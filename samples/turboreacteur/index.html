@@ -7,7 +7,7 @@
 <meta name="description" content="Un turboréacteur double flux qui se décompose pièce par pièce au fil du défilement.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=JetBrains+Mono:wght@400;500&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
     --bg: #0a0c0f;
@@ -16,14 +16,15 @@
     --muted: #8d9198;
     --faint: #3a3f46;
     --accent: #ff7a2f;
-    --serif: "Instrument Serif", Georgia, serif;
-    --sans: "Manrope", system-ui, sans-serif;
+    --display: "Archivo", system-ui, sans-serif;
+    --sans: "Archivo", system-ui, sans-serif;
     --mono: "JetBrains Mono", ui-monospace, monospace;
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   }
 
   * { box-sizing: border-box; }
-  html { background: var(--bg); }
+  html { background: var(--bg); scrollbar-color: var(--faint) var(--bg); }
+  ::selection { background: var(--accent); color: var(--bg); }
   body {
     margin: 0;
     background: var(--bg);
@@ -49,13 +50,10 @@
     justify-content: space-between;
     align-items: baseline;
     padding: 20px 28px;
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-size: 13px;
     color: var(--muted);
   }
-  .topbar b { color: var(--ink); font-weight: 500; }
+  .topbar b { color: var(--ink); font-weight: 600; }
 
   /* Hero */
   .hero {
@@ -63,15 +61,16 @@
     max-width: 760px;
   }
   .hero h1 {
-    font-family: var(--serif);
-    font-weight: 400;
-    font-size: clamp(44px, 6.6vw, 100px);
-    line-height: 0.92;
-    letter-spacing: -0.02em;
+    font-family: var(--display);
+    font-weight: 650;
+    font-stretch: 72%;
+    font-size: clamp(44px, 6.6vw, 96px);
+    line-height: 0.94;
+    letter-spacing: -0.025em;
     margin: 0 0 22px;
     text-wrap: balance;
   }
-  .hero h1 em { color: var(--accent); }
+  .hero h1 em { color: var(--accent); font-style: normal; }
   .hero p {
     margin: 0;
     max-width: 40ch;
@@ -110,25 +109,10 @@
     opacity: 0;
     will-change: opacity, transform;
   }
-  .panel .num {
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.08em;
-    color: var(--accent);
-    margin-bottom: 12px;
-    display: flex;
-    gap: 12px;
-    align-items: center;
-  }
-  .panel .num::after {
-    content: "";
-    height: 1px;
-    width: 48px;
-    background: var(--faint);
-  }
   .panel h2 {
-    font-family: var(--serif);
-    font-weight: 400;
+    font-family: var(--display);
+    font-weight: 620;
+    font-stretch: 75%;
     font-size: clamp(34px, 4vw, 52px);
     line-height: 1;
     letter-spacing: -0.01em;
@@ -168,14 +152,12 @@
     justify-content: flex-end;
     gap: 10px;
     padding: 6px 0;
-    font-family: var(--mono);
-    font-size: 10px;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-family: var(--sans);
+    font-size: 12px;
     color: var(--faint);
     transition: color 200ms ease;
   }
-  .rail button span { opacity: 0; transform: translateX(6px); transition: opacity 200ms ease, transform 200ms var(--ease-out); }
+  .rail button span { white-space: nowrap; opacity: 0; transform: translateX(6px); transition: opacity 200ms ease, transform 200ms var(--ease-out); }
   .rail button i {
     display: block;
     width: 14px; height: 1px;
@@ -222,8 +204,9 @@
   }
   footer .inner { max-width: 1120px; margin: 0 auto; }
   footer h3 {
-    font-family: var(--serif);
-    font-weight: 400;
+    font-family: var(--display);
+    font-weight: 620;
+    font-stretch: 75%;
     font-size: clamp(36px, 5vw, 64px);
     line-height: 1;
     margin: 0 0 12px;
@@ -245,7 +228,9 @@
   }
   .specs dd {
     margin: 0;
-    font-family: var(--serif);
+    font-family: var(--display);
+    font-weight: 500;
+    font-stretch: 80%;
     font-size: 40px;
     line-height: 1;
     font-variant-numeric: tabular-nums;
@@ -289,6 +274,7 @@
     }
     .panel p { font-size: 14px; }
     .panel dl { display: none; }
+    #labels text { font-size: 9px; letter-spacing: 0.04em; }
     .rail { right: 12px; top: 72px; transform: none; }
     .rail button span { display: none; }
     footer { padding: 64px 16px 48px; }
@@ -692,15 +678,15 @@ for (const c of CHAPTERS) {
   if (c.id === 'hero') { c.el = heroEl; continue; }
   const el = document.createElement('section');
   el.className = 'overlay panel';
-  el.innerHTML = `<div class="num">${c.num}</div><h2>${c.name}</h2><p>${c.text}</p>` +
+  el.innerHTML = `<h2>${c.name}</h2><p>${c.text}</p>` +
     (c.specs ? `<dl>${c.specs.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : '');
   panelsEl.appendChild(el);
   c.el = el;
 
   const btn = document.createElement('button');
   btn.type = 'button';
-  btn.innerHTML = `<span>${c.num} ${c.name}</span><i></i>`;
-  btn.setAttribute('aria-label', `${c.num} ${c.name}`);
+  btn.innerHTML = `<span>${c.name}</span><i></i>`;
+  btn.setAttribute('aria-label', c.name);
   btn.addEventListener('click', () => scrollToProgress((c.from + Math.min(c.to, 1)) / 2));
   railEl.appendChild(btn);
   c.btn = btn;
@@ -880,6 +866,16 @@ function update(p, dt, time) {
   if (labelAlpha > 0.001) placeLabels();
 }
 
+
+// Garde chaque étiquette entièrement à l'écran.
+function keepInView(text) {
+  const tw = text.getComputedTextLength();
+  const anchor = text.getAttribute('text-anchor');
+  const x = +text.getAttribute('x');
+  const left = anchor === 'start' ? x : anchor === 'end' ? x - tw : x - tw / 2;
+  const fixed = clamp(left, 8, innerWidth - 8 - tw);
+  if (fixed !== left) text.setAttribute('x', anchor === 'start' ? fixed : anchor === 'end' ? fixed + tw : fixed + tw / 2);
+}
 const a2 = new THREE.Vector3();
 function project(vec) {
   vec.project(camera);
@@ -902,6 +898,7 @@ function placeLabels() {
     nodes.text.setAttribute('x', ex + (horizontal ? dx * 8 : 0));
     nodes.text.setAttribute('y', ey + (horizontal ? 4 : dy > 0 ? 16 : -8));
     nodes.text.setAttribute('text-anchor', horizontal ? (dx > 0 ? 'start' : 'end') : 'middle');
+    keepInView(nodes.text);
   }
 }
 

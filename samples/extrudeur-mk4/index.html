@@ -1,0 +1,998 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Nextruder — vue éclatée</title>
+<meta name="description" content="La tête d'impression d'une Prusa MK4 qui se décompose pièce par pièce au fil du défilement.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c0f;
+    --bg-raised: #12151a;
+    --ink: #ebe8e1;
+    --muted: #8d9198;
+    --faint: #3a3f46;
+    --accent: #ff7a2f;
+    --display: "Archivo", system-ui, sans-serif;
+    --sans: "Archivo", system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  * { box-sizing: border-box; }
+  html { background: var(--bg); scrollbar-color: var(--faint) var(--bg); }
+  ::selection { background: var(--accent); color: var(--bg); }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #scene {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Les overlays fixes ne doivent jamais capter le scroll ou les clics. */
+  .overlay { position: fixed; pointer-events: none; z-index: 2; }
+
+  .topbar {
+    top: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 20px 28px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .topbar b { color: var(--ink); font-weight: 600; }
+
+  /* Hero */
+  .hero {
+    left: 28px; right: 28px; bottom: 9vh;
+    max-width: 760px;
+  }
+  .hero h1 {
+    font-family: var(--display);
+    font-weight: 650;
+    font-stretch: 72%;
+    font-size: clamp(44px, 6.6vw, 96px);
+    line-height: 0.94;
+    letter-spacing: -0.025em;
+    margin: 0 0 22px;
+    text-wrap: balance;
+  }
+  .hero h1 em { color: var(--accent); font-style: normal; }
+  .hero p {
+    margin: 0;
+    max-width: 40ch;
+    color: var(--muted);
+    font-size: 16px;
+    line-height: 1.55;
+  }
+  .scroll-hint {
+    margin-top: 28px;
+    display: inline-flex;
+    gap: 10px;
+    align-items: center;
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .scroll-hint i {
+    display: block;
+    width: 1px; height: 28px;
+    background: linear-gradient(var(--ink), transparent);
+    transform-origin: top;
+    animation: hint 1.8s var(--ease-out) infinite;
+  }
+  @keyframes hint {
+    0% { transform: scaleY(0); opacity: 1; }
+    70% { transform: scaleY(1); opacity: 1; }
+    100% { transform: scaleY(1); opacity: 0; }
+  }
+
+  /* Panneaux de chapitre */
+  .panel {
+    left: 28px; bottom: 9vh;
+    width: min(380px, calc(100vw - 56px));
+    opacity: 0;
+    will-change: opacity, transform;
+  }
+  .panel h2 {
+    font-family: var(--display);
+    font-weight: 620;
+    font-stretch: 75%;
+    font-size: clamp(34px, 4vw, 52px);
+    line-height: 1;
+    letter-spacing: -0.01em;
+    margin: 0 0 14px;
+  }
+  .panel p {
+    margin: 0;
+    color: #b9bcc1;
+    font-size: 15px;
+    line-height: 1.6;
+  }
+  .panel dl {
+    margin: 18px 0 0;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 6px 18px;
+    font-family: var(--mono);
+    font-size: 12px;
+  }
+  .panel dt { color: var(--muted); }
+  .panel dd { margin: 0; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  /* Rail de progression */
+  .rail {
+    right: 28px; top: 50%;
+    transform: translateY(-50%);
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .rail button {
+    all: unset;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 6px 0;
+    font-family: var(--sans);
+    font-size: 12px;
+    color: var(--faint);
+    transition: color 200ms ease;
+  }
+  .rail button span { white-space: nowrap; opacity: 0; transform: translateX(6px); transition: opacity 200ms ease, transform 200ms var(--ease-out); }
+  .rail button i {
+    display: block;
+    width: 14px; height: 1px;
+    background: currentColor;
+    transition: width 200ms var(--ease-out);
+  }
+  .rail button.active { color: var(--ink); }
+  .rail button.active i { width: 28px; background: var(--accent); }
+  .rail button.active span { opacity: 1; transform: none; }
+  @media (hover: hover) and (pointer: fine) {
+    .rail button:hover { color: var(--ink); }
+    .rail button:hover span { opacity: 1; transform: none; }
+  }
+  .rail button:focus-visible { outline: 1px solid var(--accent); outline-offset: 4px; }
+
+  .progress {
+    left: 0; bottom: 0;
+    height: 2px;
+    width: 100%;
+    background: var(--accent);
+    transform-origin: left;
+    transform: scaleX(0);
+  }
+
+  #labels { inset: 0; width: 100%; height: 100%; overflow: visible; }
+  #labels line { stroke: var(--muted); stroke-width: 1; }
+  #labels circle { fill: var(--accent); }
+  #labels text {
+    fill: var(--ink);
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  #track { position: relative; height: 1100vh; }
+
+  footer {
+    position: relative;
+    z-index: 3;
+    background: var(--bg-raised);
+    border-top: 1px solid #1f242b;
+    padding: 96px 28px 64px;
+  }
+  footer .inner { max-width: 1120px; margin: 0 auto; }
+  footer h3 {
+    font-family: var(--display);
+    font-weight: 620;
+    font-stretch: 75%;
+    font-size: clamp(36px, 5vw, 64px);
+    line-height: 1;
+    margin: 0 0 12px;
+  }
+  footer .lede { color: var(--muted); max-width: 52ch; line-height: 1.6; margin: 0 0 56px; }
+  .specs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    border-top: 1px solid #262b33;
+  }
+  .specs div { padding: 22px 20px 22px 0; border-bottom: 1px solid #262b33; }
+  .specs dt {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .specs dd {
+    margin: 0;
+    font-family: var(--display);
+    font-weight: 500;
+    font-stretch: 80%;
+    font-size: 40px;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+  }
+  .colophon {
+    margin-top: 64px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  .fallback {
+    display: none;
+    position: fixed;
+    inset: 0;
+    place-items: center;
+    padding: 28px;
+    text-align: center;
+    color: var(--muted);
+  }
+  .no-webgl .fallback { display: grid; }
+  .no-webgl #scene { display: none; }
+
+  @media (max-width: 720px) {
+    .topbar { padding: 16px; }
+    .topbar .hide-sm { display: none; }
+    .hero { left: 16px; right: 16px; bottom: 6vh; }
+    .panel {
+      left: 16px; right: 16px; bottom: 16px;
+      width: auto;
+      padding: 18px;
+      background: rgba(10, 12, 15, 0.72);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid #1f242b;
+      border-radius: 14px;
+    }
+    .panel p { font-size: 14px; }
+    .panel dl { display: none; }
+    #labels text { font-size: 9px; letter-spacing: 0.04em; }
+    .rail { right: 12px; top: 72px; transform: none; }
+    .rail button span { display: none; }
+    footer { padding: 64px 16px 48px; }
+    .specs dd { font-size: 32px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scroll-hint i { animation: none; }
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+  <canvas id="scene" aria-label="Modèle 3D d'un extrudeur d'imprimante 3D qui se décompose au défilement"></canvas>
+  <div class="fallback">WebGL n'est pas disponible sur cet appareil — le modèle 3D ne peut pas s'afficher.</div>
+
+  <svg id="labels" class="overlay" aria-hidden="true"></svg>
+
+  <div class="overlay topbar">
+    <span><b>MK4</b> &nbsp;/&nbsp; Tête d'impression Nextruder</span>
+    <span class="hide-sm">Maquette procédurale · non officielle</span>
+  </div>
+
+  <div class="overlay hero" id="hero">
+    <h1>Du fil<br>à la <em>couche</em></h1>
+    <p>La tête d'impression d'une Prusa MK4, démontée pièce par pièce. Faites défiler pour suivre le filament, du capteur jusqu'à la buse.</p>
+    <div class="scroll-hint"><i></i>Défiler</div>
+  </div>
+
+  <div id="panels"></div>
+  <nav class="overlay rail" id="rail" aria-label="Chapitres"></nav>
+  <div class="overlay progress" id="progress"></div>
+
+  <main id="track"></main>
+
+  <footer>
+    <div class="inner">
+      <h3>Ordres de grandeur</h3>
+      <p class="lede">Valeurs typiques de la configuration d'origine. La maquette ci-dessus simplifie la géométrie et les proportions ; elle n'est ni un plan ni un document officiel.</p>
+      <dl class="specs">
+        <div><dt>Diamètre du filament</dt><dd>1,75 mm</dd></div>
+        <div><dt>Buse d'origine</dt><dd>0,4 mm</dd></div>
+        <div><dt>Réduction</dt><dd>10 : 1</dd></div>
+        <div><dt>Température max.</dt><dd>290 °C</dd></div>
+      </dl>
+      <div class="colophon">
+        <span>Modèle généré en code avec Three.js — aucun fichier 3D externe. Projet non affilié à Prusa Research.</span>
+        <span>Sample · design &amp; motion</span>
+      </div>
+    </div>
+  </footer>
+
+<script type="module">
+import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ------------------------------------------------------------------
+// Utilitaires
+// ------------------------------------------------------------------
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+
+// ------------------------------------------------------------------
+// Rendu
+// ------------------------------------------------------------------
+const canvas = document.getElementById('scene');
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+} catch (err) {
+  document.body.classList.add('no-webgl');
+  throw err;
+}
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.05;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x0a0c0f);
+scene.fog = new THREE.Fog(0x0a0c0f, 40, 110);
+
+const pmrem = new THREE.PMREMGenerator(renderer);
+scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 300);
+
+scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x14100c, 0.4));
+const key = new THREE.DirectionalLight(0xffffff, 2.2);
+key.position.set(8, 12, 10);
+scene.add(key);
+const rim = new THREE.DirectionalLight(0x88aaff, 1.5);
+rim.position.set(-10, 4, -8);
+scene.add(rim);
+const heatLight = new THREE.PointLight(0xff5a1a, 0, 5, 1.6);
+scene.add(heatLight);
+
+// ------------------------------------------------------------------
+// Matériaux — une instance par pièce pour pouvoir atténuer chacune.
+// ------------------------------------------------------------------
+const std = (o) => () => new THREE.MeshStandardMaterial(o);
+const MAT = {
+  orange:   std({ color: 0xee6a2c, metalness: 0.0, roughness: 0.55 }),
+  black:    std({ color: 0x24272c, metalness: 0.0, roughness: 0.5 }),
+  alu:      std({ color: 0xc2c6cc, metalness: 0.9, roughness: 0.32 }),
+  steel:    std({ color: 0x8a9098, metalness: 0.95, roughness: 0.3 }),
+  dark:     std({ color: 0x2f343b, metalness: 0.7, roughness: 0.45 }),
+  brass:    std({ color: 0xcfa75a, metalness: 1.0, roughness: 0.28 }),
+  nylon:    std({ color: 0xd9d6cf, metalness: 0.0, roughness: 0.6 }),
+  copper:   std({ color: 0xc27a4a, metalness: 0.9, roughness: 0.35 }),
+  heater:   std({ color: 0x2a1a14, metalness: 0.6, roughness: 0.4, emissive: 0xff3a0a, emissiveIntensity: 0.9 }),
+  magnet:   std({ color: 0x9aa2ab, metalness: 1.0, roughness: 0.2 }),
+  filament: std({ color: 0x2fb3a8, metalness: 0.0, roughness: 0.35 }),
+  ptfe:     std({ color: 0xffffff, metalness: 0.0, roughness: 0.2, transparent: true, opacity: 0.35, depthWrite: false }),
+};
+
+// ------------------------------------------------------------------
+// Géométries
+// ------------------------------------------------------------------
+function mesh(geo, mat, x = 0, y = 0, z = 0) {
+  const m = new THREE.Mesh(geo, mat);
+  m.position.set(x, y, z);
+  return m;
+}
+
+// Contour d'engrenage à dentures trapézoïdales (axe Z, épaisseur centrée).
+function toothPoints(rRoot, rTip, teeth) {
+  const pts = [];
+  const step = (Math.PI * 2) / teeth;
+  for (let k = 0; k < teeth; k++) {
+    const a = k * step;
+    for (const [f, r] of [[0, rRoot], [0.28, rTip], [0.52, rTip], [0.8, rRoot]]) {
+      pts.push(new THREE.Vector2(Math.cos(a + f * step) * r, Math.sin(a + f * step) * r));
+    }
+  }
+  return pts;
+}
+function gearGeometry(rRoot, rTip, teeth, depth, bore = 0) {
+  const shape = new THREE.Shape(toothPoints(rRoot, rTip, teeth));
+  if (bore) shape.holes.push(new THREE.Path().absarc(0, 0, bore, 0, Math.PI * 2, true));
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 24 });
+  g.translate(0, 0, -depth / 2);
+  return g;
+}
+// Couronne à denture intérieure.
+function ringGeometry(rOuter, rRoot, rTip, teeth, depth) {
+  const shape = new THREE.Shape().absarc(0, 0, rOuter, 0, Math.PI * 2, false);
+  shape.holes.push(new THREE.Path(toothPoints(rRoot, rTip, teeth).reverse()));
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: false, curveSegments: 64 });
+  g.translate(0, 0, -depth / 2);
+  return g;
+}
+
+// Pale vrillée (reprise du turboréacteur), axe radial = X local.
+function bladeGeometry(len, chord, thick, pitch, twist = 0) {
+  const g = new THREE.BoxGeometry(len, chord, thick, 6, 1, 1);
+  g.translate(len / 2, 0, 0);
+  const pos = g.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const a = pitch + twist * (x / len);
+    pos.setXYZ(i, x, y * Math.cos(a) - z * Math.sin(a), y * Math.sin(a) + z * Math.cos(a));
+  }
+  g.computeVertexNormals();
+  return g;
+}
+// Couronne de pales autour de l'axe Y local.
+function bladeRing(count, rIn, rOut, chord, pitch, mat) {
+  const inst = new THREE.InstancedMesh(bladeGeometry(rOut - rIn, chord, 0.03, pitch, 0.3), mat, count);
+  const d = new THREE.Object3D();
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2;
+    d.position.set(Math.cos(a) * rIn, 0, Math.sin(a) * rIn);
+    d.rotation.set(0, -a, 0);
+    d.updateMatrix();
+    inst.setMatrixAt(i, d.matrix);
+  }
+  return inst;
+}
+
+// ------------------------------------------------------------------
+// Assemblage — axe du filament : Y, à x = 0, z = 0. Avant de la tête : +Z.
+// ------------------------------------------------------------------
+const head = new THREE.Group();
+scene.add(head);
+
+const parts = [];
+const partById = {};
+// moves : liste [début, fin, vecteur] cumulés selon la progression du scroll.
+function addPart(id, obj, opts = {}) {
+  head.add(obj);
+  const mats = new Set();
+  obj.traverse((o) => { if (o.material) mats.add(o.material); });
+  const part = { id, obj, mats: [...mats], opacity: 1, moves: [], spin: [], ...opts };
+  for (const m of part.mats) m.userData.baseOpacity = m.opacity;
+  parts.push(part);
+  partById[id] = part;
+  return part;
+}
+const EXPLODE = (delay, vec) => [0.36 + delay, 0.5 + delay, vec];
+
+const GEAR_AXIS = V(0.6, 1.1, 0); // axe du réducteur et de la roue d'entraînement
+
+// Capteur de filament : levier + aimant devant un capteur à effet Hall.
+{
+  const g = new THREE.Group();
+  g.add(mesh(new RoundedBoxGeometry(1.5, 0.9, 1.4, 3, 0.15), MAT.black(), 0, 3.15, 0));
+  const lever = mesh(new THREE.BoxGeometry(0.18, 0.7, 0.3), MAT.orange(), 0.35, 3.25, 0.75);
+  lever.rotation.z = -0.25;
+  g.add(lever);
+  g.add(mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.12, 24), MAT.magnet(), 0.5, 3.45, 0.92));
+  g.add(mesh(new THREE.SphereGeometry(0.12, 24, 16), MAT.steel(), 0.18, 3.05, 0));
+  addPart('sensor', g, { moves: [EXPLODE(0.02, V(0, 3.2, 0))], label: 'Capteur de filament' });
+}
+
+// Corps de l'extrudeur — deux demi-coques imprimées.
+{
+  const front = new THREE.Group();
+  front.add(mesh(new RoundedBoxGeometry(3.8, 3.4, 1.25, 4, 0.25), MAT.orange(), 0.2, 1.1, 0.625));
+  addPart('body-front', front, { moves: [EXPLODE(0.01, V(0, 0, 7.0))] });
+  const back = new THREE.Group();
+  back.add(mesh(new RoundedBoxGeometry(3.8, 3.4, 1.25, 4, 0.25), MAT.black(), 0.2, 1.1, -0.625));
+  addPart('body-back', back, { moves: [EXPLODE(0.01, V(0, 0, -2.6))] });
+}
+
+// Porte avant — fenêtre circulaire sur le réducteur, vis de tension et ressort.
+{
+  const g = new THREE.Group();
+  const shape = new THREE.Shape();
+  const w = 3.3, h = 3.0, r = 0.3;
+  shape.moveTo(-w / 2 + r, -h / 2);
+  shape.lineTo(w / 2 - r, -h / 2); shape.quadraticCurveTo(w / 2, -h / 2, w / 2, -h / 2 + r);
+  shape.lineTo(w / 2, h / 2 - r);  shape.quadraticCurveTo(w / 2, h / 2, w / 2 - r, h / 2);
+  shape.lineTo(-w / 2 + r, h / 2); shape.quadraticCurveTo(-w / 2, h / 2, -w / 2, h / 2 - r);
+  shape.lineTo(-w / 2, -h / 2 + r); shape.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + r, -h / 2);
+  shape.holes.push(new THREE.Path().absarc(GEAR_AXIS.x - 0.2, 0, 1.0, 0, Math.PI * 2, true));
+  const plate = new THREE.ExtrudeGeometry(shape, { depth: 0.25, bevelEnabled: true, bevelSize: 0.05, bevelThickness: 0.05, bevelSegments: 2 });
+  g.add(mesh(plate, MAT.orange(), 0.2, 1.1, 1.68));
+  // Vis de tension et ressort hélicoïdal
+  g.add(mesh(new THREE.CylinderGeometry(0.09, 0.09, 1.7, 16).rotateZ(Math.PI / 2), MAT.steel(), -0.3, 2.85, 1.85));
+  g.add(mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.14, 24).rotateZ(Math.PI / 2), MAT.steel(), -1.2, 2.85, 1.85));
+  const helix = [];
+  for (let i = 0; i <= 160; i++) {
+    const t = i / 160, a = t * Math.PI * 2 * 8;
+    helix.push(V(-0.95 + t * 1.1, 2.85 + Math.cos(a) * 0.17, 1.85 + Math.sin(a) * 0.17));
+  }
+  g.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(helix), 320, 0.025, 8), MAT.steel()));
+  addPart('door', g, { moves: [[0.22, 0.34, V(0, 0, 2.2)], EXPLODE(0, V(0, 0, 7.2))], label: 'Porte avant' });
+}
+
+// Réducteur planétaire 10:1 — couronne, trois satellites, pignon solaire.
+let ringMesh, sunMesh, planetMeshes = [];
+{
+  const ring = new THREE.Group();
+  ringMesh = mesh(ringGeometry(1.25, 1.06, 0.96, 34, 0.4), MAT.steel());
+  ring.add(ringMesh);
+  ring.position.set(GEAR_AXIS.x, GEAR_AXIS.y, 1.45);
+  addPart('ring', ring, { moves: [EXPLODE(0, V(0, 0, 3.55))], label: 'Réducteur planétaire' });
+
+  const planets = new THREE.Group();
+  planets.position.copy(ring.position);
+  for (let i = 0; i < 3; i++) {
+    const a = (i / 3) * Math.PI * 2 + 0.3;
+    const p = mesh(gearGeometry(0.28, 0.35, 11, 0.36, 0.08), MAT.steel(), Math.cos(a) * 0.64, Math.sin(a) * 0.64, 0);
+    planets.add(p);
+    planetMeshes.push(p);
+  }
+  // Porte-satellites
+  const carrier = mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.06, 64).rotateX(Math.PI / 2), MAT.dark(), 0, 0, -0.24);
+  planets.add(carrier);
+  addPart('planets', planets, { moves: [EXPLODE(0, V(0, 0, 2.6))] });
+
+  const sun = new THREE.Group();
+  sun.position.copy(ring.position);
+  sunMesh = mesh(gearGeometry(0.22, 0.3, 9, 0.42, 0.05), MAT.steel());
+  sun.add(sunMesh);
+  addPart('sun', sun, { moves: [EXPLODE(0, V(0, 0, 1.75))] });
+}
+
+// Roue d'entraînement et galet presseur : ils pincent le filament.
+let driveMesh, idlerMesh;
+{
+  const drive = new THREE.Group();
+  drive.position.set(GEAR_AXIS.x, GEAR_AXIS.y, 0);
+  driveMesh = mesh(gearGeometry(0.44, 0.52, 22, 0.45, 0.1), MAT.steel());
+  drive.add(driveMesh);
+  drive.add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 2.0, 16).rotateX(Math.PI / 2), MAT.steel(), 0, 0, 0.5));
+  addPart('drive', drive, { moves: [EXPLODE(0, V(1.2, 0, 0.6))], label: "Roue d'entraînement" });
+
+  const idler = new THREE.Group();
+  idler.position.set(-0.6, GEAR_AXIS.y, 0);
+  idlerMesh = mesh(gearGeometry(0.4, 0.48, 20, 0.45, 0.1), MAT.steel());
+  idler.add(idlerMesh);
+  idler.add(mesh(new THREE.CylinderGeometry(0.18, 0.18, 0.5, 24).rotateX(Math.PI / 2), MAT.dark()));
+  addPart('idler', idler, { moves: [[0.24, 0.34, V(-0.6, 0, 0)], EXPLODE(0, V(-1.0, 0, 0.6))], label: 'Galet presseur' });
+}
+
+// Moteur pas à pas à l'arrière.
+{
+  const g = new THREE.Group();
+  g.add(mesh(new RoundedBoxGeometry(3.0, 3.0, 1.7, 3, 0.18), MAT.dark(), GEAR_AXIS.x, GEAR_AXIS.y, -2.2));
+  g.add(mesh(new THREE.CylinderGeometry(0.75, 0.75, 0.12, 48).rotateX(Math.PI / 2), MAT.steel(), GEAR_AXIS.x, GEAR_AXIS.y, -1.3));
+  g.add(mesh(new THREE.BoxGeometry(0.9, 0.35, 0.5), MAT.black(), GEAR_AXIS.x, GEAR_AXIS.y - 1.6, -2.4));
+  addPart('motor', g, { moves: [EXPLODE(0.03, V(0, 0, -4.8))], label: 'Moteur pas à pas' });
+}
+
+// Cellule de charge : la buse sert de palpeur.
+{
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.BoxGeometry(3.2, 0.32, 1.3), MAT.alu(), 0.1, -0.68, -0.25));
+  g.add(mesh(new THREE.BoxGeometry(0.6, 0.02, 0.45), MAT.copper(), 0.6, -0.51, -0.25));
+  g.add(mesh(new THREE.BoxGeometry(0.4, 0.33, 0.5), MAT.nylon(), -1.2, -0.68, -0.25));
+  addPart('loadcell', g, { moves: [EXPLODE(0.02, V(0, 0, -3.6))], label: 'Cellule de charge' });
+}
+
+// Hotend : radiateur, rupture thermique, bloc chauffant, buse.
+{
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.CylinderGeometry(0.45, 0.45, 1.75, 32), MAT.alu(), 0, -1.72, 0));
+  const fins = new THREE.InstancedMesh(new THREE.BoxGeometry(2.4, 0.07, 2.2), MAT.alu(), 9);
+  const d = new THREE.Object3D();
+  for (let i = 0; i < 9; i++) { d.position.set(0, -2.5 + i * 0.19, 0); d.updateMatrix(); fins.setMatrixAt(i, d.matrix); }
+  g.add(fins);
+  addPart('heatsink', g, { moves: [EXPLODE(0.01, V(0, -1.4, 0))], label: 'Radiateur' });
+}
+{
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.CylinderGeometry(0.17, 0.17, 0.6, 24), MAT.steel(), 0, -2.9, 0));
+  g.add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.18, 24), MAT.steel(), 0, -2.55, 0));
+  addPart('heatbreak', g, { moves: [EXPLODE(0.02, V(0, -2.5, 0))], label: 'Rupture thermique' });
+}
+let heaterMat;
+{
+  const g = new THREE.Group();
+  g.add(mesh(new RoundedBoxGeometry(1.7, 0.9, 1.15, 2, 0.06), MAT.alu(), 0.35, -3.62, 0));
+  heaterMat = MAT.heater();
+  g.add(mesh(new THREE.CylinderGeometry(0.28, 0.28, 1.6, 24).rotateX(Math.PI / 2), heaterMat, 0.72, -3.62, 0));
+  g.add(mesh(new THREE.CylinderGeometry(0.13, 0.13, 1.35, 16).rotateX(Math.PI / 2), MAT.nylon(), -0.2, -3.72, 0.05));
+  addPart('block', g, { moves: [EXPLODE(0.03, V(0, -3.4, 0))], label: 'Bloc chauffant' });
+}
+{
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.3, 6), MAT.brass(), 0, -4.22, 0));
+  g.add(mesh(new THREE.CylinderGeometry(0.3, 0.05, 0.48, 32), MAT.brass(), 0, -4.6, 0));
+  g.add(mesh(new THREE.CylinderGeometry(0.14, 0.14, 0.35, 24), MAT.brass(), 0, -3.95, 0));
+  addPart('nozzle', g, { moves: [EXPLODE(0.04, V(0, -4.4, 0))], label: 'Buse' });
+}
+
+// Ventilateur du radiateur, à droite (axe +X).
+let fanRotor;
+{
+  const g = new THREE.Group();
+  const fan = new THREE.Group();
+  const frameShape = new THREE.Shape();
+  frameShape.moveTo(-1.3, -1.3); frameShape.lineTo(1.3, -1.3); frameShape.lineTo(1.3, 1.3); frameShape.lineTo(-1.3, 1.3); frameShape.lineTo(-1.3, -1.3);
+  frameShape.holes.push(new THREE.Path().absarc(0, 0, 1.22, 0, Math.PI * 2, true));
+  const frame = new THREE.ExtrudeGeometry(frameShape, { depth: 0.55, bevelEnabled: false, curveSegments: 48 });
+  frame.translate(0, 0, -0.275).rotateX(Math.PI / 2);
+  fan.add(mesh(frame, MAT.black()));
+  fanRotor = new THREE.Group();
+  fanRotor.add(mesh(new THREE.CylinderGeometry(0.45, 0.45, 0.45, 32), MAT.black()));
+  fanRotor.add(bladeRing(7, 0.42, 1.15, 0.42, 0.7, MAT.black()));
+  fan.add(fanRotor);
+  fan.rotation.z = -Math.PI / 2;
+  fan.position.set(1.55, -1.72, 0);
+  g.add(fan);
+  addPart('fan', g, { moves: [[0.08, 0.22, V(2.6, 0, 0)], EXPLODE(0, V(0.8, 0, 0))], label: 'Ventilateur du radiateur' });
+}
+
+// Turbine de refroidissement (blower), à gauche, avec son conduit vers la buse.
+let blowerRotor;
+{
+  const g = new THREE.Group();
+  const blower = new THREE.Group();
+  const cup = new THREE.LatheGeometry([[0.001, -0.3], [1.2, -0.3], [1.2, 0.3], [1.12, 0.3], [1.12, -0.22], [0.001, -0.22]]
+    .map(([r, y]) => new THREE.Vector2(r, y)), 64);
+  blower.add(mesh(cup, MAT.black()));
+  blower.add(mesh(new THREE.BoxGeometry(0.8, 0.6, 0.9), MAT.black(), -1.25, 0, 0.62));
+  blowerRotor = new THREE.Group();
+  blowerRotor.add(mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.45, 32), MAT.dark()));
+  blowerRotor.add(bladeRing(28, 0.5, 1.02, 0.45, 0.2, MAT.dark()));
+  blower.add(blowerRotor);
+  blower.rotation.z = Math.PI / 2;
+  blower.position.set(-2.0, -1.3, 0);
+  g.add(blower);
+  const duct = new THREE.CatmullRomCurve3([V(-2.0, -2.9, 0.6), V(-1.95, -3.7, 0.5), V(-1.25, -4.3, 0.3), V(-0.5, -4.5, 0.15)]);
+  g.add(new THREE.Mesh(new THREE.TubeGeometry(duct, 48, 0.22, 16), MAT.orange()));
+  addPart('blower', g, { moves: [[0.08, 0.22, V(-2.6, 0, 0)], EXPLODE(0, V(-0.8, -0.4, 0))], label: 'Turbine de refroidissement' });
+}
+
+// Filament et tube PTFE : la colonne vertébrale fixe de la vue éclatée.
+const filament = mesh(new THREE.CylinderGeometry(0.09, 0.09, 1, 16), MAT.filament());
+const filamentPart = addPart('filament', filament);
+const ptfe = new THREE.Group();
+ptfe.add(mesh(new THREE.CylinderGeometry(0.2, 0.2, 4.2, 24, 1, true), MAT.ptfe(), 0, 5.7, 0));
+addPart('ptfe', ptfe);
+
+// ------------------------------------------------------------------
+// Récit : chapitres, caméra
+// ------------------------------------------------------------------
+const CHAPTERS = [
+  { id: 'hero', from: 0, to: 0.06 },
+  { id: 'fans', num: '01', name: 'Ventilateurs', from: 0.09, to: 0.22,
+    text: "Deux ventilateurs, deux rôles. À droite, celui du radiateur tourne en permanence pour garder froid le haut du hotend. À gauche, la turbine souffle sur la pièce pour figer chaque couche à peine déposée." },
+  { id: 'door', num: '02', name: 'Porte et galet', from: 0.24, to: 0.35,
+    text: "La porte avant porte le galet presseur qui plaque le filament contre la roue d'entraînement. Une vis et un ressort règlent l'effort de serrage ; on l'ouvre pour dégager un bourrage." },
+  { id: 'exploded', num: '03', name: 'Vue éclatée', from: 0.37, to: 0.6,
+    text: "Le filament traverse la tête de haut en bas : capteur, roues d'entraînement, radiateur, rupture thermique, bloc chauffant et buse. Tout le reste sert à le pousser, le mesurer ou le refroidir." },
+  { id: 'sensor', num: '04', name: 'Capteur de filament', from: 0.61, to: 0.675, focus: ['sensor'], az: 35, el: 22,
+    text: "Le filament repousse un levier qui déplace un aimant devant un capteur à effet Hall. L'imprimante sait ainsi si du filament est chargé, et peut se mettre en pause avant d'en manquer.",
+    specs: [['Principe', 'Effet Hall']] },
+  { id: 'gearbox', num: '05', name: 'Réducteur planétaire', from: 0.68, to: 0.745, focus: ['ring', 'planets', 'sun', 'drive', 'idler'], az: 30, el: 18,
+    text: "Le pignon du moteur fait tourner trois satellites dans une couronne dentée. Cette réduction multiplie le couple et affine chaque pas, avec un moteur plus petit et plus léger.",
+    specs: [['Rapport', '10 : 1'], ['Satellites', '3']] },
+  { id: 'motor', num: '06', name: 'Moteur pas à pas', from: 0.75, to: 0.815, focus: ['motor'], az: 140, el: 22,
+    text: "À l'arrière, un moteur pas à pas compact fournit la rotation. Grâce au réducteur, il reste léger tout en poussant le filament avec précision : une tête plus légère, c'est moins de vibrations à grande vitesse." },
+  { id: 'loadcell', num: '07', name: 'Cellule de charge', from: 0.82, to: 0.885, focus: ['loadcell'], az: 150, el: 30,
+    text: "Une jauge de contrainte mesure la déformation infime de son support quand la buse touche le plateau. La buse elle-même sert de palpeur : pas de capteur séparé, et une première couche calée sur la vraie surface.",
+    specs: [['Mesure', 'Jauge de contrainte']] },
+  { id: 'hotend', num: '08', name: 'Hotend', from: 0.89, to: 0.95, focus: ['heatsink', 'heatbreak', 'block', 'nozzle'], az: 40, el: 10,
+    text: "Radiateur, rupture thermique, bloc chauffant, buse : sur quelques centimètres, le plastique passe de solide à fondu. La rupture thermique limite la remontée de chaleur pour que le filament ne ramollisse qu'au bon endroit.",
+    specs: [['Buse', '0,4 mm'], ['Jusqu’à', '290 °C']] },
+  { id: 'outro', num: '09', name: 'Une seule ligne', from: 0.965, to: 1.01,
+    text: "Démontée, la tête se résume à un trajet : du capteur à la buse, chaque pièce sert à pousser, mesurer, chauffer ou refroidir un fil de 1,75 mm." },
+];
+
+// Images-clés caméra. Sans focus : cible et taille S données. Avec focus : cadrage calculé
+// sur l'encombrement des pièces visées, à la position éclatée où elles se trouvent.
+const KEYS = [
+  { p: 0.0,  t: [0.2, -0.3, 0.3], S: 11.5, az: 32, el: 12 },
+  { p: 0.05, t: [0.2, -0.3, 0.3], S: 11.5, az: 32, el: 12 },
+  { p: 0.17, t: [0.0, -0.5, 0.0], S: 12.5, az: 14, el: 12 },
+  { p: 0.31, t: [0.2, 1.0, 1.5],  S: 8.5,  az: 42, el: 20 },
+  { p: 0.5,  t: [0.0, -0.6, 0.9], S: 16.5, az: 60, el: 16 },
+  { p: 0.59, t: [0.0, -0.6, 0.9], S: 16.5, az: 60, el: 16 },
+];
+for (const c of CHAPTERS) {
+  if (!c.focus) continue;
+  KEYS.push({ p: c.from + 0.015, focus: c.focus, az: c.az, el: c.el });
+  KEYS.push({ p: c.to - 0.015, focus: c.focus, az: c.az + 8, el: c.el + 2 });
+}
+KEYS.push({ p: 1.0, t: [0.0, -0.6, 0.9], S: 16.5, az: 48, el: 20 });
+KEYS.sort((a, b) => a.p - b.p);
+
+const box = new THREE.Box3();
+const tmpBox = new THREE.Box3();
+const tmpV = new THREE.Vector3();
+function frameOf(ids, outCenter) {
+  box.makeEmpty();
+  for (const id of ids) box.union(tmpBox.setFromObject(partById[id].obj));
+  box.getCenter(outCenter);
+  return box.getSize(tmpV).length() * 1.05;
+}
+function resolveKey(k, out) {
+  if (k.focus) {
+    out.S = frameOf(k.focus, out.t);
+  } else {
+    out.t.set(...k.t);
+    out.S = k.S;
+  }
+  out.az = k.az; out.el = k.el;
+  return out;
+}
+const kA = { t: new THREE.Vector3() }, kB = { t: new THREE.Vector3() };
+function cameraKey(p) {
+  let i = 0;
+  while (i < KEYS.length - 2 && p > KEYS[i + 1].p) i++;
+  const a = resolveKey(KEYS[i], kA), b = resolveKey(KEYS[i + 1], kB);
+  const t = smooth(KEYS[i].p, KEYS[i + 1].p, p);
+  return {
+    t: a.t.clone().lerp(b.t, t),
+    S: lerp(a.S, b.S, t),
+    az: lerp(a.az, b.az, t),
+    el: lerp(a.el, b.el, t),
+  };
+}
+
+// ------------------------------------------------------------------
+// DOM : panneaux, rail, étiquettes
+// ------------------------------------------------------------------
+const panelsEl = document.getElementById('panels');
+const railEl = document.getElementById('rail');
+const heroEl = document.getElementById('hero');
+const progressEl = document.getElementById('progress');
+const track = document.getElementById('track');
+
+for (const c of CHAPTERS) {
+  if (c.id === 'hero') { c.el = heroEl; continue; }
+  const el = document.createElement('section');
+  el.className = 'overlay panel';
+  el.innerHTML = `<h2>${c.name}</h2><p>${c.text}</p>` +
+    (c.specs ? `<dl>${c.specs.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : '');
+  panelsEl.appendChild(el);
+  c.el = el;
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.innerHTML = `<span>${c.name}</span><i></i>`;
+  btn.setAttribute('aria-label', c.name);
+  btn.addEventListener('click', () => scrollToProgress((c.from + Math.min(c.to, 1)) / 2));
+  railEl.appendChild(btn);
+  c.btn = btn;
+}
+
+function scrollRange() {
+  const top = track.getBoundingClientRect().top + scrollY;
+  return { top, max: track.offsetHeight - innerHeight };
+}
+function scrollToProgress(p) {
+  const { top, max } = scrollRange();
+  scrollTo({ top: top + p * max, behavior: reduceMotion ? 'auto' : 'smooth' });
+}
+function scrollProgress() {
+  const { top, max } = scrollRange();
+  return clamp((scrollY - top) / max);
+}
+
+const SVG = 'http://www.w3.org/2000/svg';
+const labelsSvg = document.getElementById('labels');
+const labelled = parts.filter((p) => p.label);
+for (const part of labelled) {
+  const g = document.createElementNS(SVG, 'g');
+  const line = document.createElementNS(SVG, 'line');
+  const dot = document.createElementNS(SVG, 'circle');
+  dot.setAttribute('r', 2.5);
+  const text = document.createElementNS(SVG, 'text');
+  text.textContent = part.label;
+  g.append(line, dot, text);
+  labelsSvg.appendChild(g);
+  part.nodes = { line, dot, text };
+}
+
+// ------------------------------------------------------------------
+// Mise à jour de la scène
+// ------------------------------------------------------------------
+let portrait = false;
+const v = new THREE.Vector3();
+const camPos = new THREE.Vector3();
+const camTarget = new THREE.Vector3();
+const wantPos = new THREE.Vector3();
+let first = true;
+let angle = 0, fanAngle = 0;
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  portrait = camera.aspect < 0.9;
+  labelsSvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+}
+addEventListener('resize', resize);
+resize();
+
+function chapterWeight(c, p) {
+  const fadeIn = c.from === 0 ? 1 : smooth(c.from - 0.012, c.from + 0.008, p);
+  const fadeOut = c.to >= 1 ? 1 : 1 - smooth(c.to - 0.008, c.to + 0.012, p);
+  return fadeIn * fadeOut;
+}
+
+function update(p, dt, time) {
+  // Déplacements cumulés de chaque pièce
+  for (const part of parts) {
+    part.obj.position.set(0, 0, 0);
+    for (const [a, b, vec] of part.moves) part.obj.position.addScaledVector(vec, smooth(a, b, p));
+  }
+  // La position de base des groupes réducteur est leur axe : on la rétablit.
+  for (const id of ['ring', 'planets', 'sun']) partById[id].obj.position.add(V(GEAR_AXIS.x, GEAR_AXIS.y, 1.45));
+  partById.drive.obj.position.add(V(GEAR_AXIS.x, GEAR_AXIS.y, 0));
+  partById.idler.obj.position.add(V(-0.6, GEAR_AXIS.y, 0));
+
+  // Le filament s'allonge vers le bas pour rester le fil conducteur.
+  const tLow = smooth(0.38, 0.54, p);
+  const bottom = lerp(-4.75, -8.6, tLow), top = 7.8;
+  filament.scale.y = top - bottom;
+  filament.position.y = (top + bottom) / 2;
+
+  // Rotations : réducteur cohérent (solaire → satellites → couronne fixe), ventilateurs.
+  if (!reduceMotion) {
+    angle += dt * 1.6;
+    fanAngle += dt * 14;
+  }
+  sunMesh.rotation.z = angle;
+  for (const pm of planetMeshes) pm.rotation.z = -angle * (9 / 11);
+  partById.planets.obj.rotation.z = angle * 0.1;
+  driveMesh.rotation.z = angle * 0.1;
+  idlerMesh.rotation.z = -angle * 0.1 * (22 / 20);
+  fanRotor.rotation.y = fanAngle;
+  blowerRotor.rotation.y = -fanAngle * 1.2;
+
+  // Chapitres : opacité des panneaux, pièces mises en avant
+  let focus = null, focusWeight = 0, active = null;
+  for (const c of CHAPTERS) {
+    const w = chapterWeight(c, p);
+    c.el.style.opacity = w.toFixed(3);
+    c.el.style.transform = `translateY(${((1 - w) * 12).toFixed(2)}px)`;
+    c.el.style.visibility = w < 0.002 ? 'hidden' : 'visible';
+    if (w > 0.5) active = c;
+    if (c.focus && w > focusWeight) { focus = c.focus; focusWeight = w; }
+  }
+  for (const c of CHAPTERS) c.btn?.classList.toggle('active', c === active);
+  progressEl.style.transform = `scaleX(${p.toFixed(4)})`;
+
+  const k = 1 - Math.exp(-dt * 7);
+  for (const part of parts) {
+    const isFocus = !focus || focus.includes(part.id) || part.id === 'filament';
+    const target = isFocus ? 1 : lerp(1, 0.08, focusWeight);
+    part.opacity = reduceMotion ? target : lerp(part.opacity, target, k);
+    for (const m of part.mats) {
+      const base = m.userData.baseOpacity;
+      const o = base * part.opacity;
+      const transparent = o < 0.995;
+      if (m.transparent !== transparent) { m.transparent = transparent; m.needsUpdate = true; }
+      m.opacity = o;
+      m.depthWrite = o > 0.5;
+    }
+  }
+
+  // Chauffe : la cartouche rougeoie, plus fort quand on regarde le hotend.
+  const block = partById.block;
+  const flicker = reduceMotion ? 0 : Math.sin(time * 3) * 0.08;
+  heaterMat.emissiveIntensity = (0.9 + flicker) * block.opacity;
+  heatLight.position.set(0.72, -3.62, 0.9).add(block.obj.position);
+  heatLight.intensity = 2.5 * block.opacity;
+
+  // Caméra
+  const ck = cameraKey(p);
+  const halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const dist = ck.S / (2 * halfTan) / Math.min(1, camera.aspect) + ck.S * 0.15;
+  const az = THREE.MathUtils.degToRad(ck.az), el = THREE.MathUtils.degToRad(ck.el);
+  v.set(Math.sin(az) * Math.cos(el), Math.sin(el), Math.cos(az) * Math.cos(el));
+  wantPos.copy(ck.t).addScaledVector(v, dist);
+
+  const kc = reduceMotion || first ? 1 : 1 - Math.exp(-dt * 5);
+  camPos.lerp(wantPos, kc);
+  camTarget.lerp(ck.t, kc);
+  first = false;
+
+  // Décentrage optique : en paysage, le sujet glisse vers la droite pour libérer la colonne de texte.
+  if (!portrait && innerWidth > 720) {
+    const shift = lerp(0.17, 0.1, smooth(0.04, 0.14, p));
+    camera.setViewOffset(innerWidth, innerHeight, -innerWidth * shift, 0, innerWidth, innerHeight);
+  } else if (camera.view) camera.clearViewOffset();
+  camera.position.copy(camPos);
+  camera.lookAt(camTarget);
+  camera.updateMatrixWorld();
+
+  // Étiquettes de la vue éclatée
+  const labelAlpha = smooth(0.47, 0.52, p) * (1 - smooth(0.585, 0.605, p)) + smooth(0.975, 0.995, p);
+  labelsSvg.style.opacity = labelAlpha.toFixed(3);
+  if (labelAlpha > 0.001) placeLabels();
+}
+
+
+// Garde chaque étiquette entièrement à l'écran.
+function keepInView(text) {
+  const tw = text.getComputedTextLength();
+  const anchor = text.getAttribute('text-anchor');
+  const x = +text.getAttribute('x');
+  const left = anchor === 'start' ? x : anchor === 'end' ? x - tw : x - tw / 2;
+  const fixed = clamp(left, 8, innerWidth - 8 - tw);
+  if (fixed !== left) text.setAttribute('x', anchor === 'start' ? fixed : anchor === 'end' ? fixed + tw : fixed + tw / 2);
+}
+const a2 = new THREE.Vector3();
+const sceneCenter = new THREE.Vector3(0, -0.6, 0.9);
+function project(vec) {
+  vec.project(camera);
+  return [(vec.x + 1) / 2 * innerWidth, (1 - vec.y) / 2 * innerHeight];
+}
+// Chaque étiquette part du centre de sa pièce, dans la direction opposée au centre de la scène.
+function placeLabels() {
+  const [cx, cy] = project(a2.copy(sceneCenter));
+  for (const part of labelled) {
+    tmpBox.setFromObject(part.obj).getCenter(a2);
+    const radius = tmpBox.getSize(tmpV).length() / 2;
+    const [px, py] = project(a2.clone());
+    let dx = px - cx, dy = py - cy;
+    if (Math.hypot(dx, dy) < 1) dx = 1;
+    const len = Math.hypot(dx, dy);
+    dx /= len; dy /= len;
+    const pxR = 34 + Math.min(40, radius * 7);
+    const tx = px + dx * pxR * 0.45, ty = py + dy * pxR * 0.45;
+    const ex = px + dx * pxR, ey = py + dy * pxR;
+    const { line, dot, text } = part.nodes;
+    line.setAttribute('x1', tx); line.setAttribute('y1', ty);
+    line.setAttribute('x2', ex); line.setAttribute('y2', ey);
+    dot.setAttribute('cx', tx); dot.setAttribute('cy', ty);
+    const horizontal = Math.abs(dx) > Math.abs(dy) * 0.6;
+    text.setAttribute('x', ex + (horizontal ? dx * 8 : 0));
+    text.setAttribute('y', ey + (horizontal ? 4 : dy > 0 ? 16 : -8));
+    text.setAttribute('text-anchor', horizontal ? (dx > 0 ? 'start' : 'end') : 'middle');
+    keepInView(text);
+  }
+}
+
+// ------------------------------------------------------------------
+// Boucle
+// ------------------------------------------------------------------
+const clock = new THREE.Clock();
+function frame() {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  update(scrollProgress(), dt, clock.elapsedTime);
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>
