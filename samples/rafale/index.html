@@ -3,23 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>M88 — carnet de bord</title>
-<meta name="description" content="Le M88, moteur du Rafale, démonté pièce par pièce au fil du défilement, sur la mer du soir.">
+<title>M88 — ASCII</title>
+<meta name="description" content="Le M88, moteur du Rafale, démonté pièce par pièce au fil du défilement et redessiné en ASCII art vivant.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Spectral:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #142022;
-    --panel: #1b2a2b;
-    --panel-edge: #8f8463;
-    --ink: #e8dfc4;
-    --body: #cfc6aa;
-    --muted: #a8a084;
-    --accent: #e0a35a;
-    --line: #0f1a1b;
-    --display: "IM Fell English SC", Georgia, serif;
-    --sans: "Spectral", Georgia, serif;
+    --bg: #05030c;
+    --panel: #0b0718;
+    --panel-edge: #6b3ff0;
+    --ink: #f4e9ff;
+    --body: #cdbdf2;
+    --muted: #9a86d6;
+    --accent: #ff4fd8;
+    --line: #05030c;
+    --display: "IBM Plex Mono", ui-monospace, monospace;
+    --sans: "IBM Plex Mono", ui-monospace, monospace;
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   }
 
@@ -57,22 +57,22 @@
   }
   .hero h1 {
     font-family: var(--display);
-    font-weight: 400;
-    font-size: clamp(48px, 6.6vw, 96px);
-    line-height: 0.95;
+    font-weight: 700;
+    font-size: clamp(40px, 5.6vw, 84px);
+    line-height: 1;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
     margin: 0 0 22px;
     color: var(--ink);
-    text-shadow: 0 2px 18px rgba(10, 18, 19, 0.6);
     text-wrap: balance;
   }
-  .hero h1 em { font-style: italic; color: var(--accent); }
+  .hero h1 em { font-style: normal; color: var(--accent); }
   .hero p {
     margin: 0;
     max-width: 40ch;
     color: var(--body);
-    font-size: 18px;
-    line-height: 1.55;
-    text-shadow: 0 1px 10px rgba(10, 18, 19, 0.7);
+    font-size: 15px;
+    line-height: 1.6;
   }
   .scroll-hint {
     margin-top: 26px;
@@ -96,42 +96,43 @@
     100% { transform: scaleY(1); opacity: 0; }
   }
 
-  /* Panneaux : pages du carnet, double filet laiton */
+  /* Panneaux : fenêtres de terminal */
   .panel {
     left: 32px; bottom: 9vh;
     width: min(400px, calc(100vw - 64px));
     padding: 22px 24px 24px;
-    background: rgba(27, 42, 43, 0.94);
+    background: rgba(11, 7, 24, 0.92);
     border: 1px solid var(--panel-edge);
-    outline: 1px solid rgba(143, 132, 99, 0.45);
-    outline-offset: 4px;
+    box-shadow: 0 0 24px rgba(107, 63, 240, 0.35);
     opacity: 0;
     will-change: opacity, transform;
   }
+  .panel h2::before { content: "> "; color: var(--accent); }
   .panel h2 {
     font-family: var(--display);
-    font-weight: 400;
-    font-size: clamp(28px, 2.8vw, 38px);
-    line-height: 1.05;
+    font-weight: 700;
+    font-size: clamp(22px, 2.2vw, 28px);
+    line-height: 1.1;
+    text-transform: uppercase;
     margin: 0 0 12px;
     color: var(--ink);
   }
   .panel p {
     margin: 0;
     color: var(--body);
-    font-size: 16px;
-    line-height: 1.6;
+    font-size: 14px;
+    line-height: 1.65;
   }
   .panel dl {
     margin: 16px 0 0;
     padding-top: 12px;
-    border-top: 1px solid rgba(143, 132, 99, 0.5);
+    border-top: 1px dashed rgba(107, 63, 240, 0.6);
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 4px 18px;
     font-size: 15px;
   }
-  .panel dt { color: var(--muted); font-style: italic; }
+  .panel dt { color: var(--muted); }
   .panel dd { margin: 0; color: var(--ink); font-variant-numeric: tabular-nums; }
 
   /* Rail de progression */
@@ -153,7 +154,7 @@
     padding: 6px 0;
     font-family: var(--display);
     font-size: 15px;
-    color: rgba(232, 223, 196, 0.35);
+    color: rgba(205, 189, 242, 0.35);
     transition: color 200ms ease;
   }
   .rail button span {
@@ -187,8 +188,8 @@
   }
   .legend span { display: inline-flex; align-items: center; gap: 8px; }
   .legend i { display: block; width: 22px; height: 3px; }
-  .legend .cold { background: #9fc4c0; }
-  .legend .hot { background: linear-gradient(90deg, #9fc4c0, #e8c77a, #e0a35a, #d0603a); }
+  .legend .cold { background: #6b6bff; }
+  .legend .hot { background: linear-gradient(90deg, #6b6bff, #b13cff, #ff4fd8, #ff9450); }
 
   .progress {
     left: 0; bottom: 0;
@@ -203,11 +204,12 @@
   #labels { inset: 0; width: 100%; height: 100%; overflow: visible; }
   #labels line { stroke: var(--ink); stroke-width: 1; opacity: 0.8; }
   #labels circle { fill: var(--accent); }
-  #labels rect { fill: #1b2a2b; stroke: var(--panel-edge); stroke-width: 1; }
+  #labels rect { fill: #0b0718; stroke: var(--panel-edge); stroke-width: 1; }
   #labels text {
     fill: var(--ink);
     font-family: var(--display);
-    font-size: 14px;
+    font-size: 12px;
+    text-transform: uppercase;
   }
 
   #track { position: relative; height: 1100vh; }
@@ -222,9 +224,11 @@
   footer .inner { max-width: 1120px; margin: 0 auto; }
   footer h3 {
     font-family: var(--display);
-    font-weight: 400;
-    font-size: clamp(38px, 4.6vw, 60px);
+    font-weight: 700;
+    font-size: clamp(30px, 3.6vw, 48px);
     line-height: 1;
+    text-transform: uppercase;
+    color: var(--accent);
     margin: 0 0 14px;
   }
   footer .lede { color: var(--body); max-width: 56ch; line-height: 1.6; margin: 0 0 56px; font-size: 17px; }
@@ -236,7 +240,8 @@
   }
   .specs div { padding: 22px 20px 22px 0; border-bottom: 1px solid rgba(143, 132, 99, 0.4); }
   .specs dt {
-    font-style: italic;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
     font-size: 15px;
     color: var(--muted);
     margin-bottom: 10px;
@@ -244,7 +249,8 @@
   .specs dd {
     margin: 0;
     font-family: var(--display);
-    font-size: 40px;
+    font-size: 32px;
+    font-weight: 700;
     line-height: 1;
     color: var(--ink);
     font-variant-numeric: tabular-nums;
@@ -275,12 +281,12 @@
     .legend { left: 16px; right: auto; top: 46px; bottom: auto; flex-direction: column; gap: 6px; font-size: 12px; }
     .topbar { padding: 16px; font-size: 14px; }
     .topbar .hide-sm { display: none; }
-    .hero { left: 16px; right: 16px; top: auto; bottom: 16px; padding: 18px 18px 20px; background: rgba(27, 42, 43, 0.94); border: 1px solid var(--panel-edge); }
-    .hero h1 { font-size: 40px; margin-bottom: 12px; }
+    .hero { left: 16px; right: 16px; top: auto; bottom: 16px; padding: 18px 18px 20px; background: rgba(11, 7, 24, 0.92); border: 1px solid var(--panel-edge); }
+    .hero h1 { font-size: 32px; margin-bottom: 12px; }
     .hero p { font-size: 15px; }
     .scroll-hint { margin-top: 14px; }
     .panel { left: 16px; right: 16px; bottom: 16px; width: auto; padding: 18px 18px 20px; outline: none; }
-    .panel p { font-size: 15px; }
+    .panel p { font-size: 13px; }
     .panel dl { display: none; }
     #labels text { font-size: 12px; }
     .rail { right: 12px; top: 72px; transform: none; }
@@ -340,7 +346,7 @@
         <div><dt>Masse d'un moteur</dt><dd>≈ 900 kg</dd></div>
       </dl>
       <div class="colophon">
-        <span>Modèle généré en code avec Three.js, rendu en temps réel : aplats sourds, contour fin, brume du soir. Projet non affilié à Safran ni à Dassault Aviation.</span>
+        <span>Modèle généré en code avec Three.js, redessiné en temps réel en caractères ASCII. Projet non affilié à Safran ni à Dassault Aviation.</span>
         <span>Sample · design &amp; motion</span>
       </div>
     </div>
@@ -379,45 +385,82 @@ renderer.autoClear = false;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 300);
 
-// Crépuscule sur la mer : ciel froid, reflets d'eau sombre, une lune basse comme seule clé.
-scene.add(new THREE.HemisphereLight(0xc8d8d0, 0x2a3a38, 1.25));
-const key = new THREE.DirectionalLight(0xe8f0e0, 1.5);
+// Éclairage contrasté : en ASCII, la forme se lit par la luminosité de chaque cellule.
+scene.add(new THREE.HemisphereLight(0xffffff, 0x202030, 0.9));
+const key = new THREE.DirectionalLight(0xffffff, 2.2);
 key.position.set(6, 9, 7);
 scene.add(key);
+const rim = new THREE.DirectionalLight(0xffffff, 1.0);
+rim.position.set(-8, -3, -6);
+scene.add(rim);
 const fireLight = new THREE.PointLight(0xffa060, 0, 6, 1.6);
 scene.add(fireLight);
 
 // ------------------------------------------------------------------
-// Matériaux : aplats à trois tons doux, palette vert-de-gris.
+// Matériaux : tons neutres répartis sur toute l'échelle de gris, pour que chaque pièce
+// tombe sur une densité de caractères différente. Les parties chaudes gardent leur teinte.
 // Une instance par pièce pour pouvoir atténuer chacune.
 // ------------------------------------------------------------------
-const ramp = new THREE.DataTexture(new Uint8Array([115, 190, 255]), 3, 1, THREE.RedFormat);
+const ramp = new THREE.DataTexture(new Uint8Array([70, 140, 205, 255]), 4, 1, THREE.RedFormat);
 ramp.minFilter = ramp.magFilter = THREE.NearestFilter;
 ramp.needsUpdate = true;
 const flat = (o) => () => new THREE.MeshToonMaterial({ gradientMap: ramp, ...o });
 const MAT = {
-  paint:  flat({ color: 0xb9b39a, side: THREE.DoubleSide }),
-  ti:     flat({ color: 0xc9cfc6 }),
-  steel:  flat({ color: 0x8fa39c, side: THREE.DoubleSide }),
-  dark:   flat({ color: 0x46524f }),
-  hot:    flat({ color: 0xc47a4e }),
-  bronze: flat({ color: 0xc49a5e, side: THREE.DoubleSide }),
-  flap:   flat({ color: 0x6e8580, side: THREE.DoubleSide }),
-  hole:   flat({ color: 0x1c2626 }),
-  pipe:   flat({ color: 0x9a5a4a }),
-  glow:   flat({ color: 0xffcf7a, emissive: 0xff9a40, emissiveIntensity: 0.9 }),
-  abglow: flat({ color: 0xffc89a, emissive: 0xff7a40, emissiveIntensity: 0.9, transparent: true, opacity: 0.85 }),
+  paint:  flat({ color: 0x8c8f9a, side: THREE.DoubleSide }),
+  ti:     flat({ color: 0xe6e8f0 }),
+  steel:  flat({ color: 0xb4b8c4, side: THREE.DoubleSide }),
+  dark:   flat({ color: 0x4a4c58 }),
+  hot:    flat({ color: 0xd88a5a }),
+  bronze: flat({ color: 0xc8a070, side: THREE.DoubleSide }),
+  flap:   flat({ color: 0x6c707e, side: THREE.DoubleSide }),
+  hole:   flat({ color: 0x18181f }),
+  pipe:   flat({ color: 0xc0603e }),
+  silver: flat({ color: 0xd8dbe2, side: THREE.DoubleSide }),
+  glow:   flat({ color: 0xffd98a, emissive: 0xff9a40, emissiveIntensity: 1.0 }),
+  abglow: flat({ color: 0xffc89a, emissive: 0xff7a40, emissiveIntensity: 1.0, transparent: true, opacity: 0.85 }),
 };
 
 // ------------------------------------------------------------------
-// Rendu : passe couleur (+ profondeur), passe normales, puis un shader qui trace un contour fin,
-// noie les lointains dans la brume et peint la mer du soir.
+// Atlas de caractères : les 95 caractères ASCII imprimables, dessinés une fois dans une texture.
+// ------------------------------------------------------------------
+const ATLAS_COLS = 16, ATLAS_ROWS = 6, GLYPH_W = 32, GLYPH_H = 48;
+const atlasCanvas = document.createElement('canvas');
+atlasCanvas.width = ATLAS_COLS * GLYPH_W;
+atlasCanvas.height = ATLAS_ROWS * GLYPH_H;
+const atlasTex = new THREE.CanvasTexture(atlasCanvas);
+atlasTex.minFilter = atlasTex.magFilter = THREE.LinearFilter;
+atlasTex.generateMipmaps = false;
+function drawAtlas() {
+  const ctx = atlasCanvas.getContext('2d');
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, atlasCanvas.width, atlasCanvas.height);
+  ctx.fillStyle = '#fff';
+  ctx.font = `700 ${Math.round(GLYPH_H * 0.8)}px "IBM Plex Mono", ui-monospace, monospace`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  for (let i = 0; i < 95; i++) {
+    ctx.fillText(String.fromCharCode(32 + i), (i % ATLAS_COLS) * GLYPH_W + GLYPH_W / 2, Math.floor(i / ATLAS_COLS) * GLYPH_H + GLYPH_H * 0.54);
+  }
+  atlasTex.needsUpdate = true;
+}
+drawAtlas();
+document.fonts?.ready.then(drawAtlas);
+
+// La phrase qui défile dans les zones éclairées, et la rampe de densité des zones sombres.
+const PHRASE = 'M88-2 SNECMA RAFALE POSTCOMBUSTION ';
+const RAMP = ' .:-=+*#%@';
+const codes = (s) => [...s].map((ch) => ch.charCodeAt(0));
+
+// ------------------------------------------------------------------
+// Rendu : passe couleur (+ profondeur), passe normales, puis un shader qui découpe l'écran
+// en cellules et dessine dans chacune un caractère choisi d'après la scène.
 // ------------------------------------------------------------------
 const colorRT = new THREE.WebGLRenderTarget(1, 1, { samples: 4 });
 colorRT.depthTexture = new THREE.DepthTexture(1, 1);
 const normalRT = new THREE.WebGLRenderTarget(1, 1);
 // Double face : les coques vues par leur envers doivent masquer ce qui est derrière elles.
 const normalMat = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
+const CELL = { w: innerWidth < 720 ? 6 : 7, h: innerWidth < 720 ? 10 : 12 };
 const ink = new THREE.ShaderMaterial({
   depthTest: false,
   depthWrite: false,
@@ -425,6 +468,7 @@ const ink = new THREE.ShaderMaterial({
     tColor: { value: colorRT.texture },
     tDepth: { value: colorRT.depthTexture },
     tNormal: { value: normalRT.texture },
+    tAtlas: { value: atlasTex },
     resolution: { value: new THREE.Vector2(1, 1) },
     near: { value: camera.near },
     far: { value: camera.far },
@@ -434,6 +478,9 @@ const ink = new THREE.ShaderMaterial({
     time: { value: 0 },
     fogNear: { value: 20 },
     fogFar: { value: 60 },
+    cell: { value: new THREE.Vector2(CELL.w, CELL.h) },
+    phrase: { value: codes(PHRASE) },
+    ramp: { value: codes(RAMP) },
   },
   vertexShader: /* glsl */`
     varying vec2 vUv;
@@ -441,126 +488,116 @@ const ink = new THREE.ShaderMaterial({
   `,
   fragmentShader: /* glsl */`
     #include <packing>
-    uniform sampler2D tColor, tDepth, tNormal;
-    uniform vec2 resolution;
+    #define PHRASE_LEN ${PHRASE.length}
+    uniform sampler2D tColor, tDepth, tNormal, tAtlas;
+    uniform vec2 resolution, cell;
     uniform float near, far, pr, aspect, scroll, time, fogNear, fogFar;
+    uniform float phrase[PHRASE_LEN];
+    uniform float ramp[10];
     varying vec2 vUv;
 
-    const vec3 LINE = vec3(0.06, 0.1, 0.105);
-    const vec3 FOG = vec3(0.56, 0.64, 0.6);
-    const vec3 SKY_TOP = vec3(0.094, 0.16, 0.172);
-    const vec3 SKY_MID = vec3(0.365, 0.478, 0.447);
-    const vec3 SKY_GLOW = vec3(0.788, 0.773, 0.604);
-    const vec3 SEA_FAR = vec3(0.184, 0.29, 0.278);
-    const vec3 SEA_NEAR = vec3(0.078, 0.141, 0.145);
-    const vec3 WAVE = vec3(0.365, 0.498, 0.471);
-    const vec3 ROCK_FAR = vec3(0.29, 0.384, 0.365);
-    const vec3 ROCK = vec3(0.165, 0.227, 0.224);
-    const vec3 MOON = vec3(0.91, 0.894, 0.784);
-    const vec3 LAMP = vec3(1.0, 0.86, 0.55);
+    const vec3 BG = vec3(0.02, 0.012, 0.05);
 
     bool isBg(vec2 uv) { return texture2D(tDepth, uv).x >= 0.99999; }
     float viewZ(vec2 uv) { return -perspectiveDepthToViewZ(texture2D(tDepth, uv).x, near, far); }
     vec3 nrm(vec2 uv) { return texture2D(tNormal, uv).xyz * 2.0 - 1.0; }
     float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
-    float vnoise(vec2 p) {
-      vec2 i = floor(p), f = fract(p);
-      vec2 u = f * f * (3.0 - 2.0 * f);
-      return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
+    vec3 scene(vec2 uv) { return pow(clamp(texture2D(tColor, uv).rgb, 0.0, 1.0), vec3(1.0 / 2.2)); }
+    float luma(vec3 c) { return dot(c, vec3(0.299, 0.587, 0.114)); }
+
+    // Masque d'un caractère de l'atlas (code ASCII), pour une position locale 0–1 dans la cellule.
+    float glyph(float code, vec2 local) {
+      float i = code - 32.0;
+      float col = mod(i, 16.0), row = floor(i / 16.0);
+      vec2 uv = vec2((col + local.x) / 16.0, 1.0 - (row + 1.0 - local.y) / 6.0);
+      return texture2D(tAtlas, uv).r;
     }
-    float fbm(vec2 p) { float v = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { v += a * vnoise(p); p *= 2.03; a *= 0.5; } return v; }
-
-    vec3 backdrop() {
-      vec2 p = vec2(vUv.x * aspect, vUv.y);
-      float y = vUv.y;
-      float h = 0.36 + 0.03 * scroll;
-      vec3 col;
-      vec2 moon = vec2(0.78 * aspect, h + 0.32);
-
-      if (y >= h) {
-        // Ciel : lueur jaunâtre sur l'horizon, vert-de-gris, nuit qui tombe.
-        float t = (y - h) / (1.0 - h);
-        col = mix(SKY_GLOW, SKY_MID, smoothstep(0.0, 0.3, t));
-        col = mix(col, SKY_TOP, smoothstep(0.3, 1.0, t));
-        // Nuages en traînées sombres.
-        float cl = fbm(vec2(p.x * 1.6 + time * 0.01, y * 9.0));
-        col = mix(col, vec3(0.17, 0.25, 0.25), smoothstep(0.5, 0.75, cl) * 0.5 * smoothstep(0.1, 0.6, t));
-        // Lune voilée.
-        float dm = length(p - moon);
-        col += MOON * 0.35 * exp(-dm * 9.0);
-        if (dm < 0.055) col = mix(MOON, col, smoothstep(0.045, 0.055, dm) * 0.6);
-        // Îlots lointains, puis rochers proches hérissés d'arbres morts.
-        float far1 = h + 0.025 + 0.04 * pow(fbm(vec2(p.x * 2.2, 1.0)), 2.0) * step(0.45, fbm(vec2(p.x * 0.7, 5.0)));
-        if (y < far1) col = mix(ROCK_FAR, col, 0.25);
-        float near1 = h + 0.07 * pow(fbm(vec2(p.x * 3.5 + 7.0, 2.0)), 1.5) * smoothstep(0.52, 0.6, fbm(vec2(p.x * 0.9 + 3.0, 9.0)));
-        float spike = step(0.82, hash(vec2(floor(p.x * 140.0), 3.0))) * 0.035 * hash(vec2(floor(p.x * 140.0), 7.0));
-        if (y < near1 + spike * step(h + 0.01, near1)) col = ROCK;
-      } else {
-        // Mer : sombre au premier plan, rides claires qui se resserrent vers l'horizon.
-        float d = (h - y) / h;
-        col = mix(SEA_FAR, SEA_NEAR, smoothstep(0.0, 1.0, d));
-        float r = log(d + 0.02) * 14.0;
-        float wave = smoothstep(0.82, 1.0, fract(r)) * step(0.55, vnoise(vec2(p.x * (6.0 / (d + 0.08)) + time * 0.25, floor(r))));
-        col = mix(col, WAVE, wave * 0.55);
-        // Reflet de lune, en touches brisées.
-        float colm = abs(p.x - moon.x) - 0.02 - 0.08 * d;
-        if (colm < 0.0) col = mix(col, MOON, wave * 0.75);
-      }
-
-      // Phare sur un rocher, faisceau qui balaie la brume.
-      vec2 base = vec2(0.16 * aspect, h);
-      vec2 lamp = base + vec2(0.0, 0.085);
-      if (abs(p.x - base.x) < 0.008 && y > h - 0.005 && y < lamp.y) {
-        col = mod(floor((y - h) * 120.0), 2.0) < 1.0 ? vec3(0.78, 0.76, 0.66) : vec3(0.55, 0.25, 0.22);
-      }
-      if (abs(p.x - base.x) < 0.03 && y < h + 0.012 && y > h - 0.004) col = ROCK;
-      float a = time * 0.5;
-      vec2 beam = normalize(vec2(cos(a), 0.06 * sin(a * 2.0)));
-      vec2 lp = p - lamp;
-      float cone = smoothstep(0.975, 0.998, dot(normalize(lp), beam)) * (1.0 - smoothstep(0.0, 0.9, length(lp)));
-      col += LAMP * cone * 0.35 * (0.6 + 0.4 * cos(a));
-      col = mix(col, LAMP, smoothstep(0.012, 0.004, length(lp)));
-
-      // Brume qui monte de l'eau.
-      col = mix(col, FOG, exp(-abs(y - h) * 12.0) * 0.5);
-      return col;
+    // Indigo → bleu → violet → rose → blanc rosé.
+    vec3 palette(float t) {
+      vec3 c0 = vec3(0.07, 0.04, 0.23), c1 = vec3(0.18, 0.17, 0.85), c2 = vec3(0.48, 0.21, 0.94);
+      vec3 c3 = vec3(1.0, 0.31, 0.85), c4 = vec3(1.0, 0.94, 1.0);
+      if (t < 0.3) return mix(c0, c1, t / 0.3);
+      if (t < 0.55) return mix(c1, c2, (t - 0.3) / 0.25);
+      if (t < 0.8) return mix(c2, c3, (t - 0.55) / 0.25);
+      return mix(c3, c4, (t - 0.8) / 0.2);
     }
 
     void main() {
-      vec2 texel = 1.0 / resolution;
-      float w = 1.0 * pr;
-      bool bg = isBg(vUv);
-      float z = bg ? 0.0 : viewZ(vUv);
-      vec3 n = nrm(vUv);
-      float edgeD = 0.0, edgeN = 0.0, bgN = 0.0;
-      vec2 o[4];
-      o[0] = vec2(w, 0.0); o[1] = vec2(-w, 0.0); o[2] = vec2(0.0, w); o[3] = vec2(0.0, -w);
-      for (int i = 0; i < 4; i++) {
-        vec2 qq = vUv + o[i] * texel;
-        if (isBg(qq)) { bgN += 1.0; continue; }
-        if (bg) continue;
-        edgeD = max(edgeD, abs(viewZ(qq) - z) / max(z, 0.001));
-        edgeN = max(edgeN, 1.0 - dot(n, nrm(qq)));
+      vec2 cs = cell * pr;
+      vec2 id = floor(gl_FragCoord.xy / cs);
+      vec2 local = fract(gl_FragCoord.xy / cs);
+      vec2 cuv = (id + 0.5) * cs / resolution;
+      vec2 dx = vec2(cs.x, 0.0) / resolution, dy = vec2(0.0, cs.y) / resolution;
+
+      // Échantillonnage de la cellule : moyenne de cinq points et part de fond.
+      vec3 c = vec3(0.0);
+      float bgCount = 0.0;
+      for (int k = 0; k < 5; k++) {
+        vec2 o = k == 0 ? vec2(0.0) : vec2(k == 1 || k == 2 ? -0.3 : 0.3, k == 1 || k == 3 ? -0.3 : 0.3);
+        vec2 suv = cuv + o * cs / resolution;
+        c += scene(suv);
+        if (isBg(suv)) bgCount += 1.0;
+      }
+      c /= 5.0;
+      float lum = luma(c);
+      // Traînées d'air et flammes : elles n'écrivent pas de profondeur, on les lit à leur couleur.
+      float alpha = texture2D(tColor, cuv).a;
+
+      vec3 col = BG;
+      float code = 32.0;
+      float t = 0.0;
+      float step8 = floor(time * 8.0);
+
+      bool empty = bgCount > 4.5 && alpha < 0.05;
+      bool silhouette = bgCount > 0.5 && bgCount < 4.5;
+
+      if (empty) {
+        // Fond : une poussière de caractères qui dérive lentement.
+        vec2 drift = id + vec2(floor(time * 1.5), 0.0);
+        float h = hash(drift);
+        if (h > 0.988) { code = h > 0.996 ? 43.0 : 46.0; t = 0.18 + 0.15 * hash(drift + 3.1); }
+      } else {
+        // Arêtes : écart de normale ou de profondeur avec les cellules voisines.
+        float edge = 0.0;
+        if (!isBg(cuv) && !isBg(cuv + dx) && !isBg(cuv + dy)) {
+          float z = viewZ(cuv);
+          vec3 n = nrm(cuv);
+          float ex = (1.0 - dot(n, nrm(cuv + dx))) + abs(viewZ(cuv + dx) - z) / z * 6.0;
+          float ey = (1.0 - dot(n, nrm(cuv + dy))) + abs(viewZ(cuv + dy) - z) / z * 6.0;
+          edge = max(ex, ey);
+        }
+        float gx = luma(scene(cuv + dx)) - luma(scene(cuv - dx));
+        float gy = luma(scene(cuv + dy)) - luma(scene(cuv - dy));
+        if (silhouette || edge > 0.6) {
+          // Caractère orienté perpendiculairement au gradient de luminosité.
+          float ax = abs(gx), ay = abs(gy);
+          code = ax > ay * 2.0 ? 124.0 : ay > ax * 2.0 ? 45.0 : (gx * gy > 0.0 ? 92.0 : 47.0);
+          t = clamp(pow(lum, 0.8) * 1.3 + 0.3, 0.0, 1.0);
+        } else if (lum < 0.2) {
+          code = ramp[int(clamp(lum / 0.2 * 9.0, 0.0, 9.0))];
+          t = lum * 1.4;
+        } else {
+          // La phrase défile le long des rangées, décalée d'une rangée à l'autre.
+          int idx = int(mod(id.x + id.y * 5.0 + step8, float(PHRASE_LEN)));
+          code = phrase[idx];
+          t = clamp(pow(lum, 0.8) * 1.35, 0.0, 1.0);
+        }
+        // Parasites : quelques caractères tirés au hasard, plus lumineux, qui changent souvent.
+        float g = hash(id + floor(time * 12.0) * 0.37);
+        if (g > 0.993) { code = 33.0 + floor(hash(id * 1.7 + step8) * 93.0); t = min(1.0, t + 0.3); }
       }
 
-      vec4 src = texture2D(tColor, vUv);
-      vec3 c = pow(clamp(src.rgb, 0.0, 1.0), vec3(1.0 / 2.2));
-      vec3 col;
-      float fog = 0.0;
-      if (bg) {
-        col = backdrop() * (1.0 - sqrt(src.a)) + c;
-      } else {
-        col = c;
-        if (edgeD > 0.02 || edgeN > 0.3 || bgN > 0.0) col = mix(col, LINE, 0.85);
-        // Brume : les lointains se fondent dans l'air humide.
-        fog = smoothstep(fogNear, fogFar, z) * 0.75;
-        col = mix(col, FOG, fog);
-      }
-      if (bg && bgN < 4.0) col = mix(col, LINE, 0.6);
-      // Vignettage sombre et grain léger.
+      // Une onde lente fait respirer la palette sur la diagonale.
+      t = clamp(t + 0.07 * sin(time * 1.3 + id.x * 0.08 + id.y * 0.05), 0.0, 1.0);
+      vec3 ink = palette(t);
+      // Les parties chaudes (flamme, flux brûlés) virent à l'orange.
+      float warm = clamp((c.r - c.b) * 2.2, 0.0, 1.0);
+      ink = mix(ink, vec3(1.0, 0.58, 0.28) * (0.55 + t * 0.6), warm * 0.7);
+
+      float m = code > 32.0 ? glyph(code, local) : 0.0;
+      col = BG + ink * m + ink * 0.05 * t * step(32.5, code);
       vec2 q = vUv - 0.5;
-      col *= 1.0 - dot(q, q) * 0.9;
-      col += (hash(floor(gl_FragCoord.xy / pr)) - 0.5) * 0.025;
+      col *= 1.0 - dot(q, q) * 0.8;
       gl_FragColor = vec4(col, 1.0);
     }
   `,
@@ -744,7 +781,7 @@ const rivetGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.012, 6);
 // --- Cône d'entrée et aubes directrices ---
 {
   const g = new THREE.Group();
-  g.add(lathe([[0.001, 3.82], [0.1, 3.75], [0.2, 3.6], [0.25, 3.44], [0.25, 3.38]], MAT.ti()));
+  g.add(lathe([[0.001, 4.15], [0.06, 4.0], [0.15, 3.75], [0.23, 3.52], [0.25, 3.38]], MAT.ti()));
   addPart('spinner', g, { dy: 3.2, order: 5, label: { text: 'Cône', r: 0.25, y: 3.6 } });
 }
 {
@@ -844,13 +881,13 @@ addHalves(['core-top', 'core-bottom'], shellProfile(CORE.map(([y, r]) => [r, y])
   [{ split: 'casing', splitX: 1.25, order: 0, label: { text: 'Carter du cœur', r: 0.56, y: 1.6 } }, { split: 'casing', splitX: -1.25, order: 0 }]);
 
 // --- Carter externe (demi-coques) ---
-const OUTER = [[OUTER_R, 3.66], [OUTER_R + 0.02, 3.2], [OUTER_R + 0.03, 0.4], [OUTER_R + 0.02, -0.6]];
+const OUTER = [[OUTER_R, 3.66], [OUTER_R + 0.01, 2.6], [OUTER_R + 0.07, 1.6], [OUTER_R + 0.08, 0.6], [OUTER_R + 0.04, -0.3], [OUTER_R + 0.01, -0.6]];
 addHalves(['outer-top', 'outer-bottom'], shellProfile(OUTER, 0.035), MAT.paint(),
   [{ split: 'nacelle', splitX: 2.0, dy: 0.3, order: 0, label: { text: 'Carter externe', r: 0.76, y: 1.0 } }, { split: 'nacelle', splitX: -2.0, dy: 0.3, order: 0 }]);
 
 // --- Canal de post-combustion (demi-coques) ---
-const AB = [[0.73, -0.6], [0.74, -2.0], [0.74, -4.2]];
-addHalves(['ab-top', 'ab-bottom'], shellProfile(AB, 0.03), MAT.paint(),
+const AB = [[0.72, -0.6], [0.68, -1.1], [0.68, -4.2]];
+addHalves(['ab-top', 'ab-bottom'], shellProfile(AB, 0.03), MAT.silver(),
   [{ split: 'nacelle', splitX: 1.7, dy: -1.5, order: 1, label: { text: 'Canal de post-combustion', r: 0.77, y: -2.6 } }, { split: 'nacelle', splitX: -1.7, dy: -1.5, order: 1 }]);
 
 // --- Post-combustion : mélangeur, cône, rampes, accroche-flammes ---
@@ -943,14 +980,41 @@ for (const part of parts) for (const m of part.mats) if (!matOwner.has(m)) matOw
     const y = -0.9 - row * 0.36;
     crown(AB_IDS, new THREE.CylinderGeometry(0.012, 0.012, 0.01, 6), hole, 56, (i) => ({ a: (i / 56) * TAU + row * 0.05, r: 0.728, y }));
   }
-  // Boîtier d'accessoires sous le moteur : pompes, alternateur, démarreur.
-  const agb = new THREE.Group();
-  agb.add(mesh(new THREE.BoxGeometry(0.2, 1.0, 0.46), dark, -0.92, 1.75, 0));
-  for (const [y, r, len, mat] of [[2.1, 0.11, 0.3, steel], [1.75, 0.13, 0.36, pipe], [1.4, 0.09, 0.26, steel]]) {
-    agb.add(mesh(new THREE.CylinderGeometry(r, r, len, 20).rotateZ(Math.PI / 2), mat, -1.1, y, 0.12));
+  // Anneau de cadre avant, épais et brillant, comme sur le moteur réel.
+  addRevolvedDetail(OUTER_IDS, [[0.7, 3.86], [0.84, 3.86], [0.88, 3.78], [0.88, 3.62], [0.84, 3.56], [0.72, 3.56], [0.7, 3.86]], steel);
+  // Carter du compresseur BP cerclé de brides serrées.
+  for (let k = 0; k < 6; k++) {
+    const y = 3.42 - k * 0.15;
+    addRevolvedDetail(OUTER_IDS, ringProfile(0.74, 0.8, y, 0.045), steel);
+    crown(OUTER_IDS, boltGeo, steel, 40, (i) => ({ a: (i / 40) * TAU + k * 0.04, r: 0.78, y: y + 0.03, rot: 'axial' }));
   }
+  // Boîtier d'accessoires sous l'avant : démarreur, pompes, alternateur, régulateur.
+  const agb = new THREE.Group();
+  agb.add(mesh(new THREE.BoxGeometry(0.26, 1.5, 0.62), dark, -0.98, 2.2, 0));
+  for (const [y, r, len, mat, z] of [[3.0, 0.15, 0.36, steel, 0.0], [2.6, 0.13, 0.4, pipe, 0.2], [2.2, 0.16, 0.42, steel, -0.18],
+                                     [1.8, 0.11, 0.3, steel, 0.16], [1.5, 0.12, 0.34, pipe, -0.12]]) {
+    agb.add(mesh(new THREE.CylinderGeometry(r, r, len, 20).rotateZ(Math.PI / 2), mat, -1.2, y, z));
+  }
+  // Calculateur FADEC sur le flanc : boîtier à ailettes de refroidissement.
+  const fadec = new THREE.Group();
+  fadec.add(mesh(new THREE.BoxGeometry(0.5, 0.75, 0.16), dark, -0.25, 1.35, 0.92));
+  for (let k = 0; k < 7; k++) fadec.add(mesh(new THREE.BoxGeometry(0.46, 0.03, 0.06), steel, -0.25, 1.05 + k * 0.1, 1.02));
+  addDetail('outer-bottom', fadec);
   agb.add(rod(V3(-0.8, 1.4, 0), V3(-0.76, 2.55, 0), 0.03, dark));       // arbre de renvoi
   addDetail('outer-bottom', agb);
+  // Faisceaux de tuyaux en arcs serrés : à l'avant, puis autour des turbines.
+  for (const [y0, n, r0] of [[2.45, 9, 0.84], [-0.35, 8, 0.86]]) {
+    for (let k = 0; k < n; k++) {
+      const a0 = -1.4 + k * 0.32, a1 = a0 + 1.1 + 0.4 * Math.sin(k);
+      const pts = [];
+      for (let j = 0; j <= 10; j++) {
+        const a = lerp(a0, a1, j / 10);
+        pts.push(V3(Math.cos(a) * (r0 + 0.012 * k), y0 - k * 0.07 + 0.05 * Math.sin(j * 0.9 + k), Math.sin(a) * (r0 + 0.012 * k)));
+      }
+      const id = Math.cos((a0 + a1) / 2) >= 0 ? 'outer-top' : 'outer-bottom';
+      addDetail(id, new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 60, 0.016 + 0.006 * (k % 3), 8), k % 3 === 1 ? pipe : steel));
+    }
+  }
   // Tuyauteries de carburant et d'huile qui courent sur le carter.
   for (const [a0, col] of [[0.7, pipe], [1.2, steel], [-0.6, pipe]]) {
     const pts = [];
@@ -1210,8 +1274,8 @@ const CHAPTERS = [
 // Images-clés caméra : y = point visé sur l'axe, L = longueur à cadrer le long de l'axe,
 // W = encombrement transversal, fa = décalage vers l'avant (+) ou l'arrière (−), el = élévation.
 const KEYS = [
-  { p: 0.0,   y: -0.6, L: 12,  W: 4.5, fa: 0.85, el: 0.34 },
-  { p: 0.05,  y: -0.6, L: 12,  W: 4.5, fa: 0.85, el: 0.34 },
+  { p: 0.0,   y: -0.4, L: 10,  W: 4.5, fa: 0.8, el: 0.3 },
+  { p: 0.05,  y: -0.4, L: 10,  W: 4.5, fa: 0.8, el: 0.3 },
   { p: 0.17,  y: 0.4,  L: 8,   W: 5.5, fa: 0.45, el: 0.5 },
   { p: 0.33,  y: 0.4,  L: 7,   W: 4.5, fa: 0.2,  el: 0.42 },
   { p: 0.5,   y: -1.0, L: 18,  W: 6,   fa: 0.06, el: 0.32 },
