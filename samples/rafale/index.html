@@ -459,7 +459,7 @@ colorRT.depthTexture = new THREE.DepthTexture(1, 1);
 const normalRT = new THREE.WebGLRenderTarget(1, 1);
 // Double face : les coques vues par leur envers doivent masquer ce qui est derrière elles.
 const normalMat = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
-const CELL = { w: innerWidth < 720 ? 6 : 7, h: innerWidth < 720 ? 10 : 12 };
+const CELL = { w: innerWidth < 720 ? 4 : 5, h: innerWidth < 720 ? 7 : 8 };
 const ink = new THREE.ShaderMaterial({
   depthTest: false,
   depthWrite: false,
@@ -477,6 +477,9 @@ const ink = new THREE.ShaderMaterial({
     time: { value: 0 },
     fogNear: { value: 20 },
     fogFar: { value: 60 },
+    // Phase du texte et intensité du mouvement : ils n'avancent que si le modèle bouge à l'écran.
+    phase: { value: 0 },
+    motion: { value: 0 },
     cell: { value: new THREE.Vector2(CELL.w, CELL.h) },
     phrase: { value: codes(PHRASE) },
     ramp: { value: codes(RAMP) },
@@ -490,7 +493,7 @@ const ink = new THREE.ShaderMaterial({
     #define PHRASE_LEN ${PHRASE.length}
     uniform sampler2D tColor, tDepth, tNormal, tAtlas;
     uniform vec2 resolution, cell;
-    uniform float near, far, pr, aspect, scroll, time, fogNear, fogFar;
+    uniform float near, far, pr, aspect, scroll, time, fogNear, fogFar, phase, motion;
     uniform float phrase[PHRASE_LEN];
     uniform float ramp[10];
     varying vec2 vUv;
@@ -545,14 +548,14 @@ const ink = new THREE.ShaderMaterial({
       vec3 col = BG;
       float code = 32.0;
       float t = 0.0;
-      float step8 = floor(time * 8.0);
+      float step8 = floor(phase);
 
       bool empty = bgCount > 4.5 && alpha < 0.05;
       bool silhouette = bgCount > 0.5 && bgCount < 4.5;
 
       if (empty) {
         // Fond : une poussière de caractères qui dérive lentement.
-        vec2 drift = id + vec2(floor(time * 1.5), 0.0);
+        vec2 drift = id + vec2(floor(phase * 0.2), 0.0);
         float h = hash(drift);
         if (h > 0.988) { code = h > 0.996 ? 43.0 : 46.0; t = 0.18 + 0.15 * hash(drift + 3.1); }
       } else {
@@ -581,9 +584,9 @@ const ink = new THREE.ShaderMaterial({
           code = phrase[idx];
           t = clamp(pow(lum, 0.8) * 1.35, 0.0, 1.0);
         }
-        // Parasites : quelques caractères tirés au hasard, plus lumineux, qui changent souvent.
-        float g = hash(id + floor(time * 12.0) * 0.37);
-        if (g > 0.993) { code = 33.0 + floor(hash(id * 1.7 + step8) * 93.0); t = min(1.0, t + 0.3); }
+        // Parasites : quelques caractères tirés au hasard, seulement pendant le mouvement.
+        float g = hash(id + floor(phase * 1.5) * 0.37);
+        if (g > 1.0 - 0.008 * motion) { code = 33.0 + floor(hash(id * 1.7 + step8) * 93.0); t = min(1.0, t + 0.3); }
       }
 
       // Une onde lente fait respirer la palette sur la diagonale.
@@ -1370,6 +1373,8 @@ const camTarget = new THREE.Vector3();
 const wantPos = new THREE.Vector3();
 const wantTarget = new THREE.Vector3();
 let first = true;
+const prevCam = new THREE.Vector3();
+let lastP = 0;
 let angleN1 = 0, angleN2 = 0;
 
 function resize() {
@@ -1500,9 +1505,15 @@ function update(p, dt, time) {
   ink.uniforms.fogFar.value = dist * 3.2;
 
   const kc = reduceMotion || first ? 1 : 1 - Math.exp(-dt * 5);
+  prevCam.copy(camPos);
   camPos.lerp(wantPos, kc);
   camTarget.lerp(wantTarget, kc);
   first = false;
+  // Le texte ASCII n'avance que si la scène bouge : déplacement de caméra et progression du démontage.
+  const moved = prevCam.distanceTo(camPos) * 6 + Math.abs(p - lastP) * 400;
+  lastP = p;
+  ink.uniforms.phase.value += moved;
+  ink.uniforms.motion.value = lerp(ink.uniforms.motion.value, clamp(moved * 2), 1 - Math.exp(-dt * 8));
   // Décentrage optique : en paysage, le sujet glisse vers la droite pour libérer la colonne de texte,
   // davantage sur le hero où le titre est large.
   if (!portrait && innerWidth > 720) {
