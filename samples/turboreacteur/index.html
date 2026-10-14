@@ -432,7 +432,8 @@ const MAT = {
 // Dessin : passe couleur (+ profondeur), passe normales, puis un shader qui trace
 // les contours à l'encre et dessine le décor au trait sur un ciel uni.
 // ------------------------------------------------------------------
-const colorRT = new THREE.WebGLRenderTarget(1, 1);
+// MSAA : les courbes fines restent lisses.
+const colorRT = new THREE.WebGLRenderTarget(1, 1, { samples: 4 });
 colorRT.depthTexture = new THREE.DepthTexture(1, 1);
 const normalRT = new THREE.WebGLRenderTarget(1, 1);
 const normalMat = new THREE.MeshNormalMaterial();
@@ -736,7 +737,7 @@ const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1, 32), MAT.da
 const shaftPart = addPart('shaft', shaft, { order: 0 });
 
 // ------------------------------------------------------------------
-// Flux d'air : de fines lignes de courant qui suivent le trajet réel de l'air.
+// Flux d'air : des particules qui suivent le trajet réel de l'air en laissant une traînée qui s'efface.
 // Secondaire (froid) entre nacelle et carter ; primaire comprimé, chauffé puis détendu.
 // ------------------------------------------------------------------
 // Interpolation linéaire dans une table [[y, valeur], …] triée par y décroissant.
@@ -763,7 +764,7 @@ const capture = (y) => smooth(4.7, 7.4, y);
 const FLOWS = [
   {
     // Flux primaire : traverse le cœur du moteur.
-    lines: 6, start: 7.4, end: -9,
+    particles: 22, start: 7.4, end: -9,
     speed: [[10, 3.2], [3.4, 3.0], [0.4, 1.8], [-0.9, 2.6], [-2.7, 4.0], [-4.3, 6.5], [-11, 7.5]],
     color: [[10, C(0x5f9ea8)], [0.3, C(0x6aa3a0)], [-0.1, C(0xf2b13a)], [-0.8, C(0xf09a3a)], [-2.6, C(0xe0662e)],
             [-4.4, C(0xc4452a)], [-11, C(0xd08a6a)]],
@@ -781,7 +782,7 @@ const FLOWS = [
   {
     // Flux secondaire : contourne le cœur, entre carter et nacelle.
     bypass: true,
-    lines: 8, start: 7.4, end: -8.5,
+    particles: 28, start: 7.4, end: -8.5,
     speed: [[10, 3.4], [3.7, 3.2], [0.1, 4.2], [-10, 4.6]],
     color: [[10, C(0x6fa8c4)], [0.1, C(0x6fa8c4)], [-10, C(0x9cc3d3)]],
     radius(y, u) {
@@ -801,7 +802,7 @@ const FLOWS = [
   {
     // Air extérieur : glisse autour du capot de la nacelle.
     bypass: true,
-    lines: 7, start: 7.2, end: -7.5,
+    particles: 16, start: 7.2, end: -7.5,
     speed: [[10, 3.6], [-9, 3.6]],
     color: [[10, C(0x8fb5bf)], [-9, C(0x8fb5bf)]],
     radius(y, u) {
@@ -816,10 +817,36 @@ const FLOWS = [
 
 const flowGroup = new THREE.Group();
 engine.add(flowGroup);
-const SAMPLES = 240;
-for (const [li, f] of FLOWS.entries()) {
-  // Échantillons le long de l'axe : couleur, temps de parcours et rotation cumulés.
-  // Le temps de parcours fait circuler les pulsations à la vitesse locale de l'air.
+const SAMPLES = 240;   // échantillons du trajet, pour le temps de parcours et la couleur
+const TRAIL = 36;      // points par traînée
+
+// LineMaterial n'a pas d'opacité par sommet : on lui ajoute un attribut qui efface la traînée vers sa queue.
+function trailMaterial() {
+  const m = new LineMaterial({ linewidth: 2.6 * PR, vertexColors: true, transparent: true, depthWrite: false });
+  m.onBeforeCompile = (shader) => {
+    shader.vertexShader = 'attribute float instanceAlphaStart;\nattribute float instanceAlphaEnd;\nvarying float vTrail;\n' +
+      shader.vertexShader.replace(
+        'vColor.xyz = ( position.y < 0.5 ) ? instanceColorStart : instanceColorEnd;',
+        'vColor.xyz = ( position.y < 0.5 ) ? instanceColorStart : instanceColorEnd;\n\t\t\t\tvTrail = ( position.y < 0.5 ) ? instanceAlphaStart : instanceAlphaEnd;');
+    shader.fragmentShader = 'varying float vTrail;\n' +
+      shader.fragmentShader.replace('float alpha = opacity;', 'float alpha = opacity * vTrail;');
+  };
+  m.customProgramCacheKey = () => 'trail';
+  return m;
+}
+
+function spawn(p, initial) {
+  p.u = Math.random();
+  p.a = Math.random() * Math.PI * 2;
+  p.wob = Math.random() * Math.PI * 2;
+  p.rate = 0.8 + Math.random() * 0.4;
+  p.len = 0.7 + Math.random() * 0.8;
+  p.t = 0;
+  p.wait = initial ? 0 : Math.random() * 1.4;
+}
+
+for (const f of FLOWS) {
+  // Le long du trajet : temps de parcours et rotation cumulés, couleur locale.
   f.ys = new Float32Array(SAMPLES);
   f.tof = new Float32Array(SAMPLES);
   f.twist = new Float32Array(SAMPLES);
@@ -835,18 +862,23 @@ for (const [li, f] of FLOWS.entries()) {
     f.ys[k] = y; f.tof[k] = tof; f.twist[k] = twist;
     f.base.push(table(f.color, y));
   }
-  // Lignes réparties en spirale (angle d'or) et en rayon, chacune avec sa phase.
-  f.seeds = [];
-  for (let j = 0; j < f.lines; j++) {
-    f.seeds.push({ a: j * 2.39996 + li * 0.8, u: (j + 0.5) / f.lines, phase: Math.random(), wob: Math.random() * Math.PI * 2 });
+  f.total = tof;
+  // Départ dispersé : à l'ouverture, les particules sont déjà en route.
+  f.p = [];
+  for (let i = 0; i < f.particles; i++) {
+    const p = {};
+    spawn(p, true);
+    p.t = Math.random() * (f.total + p.len);
+    f.p.push(p);
   }
-  const segs = f.lines * (SAMPLES - 1);
-  f.pos = new Float32Array(segs * 6);
-  f.col = new Float32Array(segs * 6);
+  const segs = f.particles * (TRAIL - 1);
   const geo = new LineSegmentsGeometry();
-  geo.setPositions(f.pos);
-  geo.setColors(f.col);
-  f.mat = new LineMaterial({ linewidth: 2.4 * PR, vertexColors: true, transparent: true, depthWrite: false });
+  geo.setPositions(new Float32Array(segs * 6));
+  geo.setColors(new Float32Array(segs * 6));
+  f.alpha = new THREE.InstancedInterleavedBuffer(new Float32Array(segs * 2), 2, 1);
+  geo.setAttribute('instanceAlphaStart', new THREE.InterleavedBufferAttribute(f.alpha, 1, 0));
+  geo.setAttribute('instanceAlphaEnd', new THREE.InterleavedBufferAttribute(f.alpha, 1, 1));
+  f.mat = trailMaterial();
   f.mesh = new LineSegments2(geo, f.mat);
   f.mesh.frustumCulled = false;
   f.offsets = new Float32Array(SAMPLES);
@@ -868,43 +900,62 @@ function explodeOffset(y) {
 
 // Réglé depuis update() : le flux secondaire s'efface pendant les gros plans.
 let bypassVis = 1;
-const pulseCol = new THREE.Color();
-function updateFlow(time) {
+const trailCol = new THREE.Color();
+// Position d'une particule après un temps de parcours tau : y, rotation et index d'échantillon.
+function along(f, tau, out) {
+  let lo = 0, hi = SAMPLES - 1;
+  while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (f.tof[mid] <= tau) lo = mid; else hi = mid; }
+  const t = clamp((tau - f.tof[lo]) / Math.max(1e-6, f.tof[hi] - f.tof[lo]));
+  out.y = lerp(f.ys[lo], f.ys[hi], t);
+  out.twist = lerp(f.twist[lo], f.twist[hi], t);
+  out.off = lerp(f.offsets[lo], f.offsets[hi], t);
+  out.k = t < 0.5 ? lo : hi;
+  return out;
+}
+const at = {};
+function updateFlow(dt) {
   for (const f of FLOWS) {
     f.mat.opacity = f.bypass ? bypassVis : 1;
     f.mesh.visible = f.mat.opacity > 0.01;
     if (!f.mesh.visible) continue;
     for (let k = 0; k < SAMPLES; k++) f.offsets[k] = explodeOffset(f.ys[k]);
-    const pos = f.mesh.geometry.attributes.instanceStart.data;
-    const col = f.mesh.geometry.attributes.instanceColorStart.data;
-    let o = 0;
-    for (const seed of f.seeds) {
-      let px = 0, py = 0, pz = 0, cr = 0, cg = 0, cb = 0;
-      for (let k = 0; k < SAMPLES; k++) {
-        const y = f.ys[k];
-        // Ondulation libre hors du moteur : légère à l'aspiration, plus marquée dans le jet.
-        const amp = 0.22 * smooth(4.8, 7.4, y) + 0.4 * smooth(-3, -9, y);
-        const wave = Math.sin(y * 0.85 + seed.wob);
-        const r = f.radius(y, seed.u) + amp * wave;
-        const a = seed.a + f.twist[k] + amp * 0.18 * Math.cos(y * 0.6 + seed.wob);
-        const x = Math.cos(a) * r, yy = y + f.offsets[k], z = Math.sin(a) * r;
-        // Pulsations qui descendent la ligne : plus serrées là où l'air ralentit.
-        const beat = 0.5 + 0.5 * Math.cos((f.tof[k] * 0.8 - time * 0.9 + seed.phase) * Math.PI * 2);
-        const pulse = beat ** 6;
-        const b = f.base[k];
-        pulseCol.setRGB(b.r * (1 - 0.45 * pulse), b.g * (1 - 0.45 * pulse), b.b * (1 - 0.45 * pulse));
-        if (k > 0) {
-          pos.array[o] = px; pos.array[o + 1] = py; pos.array[o + 2] = pz;
-          pos.array[o + 3] = x; pos.array[o + 4] = yy; pos.array[o + 5] = z;
-          col.array[o] = cr; col.array[o + 1] = cg; col.array[o + 2] = cb;
-          col.array[o + 3] = pulseCol.r; col.array[o + 4] = pulseCol.g; col.array[o + 5] = pulseCol.b;
-          o += 6;
+    const pos = f.mesh.geometry.attributes.instanceStart.data.array;
+    const col = f.mesh.geometry.attributes.instanceColorStart.data.array;
+    const alp = f.alpha.array;
+    let o = 0, oa = 0;
+    for (const p of f.p) {
+      if (p.wait > 0) p.wait -= dt;
+      else p.t += dt * p.rate;
+      if (p.t - p.len > f.total) spawn(p, false);
+      let px = 0, py = 0, pz = 0, pa = 0;
+      for (let j = 0; j < TRAIL; j++) {
+        const s = j / (TRAIL - 1);             // 0 = queue, 1 = tête
+        const tau = p.t - p.len * (1 - s);
+        const visible = p.wait <= 0 && tau >= 0 && tau <= f.total;
+        along(f, clamp(tau, 0, f.total), at);
+        // Légère dérive aléatoire hors du moteur, plus ample dans le jet.
+        const amp = 0.16 * smooth(4.8, 7.4, at.y) + 0.3 * smooth(-3, -9, at.y);
+        const r = f.radius(at.y, p.u) + amp * Math.sin(at.y * 0.8 + p.wob);
+        const a = p.a + at.twist + amp * 0.2 * Math.cos(at.y * 0.55 + p.wob);
+        const x = Math.cos(a) * r, y = at.y + at.off, z = Math.sin(a) * r;
+        // La traînée s'efface vers la queue ; la particule apparaît et s'éteint en douceur.
+        const life = smooth(0, 0.35, tau) * smooth(f.total, f.total - 0.5, tau);
+        const alpha = visible ? (s ** 1.6) * life : 0;
+        const c = f.base[at.k];
+        if (j > 0) {
+          pos[o] = px; pos[o + 1] = py; pos[o + 2] = pz;
+          pos[o + 3] = x; pos[o + 4] = y; pos[o + 5] = z;
+          col[o] = trailCol.r; col[o + 1] = trailCol.g; col[o + 2] = trailCol.b;
+          col[o + 3] = c.r; col[o + 4] = c.g; col[o + 5] = c.b;
+          alp[oa] = pa; alp[oa + 1] = alpha;
+          o += 6; oa += 2;
         }
-        px = x; py = yy; pz = z; cr = pulseCol.r; cg = pulseCol.g; cb = pulseCol.b;
+        px = x; py = y; pz = z; pa = alpha; trailCol.copy(c);
       }
     }
-    pos.needsUpdate = true;
-    col.needsUpdate = true;
+    f.mesh.geometry.attributes.instanceStart.data.needsUpdate = true;
+    f.mesh.geometry.attributes.instanceColorStart.data.needsUpdate = true;
+    f.alpha.needsUpdate = true;
   }
 }
 
@@ -1101,8 +1152,8 @@ function update(p, dt, time) {
   shaft.scale.y = lerp(7.2, 19.5, ts);
   shaft.position.y = lerp(0.4, -0.9, ts);
 
-  // En mouvement réduit, les lignes restent visibles mais les pulsations sont figées.
-  updateFlow(reduceMotion ? 0 : time);
+  // En mouvement réduit, les traînées restent visibles mais immobiles.
+  updateFlow(reduceMotion ? 0 : dt);
 
   // Rotation : les deux arbres tournent à des régimes différents et ralentissent au démontage.
   if (!reduceMotion) {
