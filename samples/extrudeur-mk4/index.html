@@ -459,7 +459,8 @@ const MAT = {
 const colorRT = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType });
 colorRT.depthTexture = new THREE.DepthTexture(1, 1);
 const normalRT = new THREE.WebGLRenderTarget(1, 1);
-const normalMat = new THREE.MeshNormalMaterial();
+// Double face : les coques vues par leur envers doivent masquer ce qui est derrière elles.
+const normalMat = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
 const post = new THREE.ShaderMaterial({
   depthTest: false,
   depthWrite: false,
