@@ -10,7 +10,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --haze: #f3e9df;
+    --haze: #dce9f2;
     --paper: #fbf8f3;
     --ink: #2b2838;
     --body: #4c4760;
@@ -398,19 +398,19 @@ const camera = new THREE.PerspectiveCamera(32, 1, 0.5, 800);
 // selon son orientation dans le monde, comme les six gravités de Manifold Garden.
 const flat = (color, o = {}) => () => new THREE.MeshBasicMaterial({ color, ...o });
 const MAT = {
-  tubes:   flat(0xdcd7cf),
-  inner:   flat(0xb9b2aa, { side: THREE.DoubleSide }),
-  ext:     flat(0x6a6472, { side: THREE.DoubleSide }),
-  white:   flat(0xf6f3ee),
-  pale:    flat(0xe4dfd7),
-  steel:   flat(0x9a95a3),
-  dark:    flat(0x5c5866),
-  copper:  flat(0xd88a5c),
-  lox:     flat(0xc9def0),
-  fuel:    flat(0xf0d9b8),
-  gas:     flat(0xd9d0e2),
-  accent:  flat(0xe07a52),
-  hole:    flat(0x3a3644),
+  tubes:   flat(0xf4f2ee),
+  inner:   flat(0xdedbe4, { side: THREE.DoubleSide }),
+  ext:     flat(0xe6e3ec, { side: THREE.DoubleSide }),
+  white:   flat(0xffffff),
+  pale:    flat(0xf2f0f4),
+  steel:   flat(0xc9c5d3),
+  dark:    flat(0x8d88a0),
+  copper:  flat(0xf08a4e),
+  lox:     flat(0x7fb8f0),
+  fuel:    flat(0xffc266),
+  gas:     flat(0xe8e2f2),
+  accent:  flat(0xff6a4a),
+  hole:    flat(0x4a4260),
 };
 
 // ------------------------------------------------------------------
@@ -452,16 +452,17 @@ const ink = new THREE.ShaderMaterial({
     varying vec2 vUv;
 
     // Une teinte par orientation : haut, bas, ±X, ±Z.
-    const vec3 C_UP = vec3(0.984, 0.965, 0.933);
-    const vec3 C_DOWN = vec3(0.64, 0.58, 0.76);
-    const vec3 C_PX = vec3(0.95, 0.66, 0.52);
-    const vec3 C_NX = vec3(0.50, 0.76, 0.75);
-    const vec3 C_PZ = vec3(0.94, 0.905, 0.85);
-    const vec3 C_NZ = vec3(0.56, 0.66, 0.85);
-    const vec3 FOG_TOP = vec3(0.965, 0.92, 0.875);
-    const vec3 FOG_LOW = vec3(0.89, 0.865, 0.93);
-    const vec3 SUN = vec3(1.0, 0.975, 0.93);
-    const vec3 LINE = vec3(0.2, 0.18, 0.27);
+    // Palette franche, une couleur par gravité : le haut reste blanc, chaque mur prend la teinte de son axe.
+    const vec3 C_UP = vec3(1.0, 0.99, 0.97);
+    const vec3 C_DOWN = vec3(0.36, 0.27, 0.62);
+    const vec3 C_PX = vec3(1.0, 0.56, 0.3);
+    const vec3 C_NX = vec3(0.16, 0.68, 0.68);
+    const vec3 C_PZ = vec3(0.97, 0.965, 0.98);
+    const vec3 C_NZ = vec3(0.3, 0.48, 0.9);
+    const vec3 FOG_TOP = vec3(0.6, 0.8, 0.93);
+    const vec3 FOG_LOW = vec3(0.92, 0.9, 0.95);
+    const vec3 SUN = vec3(1.0, 0.97, 0.88);
+    const vec3 LINE = vec3(0.13, 0.1, 0.2);
 
     float rawDepth(vec2 uv) { return texture2D(tDepth, uv).x; }
     float viewZ(vec2 uv) { return -perspectiveDepthToViewZ(rawDepth(uv), near, far); }
@@ -469,14 +470,16 @@ const ink = new THREE.ShaderMaterial({
     float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 
     vec3 orient(vec3 n) {
-      vec3 w = n * n;
+      // Poids aiguisés : sur une surface courbe, les teintes se relaient vite au lieu de se fondre.
+      vec3 w = pow(n * n, vec3(3.0));
+      w /= w.x + w.y + w.z;
       return (n.x > 0.0 ? C_PX : C_NX) * w.x + (n.y > 0.0 ? C_UP : C_DOWN) * w.y + (n.z > 0.0 ? C_PZ : C_NZ) * w.z;
     }
 
     vec3 haze() {
       vec3 c = mix(FOG_LOW, FOG_TOP, smoothstep(0.0, 1.0, vUv.y));
       vec2 q = vec2((vUv.x - 0.8) * aspect, vUv.y - 0.86);
-      c = mix(c, SUN, exp(-length(q) * 3.2) * 0.75);
+      c = mix(c, SUN, exp(-length(q) * 2.6) * 0.9);
       return c;
     }
 
@@ -511,9 +514,9 @@ const ink = new THREE.ShaderMaterial({
         vec3 nv = nrm(vUv);
         vec3 nw = normalize(camRot * nv);
         vec3 alb = pow(clamp(src.rgb, 0.0, 1.0), vec3(1.0 / 2.2));
-        float key = 0.9 + 0.1 * dot(nw, normalize(vec3(0.35, 0.8, 0.5)));
+        float key = 0.82 + 0.18 * max(dot(nw, normalize(vec3(0.35, 0.8, 0.5))), 0.0);
         col = alb * orient(nw) * key;
-        col *= 1.0 - 0.6 * occlusion(z);
+        col *= 1.0 - 0.75 * occlusion(z);
 
         // Trait fin : ruptures de profondeur, et plis marqués tant que l'objet est proche.
         float edgeD = 0.0, edgeN = 0.0;
@@ -524,8 +527,8 @@ const ink = new THREE.ShaderMaterial({
           edgeD = max(edgeD, abs(viewZ(q) - z) / max(z, 0.001));
           edgeN = max(edgeN, 1.0 - dot(nv, nrm(q)));
         }
-        float line = max(smoothstep(0.015, 0.04, edgeD), smoothstep(0.35, 0.6, edgeN) * (1.0 - smoothstep(18.0, 40.0, z)));
-        col = mix(col, LINE, line * 0.5);
+        float line = max(smoothstep(0.012, 0.03, edgeD), smoothstep(0.3, 0.5, edgeN) * (1.0 - smoothstep(12.0, 26.0, z)));
+        col = mix(col, LINE, line * 0.85);
 
         // Brume : l'architecture se dissout dans l'air clair.
         float fog = 1.0 - exp(-max(z - fogStart, 0.0) / fogScale);
@@ -660,7 +663,7 @@ const GG = pumpAt(2.55, -0.95, 0.95);
 {
   const g = new THREE.Group();
   g.add(tubeShell(Y_INJ + 0.05, Y_SPLIT + 0.02, 70, 178, 0.03, MAT.tubes()));
-  addPart('chamber', g, { order: 0, label: { text: 'Chambre à 178 tubes', at: [-(outR(1.3) + 0.03), 1.3, 0] } });
+  addPart('chamber', g, { order: 0, label: { text: 'Chambre à 178 tubes', at: [outR(1.0) + 0.03, 1.0, 0] } });
 }
 
 // --- Injecteur : plaque percée, cloisons de cuivre ---
@@ -703,7 +706,7 @@ const MAN_R = 3.2, MAN_r = 0.32, MAN_Y = -0.95;
   m.rotation.x = Math.PI / 2;
   m.position.y = MAN_Y;
   g.add(m);
-  addPart('manifold', g, { dy: -1.8, order: 1, label: { text: "Collecteur d'échappement", at: [-(MAN_R + MAN_r), MAN_Y, 0] } });
+  addPart('manifold', g, { dy: -1.8, order: 1, label: { text: "Collecteur d'échappement", at: [MAN_R + MAN_r, MAN_Y, 0] } });
 }
 
 // --- Extension de tuyère : refroidie par film de gaz de turbine ---
@@ -713,7 +716,7 @@ const MAN_R = 3.2, MAN_r = 0.32, MAN_Y = -0.95;
   for (let i = 0; i <= 40; i++) { const y = lerp(Y_SPLIT, Y_EXIT, i / 40); outer.push([gasR(y) + 0.06, y]); }
   for (let i = 40; i >= 0; i--) { const y = lerp(Y_SPLIT, Y_EXIT, i / 40); inner.push([gasR(y), y]); }
   g.add(lathe([...outer, ...inner, outer[0]], MAT.ext(), 160));
-  addPart('extension', g, { dy: -3.8, order: 2, label: { text: 'Extension de tuyère', at: [-(gasR(-3.6) + 0.08), -3.6, 0] } });
+  addPart('extension', g, { dy: -3.8, order: 2, label: { text: 'Extension de tuyère', at: [gasR(-3.6) + 0.08, -3.6, 0] } });
 }
 
 // --- Turbopompe Mark 10 : pompe à oxygène en haut, kérosène au milieu, turbine en bas ---
@@ -1048,7 +1051,7 @@ const box = (cat, x, y, z, sx, sy, sz) => BOXES[cat].push([x, y, z, sx, sy, sz])
   // Cubes en suspension.
   for (const [x, y, z, s] of [[-11, 9, -14, 2.2], [13, -9, -9, 1.6], [-15, -15, 9, 1.3], [10, 16, -6, 1.1], [-8, 20, 8, 1.8], [24, 4, -30, 3]]) box('stone', x, y, z, s, s, s);
 }
-const ALBEDO = { stone: 0xffffff, warm: 0xf2e6d8, leaf: 0xf06a5a, leaf2: 0x8fcf7a, trunk: 0xd8cec0, pool: 0x9ad3e8 };
+const ALBEDO = { stone: 0xffffff, warm: 0xfff6ea, leaf: 0xff5a4a, leaf2: 0x6fdc8a, trunk: 0xf2ece4, pool: 0x7fd6f0 };
 // Eau : stries qui défilent vers le bas.
 const waterTex = (() => {
   const c = document.createElement('canvas');
@@ -1075,7 +1078,7 @@ scene.add(world);
   const d = new THREE.Object3D();
   for (const [cat, list] of Object.entries(BOXES)) {
     if (!list.length) continue;
-    const mat = cat === 'water' ? new THREE.MeshBasicMaterial({ map: waterTex }) : new THREE.MeshBasicMaterial({ color: cat === 'hole' ? 0x8a8496 : ALBEDO[cat] });
+    const mat = cat === 'water' ? new THREE.MeshBasicMaterial({ map: waterTex }) : new THREE.MeshBasicMaterial({ color: cat === 'hole' ? 0x6a6290 : ALBEDO[cat] });
     const inst = new THREE.InstancedMesh(unit, mat, list.length * cells.length);
     let n = 0;
     for (const [cx, cy, cz] of cells) {
@@ -1097,9 +1100,9 @@ scene.add(world);
   prof.push([0.001, Y_EXIT]);
   const copies = cells.filter(([x, y, z]) => x || y || z);
   const parts3 = [
-    [new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 64), 0xe4dfd7, [0, 0, 0]],
+    [new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 64), 0xffffff, [0, 0, 0]],
     [new THREE.CylinderGeometry(0.9, 0.9, 3.7, 32), 0xf6f3ee, [PUMP.x, 3.15, PUMP.z]],
-    [new THREE.TorusGeometry(MAN_R, MAN_r, 16, 96).rotateX(Math.PI / 2), 0xd9d0e2, [0, MAN_Y, 0]],
+    [new THREE.TorusGeometry(MAN_R, MAN_r, 16, 96).rotateX(Math.PI / 2), 0xffffff, [0, MAN_Y, 0]],
   ];
   const d = new THREE.Object3D();
   for (const [geo, color, off] of parts3) {
@@ -1321,22 +1324,22 @@ const CHAPTERS = [
 
 // Images-clés caméra : point visé (x, y), hauteur L et largeur W à cadrer, azimut et élévation.
 const KEYS = [
-  { p: 0.0,   x: 0.8,  y: -3.6, L: 22,  W: 9,   az: 0.32,  el: 0.1 },
-  { p: 0.05,  x: 0.8,  y: -3.6, L: 22,  W: 9,   az: 0.32,  el: 0.1 },
+  { p: 0.0,   x: 0.8,  y: -2.8, L: 22,  W: 9,   az: 0.32,  el: 0.1 },
+  { p: 0.05,  x: 0.8,  y: -2.8, L: 22,  W: 9,   az: 0.32,  el: 0.1 },
   { p: 0.17,  x: 1.5,  y: 3.4,  L: 8,   W: 7,   az: 0.55,  el: 0.3 },
   { p: 0.23,  x: 1.5,  y: 3.4,  L: 8,   W: 7,   az: 0.7,   el: 0.34 },
   { p: 0.33,  x: 0.2,  y: -7.5, L: 20,  W: 10,  az: -0.3,  el: -0.12 },
   { p: 0.39,  x: 0.2,  y: -7.5, L: 20,  W: 10,  az: -0.4,  el: -0.1 },
-  { p: 0.5,   x: 2.0,  y: 0.4,  L: 20,  W: 16,  az: 0.14,  el: 0.12 },
-  { p: 0.59,  x: 2.0,  y: 0.4,  L: 20,  W: 16,  az: 0.18,  el: 0.12 },
+  { p: 0.5,   x: 2.0,  y: 0.5,  L: 22.5, W: 17, az: 0.14,  el: 0.12 },
+  { p: 0.59,  x: 2.0,  y: 0.5,  L: 22.5, W: 17, az: 0.18,  el: 0.12 },
   { p: 0.625, x: 7.2,  y: 4.0,  L: 6.6, W: 4.5, az: 0.42,  el: 0.16 },
   { p: 0.66,  x: 7.2,  y: 4.0,  L: 6.6, W: 4.5, az: 0.55,  el: 0.2 },
   { p: 0.695, x: 9.3,  y: 1.2,  L: 10,  W: 6,   az: 0.3,   el: 0.12 },
   { p: 0.73,  x: 9.3,  y: 1.2,  L: 10,  W: 6,   az: 0.42,  el: 0.15 },
   { p: 0.765, x: 0.0,  y: 6.3,  L: 4.6, W: 4,   az: 0.2,   el: -0.55 },
   { p: 0.80,  x: 0.0,  y: 6.3,  L: 4.6, W: 4,   az: 0.32,  el: -0.5 },
-  { p: 0.835, x: 0.0,  y: -2.5, L: 18,  W: 9,   az: -0.3,  el: 0.1 },
-  { p: 0.87,  x: 0.0,  y: -2.5, L: 18,  W: 9,   az: -0.4,  el: 0.12 },
+  { p: 0.835, x: 0.0,  y: -2.4, L: 19.5, W: 9,  az: -0.3,  el: 0.1 },
+  { p: 0.87,  x: 0.0,  y: -2.4, L: 19.5, W: 9,  az: -0.4,  el: 0.12 },
   { p: 0.95,  x: 0.8,  y: -4.0, L: 23,  W: 12,  az: 0.25,  el: 0.12 },
   { p: 1.0,   x: 0.8,  y: -4.0, L: 24,  W: 12,  az: 0.3,   el: 0.14 },
 ];
@@ -1497,7 +1500,8 @@ function update(p, dt, time) {
   // Caméra
   const ck = cameraKey(p);
   const halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  const dist = Math.max((ck.L * 1.08) / (2 * halfTan), (ck.W * 1.12) / (2 * halfTan * camera.aspect)) + ck.W * 0.3;
+  // Cadrage un peu serré : le moteur occupe davantage l'écran.
+  const dist = (Math.max((ck.L * 1.08) / (2 * halfTan), (ck.W * 1.12) / (2 * halfTan * camera.aspect)) + ck.W * 0.3) * 0.86;
   wantTarget.set(ck.x, ck.y, 0);
   v.set(Math.sin(ck.az) * Math.cos(ck.el), Math.sin(ck.el), Math.cos(ck.az) * Math.cos(ck.el));
   wantPos.copy(wantTarget).addScaledVector(v, dist);
@@ -1508,7 +1512,7 @@ function update(p, dt, time) {
   first = false;
   // Décentrage optique : en paysage, le sujet glisse vers la droite pour libérer la colonne de texte.
   if (!portrait && innerWidth > 720) {
-    const shift = lerp(0.16, 0.08, smooth(0.04, 0.14, p));
+    const shift = lerp(0.1, 0.045, smooth(0.04, 0.14, p));
     camera.setViewOffset(innerWidth, innerHeight, -innerWidth * shift, 0, innerWidth, innerHeight);
   } else if (camera.view) camera.clearViewOffset();
   camera.position.copy(camPos);
