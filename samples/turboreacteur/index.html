@@ -737,6 +737,185 @@ const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1, 32), MAT.da
 const shaftPart = addPart('shaft', shaft, { order: 0 });
 
 // ------------------------------------------------------------------
+// Détails : brides boulonnées, rivets, panneaux acoustiques, inverseur, mât, commandes
+// de calage variable, collecteurs, tuyauteries. Avec le rendu à l'encre, chaque relief
+// devient un trait : c'est ce qui donne la densité du dessin.
+// ------------------------------------------------------------------
+const TAU = Math.PI * 2;
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+function mesh(geo, mat, x = 0, y = 0, z = 0) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); return m; }
+function rod(a, b, radius, mat) {
+  const dir = b.clone().sub(a);
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(radius, radius, dir.length(), 10), mat);
+  m.position.copy(a).add(b).multiplyScalar(0.5);
+  m.quaternion.setFromUnitVectors(V3(0, 1, 0), dir.normalize());
+  return m;
+}
+// Profil [y, rayon] trié par y décroissant.
+function radiusAt(rows, y) {
+  if (y >= rows[0][0]) return rows[0][1];
+  for (let i = 0; i < rows.length - 1; i++) {
+    const [y0, r0] = rows[i], [y1, r1] = rows[i + 1];
+    if (y <= y0 && y >= y1) return lerp(r0, r1, (y0 - y) / (y0 - y1));
+  }
+  return rows[rows.length - 1][1];
+}
+const nacelleOutR = (y) => radiusAt([[4.62, 2.45], [4.4, 2.52], [3.6, 2.56], [2.2, 2.5], [0.9, 2.36], [0.1, 2.26]], y);
+const coreOutR = (y) => casingRadius(y) + 0.05;
+const ring = (rIn, rOut, y, t) => [[rIn, y + t / 2], [rOut, y + t / 2], [rOut, y - t / 2], [rIn, y - t / 2], [rIn, y + t / 2]];
+
+// Chaque pièce garde ses propres matériaux, sinon atténuer l'une atténuerait aussi ses voisines.
+const matOwner = new Map();
+const matCopies = new Map();
+for (const part of parts) for (const m of part.mats) matOwner.set(m, part.id);
+function addDetail(id, obj) {
+  const part = partById[id];
+  part.obj.add(obj);
+  obj.traverse((o) => {
+    if (!o.material) return;
+    const owner = matOwner.get(o.material);
+    if (owner && owner !== id) {
+      const k = id + o.material.uuid;
+      if (!matCopies.has(k)) matCopies.set(k, o.material.clone());
+      o.material = matCopies.get(k);
+    }
+    matOwner.set(o.material, id);
+    if (!part.mats.includes(o.material)) part.mats.push(o.material);
+  });
+}
+// Demi-coques : x ≥ 0 en haut, x < 0 en bas.
+const NAC = ['nacelle-top', 'nacelle-bottom'], CORE = ['casing-top', 'casing-bottom'];
+function revolved(ids, points, mat) {
+  addDetail(ids[0], lathe(points, mat, 0, Math.PI));
+  addDetail(ids[1], lathe(points, mat, Math.PI, Math.PI));
+}
+// Couronne d'objets instanciés ; place(i) → { a, r, y, rot }. ids : une pièce, ou deux demi-coques.
+function crown(ids, geo, mat, count, place) {
+  const d = new THREE.Object3D();
+  const two = Array.isArray(ids);
+  const buckets = [[], []];
+  for (let i = 0; i < count; i++) {
+    const { a, r, y, rot = 'radial' } = place(i);
+    d.position.set(Math.cos(a) * r, y, Math.sin(a) * r);
+    if (rot === 'radial') d.rotation.set(0, -a, Math.PI / 2);
+    else if (rot === 'surface') d.rotation.set(0, -a, 0);
+    else d.rotation.set(0, 0, 0);
+    d.updateMatrix();
+    buckets[two && d.position.x < 0 ? 1 : 0].push(d.matrix.clone());
+  }
+  buckets.forEach((list, k) => {
+    if (!list.length) return;
+    const inst = new THREE.InstancedMesh(geo, mat, list.length);
+    list.forEach((m, i) => inst.setMatrixAt(i, m));
+    addDetail(two ? ids[k] : ids, inst);
+  });
+}
+const steel = MAT.steel(), dark = MAT.dark(), ti = MAT.ti(), bronze = MAT.bronze(), hot = MAT.hot();
+const hole = flat({ color: 0x4a3d34 })(), pipe = flat({ color: 0xc98a5a })();
+const boltGeo = new THREE.CylinderGeometry(0.028, 0.028, 0.03, 6);
+const rivetGeo = new THREE.CylinderGeometry(0.011, 0.011, 0.016, 6);
+const dotGeo = new THREE.CylinderGeometry(0.014, 0.014, 0.01, 6);
+
+// --- Soufflante : aubes redresseuses derrière la roue, boulons du disque ---
+addDetail('fan', stage({ y: 3.12, hub: 1.22, tip: 2.18, count: 44, chord: 0.24, pitch: -0.28, twist: 0.05, bladeMat: steel, discMat: dark }));
+crown('fan', boltGeo, steel, 18, (i) => ({ a: (i / 18) * TAU, r: 0.42, y: 4.1, rot: 'axial' }));
+
+// --- Nacelle ---
+{
+  const paint = partById['nacelle-top'].mats[0];
+  // Lèvre d'entrée dégivrée, en métal nu.
+  revolved(NAC, [[2.2, 4.56], [2.31, 4.72], [2.46, 4.63], [2.53, 4.4], [2.51, 4.4], [2.44, 4.6], [2.31, 4.69], [2.22, 4.55], [2.2, 4.56]], steel);
+  // Panneaux acoustiques de l'entrée : joints et perforations, sur la paroi intérieure.
+  for (const y of [4.25, 2.95]) revolved(NAC, ring(2.165, 2.2, y, 0.03), dark);
+  for (let row = 0; row < 3; row++) {
+    const y = 4.05 - row * 0.12;
+    crown(NAC, dotGeo, hole, 120, (i) => ({ a: (i / 120) * TAU + row * 0.02, r: 2.18, y }));
+  }
+  // Joints de panneaux extérieurs rivetés ; joint du capot coulissant de l'inverseur.
+  for (const y of [3.6, 2.2, 1.55]) {
+    revolved(NAC, ring(nacelleOutR(y) - 0.01, nacelleOutR(y) + 0.018, y, 0.025), y === 1.55 ? dark : paint);
+    for (const dy of [-0.05, 0.05]) {
+      crown(NAC, rivetGeo, steel, 140, (i) => ({ a: (i / 140) * TAU, r: nacelleOutR(y + dy) + 0.008, y: y + dy }));
+    }
+  }
+  // Grilles de l'inverseur de poussée, logées sous le capot coulissant.
+  crown(NAC, new THREE.BoxGeometry(0.07, 0.5, 0.22), dark, 52, (i) => ({ a: (i / 52) * TAU, r: 2.25, y: 1.3, rot: "surface" }));
+  // Charnières des capots (en haut) et verrous (en bas).
+  for (const y of [3.9, 3.1, 2.3]) {
+    addDetail('nacelle-top', mesh(new THREE.BoxGeometry(0.09, 0.22, 0.14), dark, nacelleOutR(y) + 0.03, y, 0.25));
+    addDetail('nacelle-top', mesh(new THREE.BoxGeometry(0.09, 0.22, 0.14), dark, nacelleOutR(y) + 0.03, y, -0.25));
+    addDetail('nacelle-bottom', mesh(new THREE.BoxGeometry(0.07, 0.34, 0.2), steel, -nacelleOutR(y) - 0.02, y, 0));
+  }
+  // Mât d'accrochage à l'aile, sur le dessus.
+  const pylon = new THREE.Group();
+  const side = new THREE.Shape([new THREE.Vector2(2.45, 3.4), new THREE.Vector2(3.05, 2.5), new THREE.Vector2(3.05, -1.2),
+                                new THREE.Vector2(2.3, -0.3), new THREE.Vector2(2.3, 3.4)]);
+  const pg = new THREE.ExtrudeGeometry(side, { depth: 0.34, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.03, bevelSegments: 1 });
+  pg.translate(0, 0, -0.17);
+  pylon.add(new THREE.Mesh(pg, paint));
+  for (const y of [2.6, 1.6, 0.6, -0.4]) pylon.add(mesh(new THREE.BoxGeometry(0.5, 0.03, 0.38), dark, 2.75, y, 0));
+  addDetail('nacelle-top', pylon);
+}
+
+// --- Carter du cœur ---
+{
+  // Brides boulonnées entre modules.
+  for (const y of [3.02, 2.2, 0.22, -0.95, -1.45, -2.62]) {
+    const r = coreOutR(y);
+    revolved(CORE, ring(r - 0.02, r + 0.07, y, 0.05), steel);
+    crown(CORE, boltGeo, steel, 40, (i) => ({ a: (i / 40) * TAU, r: r + 0.035, y: y + 0.04, rot: 'axial' }));
+  }
+  // Aubes de stator à calage variable : anneaux de synchronisation, leviers, vérin commun.
+  for (const y of [1.78, 1.54, 1.3, 1.06]) {
+    const r = coreOutR(y);
+    revolved(CORE, ring(r + 0.07, r + 0.1, y, 0.03), bronze);
+    crown(CORE, new THREE.BoxGeometry(0.08, 0.13, 0.02), dark, 36, (i) => ({ a: (i / 36) * TAU, r: r + 0.04, y: y + 0.05, rot: 'surface' }));
+  }
+  addDetail('casing-top', rod(V3(coreOutR(1.9) + 0.2, 1.9, 0.5), V3(coreOutR(0.95) + 0.2, 0.95, 0.5), 0.045, dark));
+  addDetail('casing-top', rod(V3(coreOutR(2.1) + 0.2, 2.1, 0.5), V3(coreOutR(1.9) + 0.2, 1.9, 0.5), 0.07, steel));
+  // Vannes de décharge du compresseur.
+  crown(CORE, new THREE.BoxGeometry(0.06, 0.18, 0.16), dark, 8, (i) => ({ a: (i / 8) * TAU + 0.2, r: coreOutR(0.75) + 0.03, y: 0.75, rot: 'surface' }));
+  // Collecteur de carburant autour de la chambre, tubulures vers chaque injecteur, allumeurs.
+  revolved(CORE, [[coreOutR(-0.15) + 0.14, -0.12], [coreOutR(-0.15) + 0.2, -0.12], [coreOutR(-0.15) + 0.2, -0.18], [coreOutR(-0.15) + 0.14, -0.18], [coreOutR(-0.15) + 0.14, -0.12]], bronze);
+  crown(CORE, new THREE.CylinderGeometry(0.014, 0.014, 0.16, 6), bronze, 20, (i) => ({ a: (i / 20) * TAU, r: coreOutR(-0.15) + 0.08, y: -0.15 }));
+  for (const a of [0.9, -0.9]) {
+    addDetail(Math.cos(a) >= 0 ? 'casing-top' : 'casing-bottom',
+      mesh(new THREE.CylinderGeometry(0.045, 0.04, 0.22, 8).rotateZ(Math.PI / 2).rotateY(-a), steel, Math.cos(a) * (coreOutR(-0.5) + 0.1), -0.5, Math.sin(a) * (coreOutR(-0.5) + 0.1)));
+  }
+  // Pilotage des jeux de turbine : rampes d'air de refroidissement autour du carter.
+  for (const y of [-1.7, -1.95, -2.2, -2.45]) revolved(CORE, ring(coreOutR(y) + 0.06, coreOutR(y) + 0.11, y, 0.05), pipe);
+  addDetail('casing-top', rod(V3(coreOutR(-1.0) + 0.14, -1.0, -0.6), V3(coreOutR(-2.5) + 0.16, -2.5, -0.6), 0.04, pipe));
+  // Canalisations d'huile et de carburant le long du carter.
+  for (const [a0, mat] of [[0.55, pipe], [1.25, steel], [-0.7, pipe], [-1.6, steel]]) {
+    const pts = [];
+    for (let k = 0; k <= 10; k++) {
+      const y = 2.9 - k * 0.5;
+      const a = a0 + 0.06 * Math.sin(k * 1.4);
+      const r = coreOutR(y) + 0.13;
+      pts.push(V3(Math.cos(a) * r, y, Math.sin(a) * r));
+    }
+    addDetail(Math.cos(a0) >= 0 ? 'casing-top' : 'casing-bottom', new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 120, 0.022, 8), mat));
+  }
+  // Boîtier d'accessoires, sous le cœur : démarreur, pompes, alternateur, arbre de renvoi.
+  const agb = new THREE.Group();
+  agb.add(mesh(new THREE.BoxGeometry(0.24, 1.15, 0.6), dark, -1.38, 1.6, 0));
+  for (const [y, r, len, mat] of [[2.0, 0.14, 0.36, steel], [1.6, 0.16, 0.42, pipe], [1.2, 0.11, 0.3, steel]]) {
+    agb.add(mesh(new THREE.CylinderGeometry(r, r, len, 20).rotateZ(Math.PI / 2), mat, -1.6, y, 0.18));
+  }
+  agb.add(rod(V3(-1.1, 2.3, 0), V3(-coreOutR(2.6), 2.6, 0), 0.04, dark));
+  addDetail('casing-bottom', agb);
+}
+
+// --- Tuyère et cône d'éjection ---
+crown('nozzle', boltGeo, steel, 40, (i) => ({ a: (i / 40) * TAU, r: 1.44, y: -2.78, rot: 'axial' }));
+addDetail('nozzle', lathe(ring(1.38, 1.5, -2.74, 0.06), steel));
+addDetail('nozzle', lathe([[1.02, -4.22], [1.12, -4.22], [1.12, -4.3], [1.02, -4.3], [1.02, -4.22]], steel));
+for (let row = 0; row < 4; row++) {
+  const y = -3.0 - row * 0.14;
+  crown('tailcone', dotGeo, hole, 60, (i) => ({ a: (i / 60) * TAU + row * 0.05, r: radiusAt([[-2.72, 0.62], [-3.2, 0.6], [-3.9, 0.45]], y) + 0.002, y }));
+}
+
+// ------------------------------------------------------------------
 // Flux d'air : des particules qui suivent le trajet réel de l'air en laissant une traînée qui s'efface.
 // Secondaire (froid) entre nacelle et carter ; primaire comprimé, chauffé puis détendu.
 // ------------------------------------------------------------------
