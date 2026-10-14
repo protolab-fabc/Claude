@@ -488,66 +488,217 @@ const ink = new THREE.ShaderMaterial({
     // Trait d'encre le long de la frontière f = 0, d'épaisseur w pixels.
     float inkLine(float f, float w) { float d = abs(f) / max(fwidth(f), 1e-5); return 1.0 - smoothstep(w * 0.5, w, d); }
 
-    // Décor peint : soleil à rayons, nuages cernés, collines et arbres sucettes.
+    float sdBox(vec2 p, vec2 b) { vec2 d = abs(p) - b; return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0); }
+    float sdSeg(vec2 p, vec2 a, vec2 b) { vec2 pa = p - a, ba = b - a; float h = clamp(dot(pa, ba) / dot(ba, ba), 0.0, 1.0); return length(pa - ba * h); }
+    vec2 rot(vec2 p, float a) { float c = cos(a), s = sin(a); return vec2(c * p.x - s * p.y, s * p.x + c * p.y); }
+    // Pose un aplat cerné d'encre : f < 0 à l'intérieur.
+    vec3 paint(vec3 col, float f, vec3 fill, float lw) {
+      if (f < 0.0) col = fill;
+      return mix(col, INK, inkLine(f, lw));
+    }
+    float farHill(float x) { return 0.385 + 0.03 * sin(x * 3.1 + 1.0) + 0.014 * sin(x * 7.3); }
+    float midHill(float x) { return 0.315 + 0.035 * sin(x * 2.6 + 4.0) + 0.012 * sin(x * 6.7 + 1.0); }
+    float nearHill(float x) { return 0.24 + 0.045 * sin(x * 2.2 + 2.0) + 0.02 * sin(x * 5.1); }
+
+    // Décor peint, en plans successifs : ciel, soleil souriant, nuages, oiseaux, montgolfière, montagnes,
+    // colline du moulin, colline des meules, champs aux arbres sucettes, buissons du premier plan.
     vec3 backdrop() {
       vec2 p = vec2(vUv.x * aspect, vUv.y);
       float lw = 2.6 * pr;
-      vec3 col = mix(vec3(0.97, 0.9, 0.74), vec3(0.62, 0.81, 0.78), smoothstep(0.32, 1.0, vUv.y));
+      float fr = frame;
+      vec3 col = mix(vec3(0.97, 0.9, 0.74), vec3(0.6, 0.8, 0.79), smoothstep(0.34, 1.0, vUv.y));
 
-      // Soleil et rayons qui tournent lentement, image par image.
+      // Soleil et rayons qui tournent, image par image.
       vec2 sun = vec2(0.84 * aspect, 0.82);
       vec2 ds = p - sun;
-      float ang = atan(ds.y, ds.x) + frame * 0.004;
+      float ang = atan(ds.y, ds.x) + fr * 0.004;
       float ray = step(0.5, fract(ang / 6.2832 * 18.0));
       col = mix(col, col * vec3(1.03, 1.0, 0.92) + vec3(0.035, 0.03, 0.0), ray * 0.6 * (1.0 - smoothstep(0.0, 1.5, length(ds))));
-      float sd = length(ds) - 0.07;
-      if (sd < 0.0) col = mix(vec3(0.99, 0.83, 0.38), vec3(1.0, 0.92, 0.6), smoothstep(-0.07, 0.0, -length(ds - vec2(-0.02, 0.02)) + 0.02));
+      float sd = length(ds) - 0.075;
+      if (sd < 0.0) col = mix(vec3(0.99, 0.82, 0.36), vec3(1.0, 0.93, 0.62), smoothstep(0.06, 0.0, length(ds - vec2(-0.022, 0.022))));
+      // Visage : yeux ovales avec reflet, joues roses, sourire.
+      float blink = step(0.97, fract(fr / 46.0)) ;
+      for (int e = 0; e < 2; e++) {
+        vec2 eye = sun + vec2(e == 0 ? -0.022 : 0.022, 0.014);
+        vec2 q = (p - eye) / vec2(1.0, mix(1.0, 0.15, blink));
+        float fe = length(q / vec2(0.009, 0.015)) - 1.0;
+        if (fe < 0.0) col = INK;
+        if (length(p - eye - vec2(-0.003, 0.006)) < 0.0035 && blink < 0.5) col = vec3(1.0);
+        if (length(p - eye - vec2(0.0, -0.03)) < 0.012) col = mix(col, vec3(0.96, 0.55, 0.45), 0.6);
+      }
+      float smile = abs(length(p - sun - vec2(0.0, 0.006)) - 0.034) - 0.003;
+      if (p.y < sun.y - 0.012 && abs(p.x - sun.x) < 0.028) col = mix(col, INK, step(smile, 0.0));
       col = mix(col, INK, inkLine(sd, lw));
 
-      // Nuages : trois boules et un ventre plat, qui dérivent.
-      for (int k = 0; k < 3; k++) {
+      // Montgolfière qui dérive au loin.
+      {
+        vec2 c = vec2(mod(0.25 * aspect + fr * 0.00025 - scroll * 0.1, aspect + 0.2) - 0.1, 0.7 + 0.01 * sin(fr * 0.05));
+        vec2 q = p - c;
+        float env = length(q / vec2(0.028, 0.034)) - 1.0;
+        env = min(env, sdBox(q - vec2(0.0, -0.03), vec2(0.012, 0.012)) / 0.03);
+        float stripe = step(0.5, fract(q.x / 0.014 + 0.25));
+        col = paint(col, env * 0.03, mix(vec3(0.85, 0.3, 0.26), vec3(0.98, 0.92, 0.8), stripe), lw * 0.8);
+        float basket = sdBox(q - vec2(0.0, -0.06), vec2(0.008, 0.006));
+        col = paint(col, basket, vec3(0.55, 0.36, 0.24), lw * 0.7);
+        col = mix(col, INK, step(min(sdSeg(q, vec2(-0.011, -0.04), vec2(-0.007, -0.054)), sdSeg(q, vec2(0.011, -0.04), vec2(0.007, -0.054))), 0.0012));
+      }
+
+      // Nuages : cinq, de tailles variées, qui dérivent à des vitesses différentes.
+      for (int k = 0; k < 5; k++) {
         float fk = float(k);
-        float cx = mod(0.15 + fk * 0.52 + frame * 0.0006 * (1.0 + fk * 0.4) - scroll * 0.25, 1.7) * aspect - 0.25;
-        vec2 c = vec2(cx, 0.66 + 0.09 * mod(fk * 1.7, 2.0));
-        float s = 0.045 + 0.012 * fk;
+        float cx = mod(0.1 + fk * 0.37 + fr * 0.0005 * (1.0 + fk * 0.35) - scroll * (0.2 + 0.05 * fk), 1.9) * aspect - 0.3;
+        vec2 c = vec2(cx, 0.6 + 0.07 * mod(fk * 1.7, 3.0));
+        float s = 0.032 + 0.01 * mod(fk * 2.3, 3.0);
         float f = min(min(length(p - c) - s, length(p - c - vec2(s * 1.15, -s * 0.3)) - s * 0.78), length(p - c + vec2(s * 1.2, s * 0.35)) - s * 0.7);
         f = min(f, length(p - c - vec2(s * 0.3, s * 0.55)) - s * 0.62);
         f = max(f, (c.y - s * 0.55) - p.y);
-        if (f < 0.0) col = mix(vec3(1.0, 0.98, 0.93), vec3(0.88, 0.86, 0.84), smoothstep(c.y + s * 0.3, c.y - s * 0.6, p.y));
-        col = mix(col, INK, inkLine(f, lw));
+        col = paint(col, f, mix(vec3(1.0, 0.98, 0.93), vec3(0.87, 0.86, 0.85), smoothstep(c.y + s * 0.3, c.y - s * 0.6, p.y)), lw);
       }
 
-      // Collines lointaines.
-      float x1 = p.x + scroll * 0.35;
-      float h1 = 0.37 + 0.028 * sin(x1 * 3.1 + 1.0) + 0.014 * sin(x1 * 7.3);
-      float f1 = p.y - h1;
-      if (f1 < 0.0) col = mix(vec3(0.5, 0.67, 0.58), vec3(0.42, 0.58, 0.52), smoothstep(0.0, -0.08, f1));
-      col = mix(col, INK, inkLine(f1, lw) * 0.85);
+      // Oiseaux en « v », qui battent des ailes en deux temps.
+      for (int k = 0; k < 4; k++) {
+        float fk = float(k);
+        vec2 c = vec2(mod(0.4 + fk * 0.11 + fr * 0.0012, aspect + 0.3) - 0.15, 0.78 + 0.035 * sin(fk * 2.1) + 0.01 * fk);
+        float flap = mod(fr + fk * 2.0, 4.0) < 2.0 ? 0.6 : -0.15;
+        vec2 q = p - c;
+        float w = 0.012 + 0.003 * fk;
+        float b = min(sdSeg(q, vec2(0.0), vec2(-w, w * flap)), sdSeg(q, vec2(0.0), vec2(w, w * flap)));
+        col = mix(col, INK, 1.0 - smoothstep(0.0012, 0.0024, b));
+      }
 
-      // Collines proches, sillons, arbres sucettes.
-      float x2 = p.x + scroll * 0.8;
-      float h2 = 0.24 + 0.045 * sin(x2 * 2.2 + 2.0) + 0.02 * sin(x2 * 5.1);
-      float f2 = p.y - h2;
-      if (f2 < 0.0) {
-        col = vec3(0.76, 0.78, 0.42);
-        float furrow = fract((h2 - p.y) * 26.0 + sin(x2 * 9.0) * 0.4);
-        if (furrow < 0.12) col *= 0.88;
+      // Montagnes bleutées et leurs neiges.
+      {
+        float x = p.x + scroll * 0.15;
+        float h = 0.43 + 0.07 * abs(sin(x * 2.4 + 0.5)) + 0.03 * sin(x * 5.7) + 0.012 * sin(x * 13.0);
+        float f = p.y - h;
+        vec3 m = mix(vec3(0.56, 0.66, 0.72), vec3(0.48, 0.58, 0.66), smoothstep(0.0, -0.1, f));
+        if (f > -0.02 && h > 0.47) m = vec3(0.95, 0.94, 0.9);
+        col = paint(col, f, m, lw * 0.8);
       }
-      col = mix(col, INK, inkLine(f2, lw));
-      float cell = floor(x2 * 3.2);
-      float hc = hash(vec2(cell, 4.0));
-      if (hc > 0.35) {
-        float tx = (cell + 0.3 + 0.4 * hash(vec2(cell, 9.0))) / 3.2;
-        float base = 0.24 + 0.045 * sin(tx * 2.2 + 2.0) + 0.02 * sin(tx * 5.1);
-        float sc = 0.8 + 0.4 * hash(vec2(cell, 2.0));
-        vec2 q = vec2(x2 - tx, p.y - base);
-        float trunk = max(abs(q.x) - 0.006 * sc, max(-q.y - 0.01, q.y - 0.08 * sc));
-        float crown = length(q - vec2(0.0, 0.1 * sc)) - 0.038 * sc;
-        if (trunk < 0.0) col = vec3(0.55, 0.36, 0.24);
-        col = mix(col, INK, inkLine(trunk, lw * 0.8));
-        if (crown < 0.0) col = mix(vec3(0.36, 0.6, 0.36), vec3(0.5, 0.74, 0.44), smoothstep(0.0, 0.03 * sc, length(q - vec2(-0.012, 0.115 * sc))) < 0.5 ? 1.0 : 0.0);
-        col = mix(col, INK, inkLine(crown, lw));
+
+      // Colline du moulin, avec la grange rouge et le château d'eau.
+      {
+        float x1 = p.x + scroll * 0.35;
+        float f1 = p.y - farHill(x1);
+        col = paint(col, f1, mix(vec3(0.5, 0.67, 0.58), vec3(0.42, 0.58, 0.52), smoothstep(0.0, -0.08, f1)), lw * 0.9);
+        // Moulin : tour conique crème, toit, ailes qui tournent.
+        float xm = 1.15;
+        vec2 q = vec2(x1 - xm, p.y - farHill(xm));
+        float tower = max(abs(q.x) - (0.018 - q.y * 0.07), max(-q.y - 0.01, q.y - 0.1));
+        col = paint(col, tower, vec3(0.96, 0.9, 0.78), lw * 0.8);
+        col = paint(col, length(q - vec2(0.0, 0.1)) - 0.016, vec3(0.75, 0.3, 0.26), lw * 0.8);
+        float door = sdBox(q - vec2(0.0, 0.012), vec2(0.005, 0.012));
+        col = paint(col, door, vec3(0.45, 0.3, 0.22), lw * 0.6);
+        vec2 hub = q - vec2(0.0, 0.1);
+        for (int k = 0; k < 4; k++) {
+          vec2 r = rot(hub, -(fr * 0.06 + float(k) * 1.5708));
+          float sail = sdBox(r - vec2(0.045, 0.0), vec2(0.036, 0.009));
+          col = paint(col, sail, vec3(0.98, 0.95, 0.88), lw * 0.7);
+          col = mix(col, INK, (1.0 - smoothstep(0.0008, 0.0018, abs(r.y))) * step(0.0, r.x) * step(r.x, 0.08));
+        }
+        col = paint(col, length(hub) - 0.005, INK, lw * 0.5);
+        // Grange rouge, toit sombre, croix blanche sur la porte.
+        float xb = 0.62;
+        vec2 g = vec2(x1 - xb, p.y - farHill(xb));
+        float body = sdBox(g - vec2(0.0, 0.02), vec2(0.03, 0.022));
+        col = paint(col, body, vec3(0.8, 0.28, 0.23), lw * 0.8);
+        float roof = max(abs(g.x) * 0.9 + (g.y - 0.068), 0.042 - g.y);
+        col = paint(col, roof, vec3(0.42, 0.24, 0.2), lw * 0.8);
+        vec2 dq = g - vec2(0.0, 0.015);
+        float dbox = sdBox(dq, vec2(0.011, 0.015));
+        col = paint(col, dbox, vec3(0.95, 0.9, 0.82), lw * 0.6);
+        col = mix(col, vec3(0.8, 0.28, 0.23), step(dbox, 0.0) * (1.0 - step(0.0016, min(abs(dq.x * 1.36 - dq.y), abs(dq.x * 1.36 + dq.y)))));
+        // Château d'eau sur pilotis.
+        float xw = 0.9;
+        vec2 w = vec2(x1 - xw, p.y - farHill(xw));
+        float tank = sdBox(w - vec2(0.0, 0.075), vec2(0.02, 0.016));
+        float legs = min(sdSeg(w, vec2(-0.016, 0.0), vec2(-0.012, 0.06)), sdSeg(w, vec2(0.016, 0.0), vec2(0.012, 0.06))) - 0.0015;
+        col = mix(col, INK, step(legs, 0.0));
+        col = paint(col, tank, vec3(0.7, 0.56, 0.42), lw * 0.7);
+        col = paint(col, max(abs(w.x) * 0.8 + (w.y - 0.105), 0.091 - w.y), vec3(0.42, 0.24, 0.2), lw * 0.7);
       }
+
+      // Colline des meules, bordée d'une clôture.
+      {
+        float x3 = p.x + scroll * 0.55;
+        float h3 = midHill(x3);
+        float f3 = p.y - h3;
+        vec3 m = vec3(0.62, 0.73, 0.44);
+        if (fract((h3 - p.y) * 32.0 + sin(x3 * 7.0) * 0.5) < 0.1) m *= 0.92;
+        col = paint(col, f3, m, lw);
+        // Clôture : piquets réguliers, deux lisses qui suivent la crête.
+        float post = mod(x3, 0.045) - 0.0225;
+        float rail1 = abs(p.y - h3 - 0.011) - 0.0012, rail2 = abs(p.y - h3 - 0.021) - 0.0012;
+        float fence = min(max(abs(post) - 0.0022, max(h3 - 0.004 - p.y, p.y - h3 - 0.028)), min(rail1, rail2));
+        float span = step(0.0, sin(x3 * 1.7 + 0.6) + 0.2);
+        col = mix(col, vec3(0.45, 0.32, 0.24), step(fence, 0.0) * span);
+        // Meules : demi-dômes paille rayés.
+        float cell = floor(x3 / 0.35);
+        float hc = hash(vec2(cell, 31.0));
+        if (hc > 0.3) {
+          float cx = (cell + 0.25 + 0.5 * hash(vec2(cell, 7.0))) * 0.35;
+          vec2 q = vec2(x3 - cx, p.y - midHill(cx) + 0.004);
+          float stack = max(length(q / vec2(1.0, 1.25)) - 0.03, -q.y);
+          vec3 straw = mix(vec3(0.95, 0.78, 0.38), vec3(0.85, 0.66, 0.3), step(0.5, fract(q.y * 90.0)));
+          col = paint(col, stack, straw, lw * 0.8);
+        }
+      }
+
+      // Champs proches, sillons, arbres sucettes, petites fleurs.
+      {
+        float x2 = p.x + scroll * 0.8;
+        float h2 = nearHill(x2);
+        float f2 = p.y - h2;
+        vec3 m = vec3(0.76, 0.78, 0.42);
+        if (fract((h2 - p.y) * 26.0 + sin(x2 * 9.0) * 0.4) < 0.12) m *= 0.88;
+        col = paint(col, f2, m, lw);
+        vec2 fc = floor(vec2(x2, p.y) * vec2(70.0, 70.0));
+        float hf = hash(fc + 3.0);
+        if (f2 < -0.01 && hf > 0.965) {
+          vec2 fq = fract(vec2(x2, p.y) * 70.0) - 0.5;
+          if (length(fq) < 0.28) col = hf > 0.985 ? vec3(0.95, 0.4, 0.35) : vec3(1.0, 0.97, 0.9);
+          if (length(fq) < 0.1) col = vec3(0.96, 0.78, 0.3);
+        }
+        float cell = floor(x2 * 3.2);
+        float hc = hash(vec2(cell, 4.0));
+        if (hc > 0.35) {
+          float tx = (cell + 0.3 + 0.4 * hash(vec2(cell, 9.0))) / 3.2;
+          float base = nearHill(tx);
+          float sc = 0.8 + 0.4 * hash(vec2(cell, 2.0));
+          vec2 q = vec2(x2 - tx, p.y - base);
+          float trunk = max(abs(q.x) - 0.006 * sc, max(-q.y - 0.01, q.y - 0.08 * sc));
+          col = paint(col, trunk, vec3(0.55, 0.36, 0.24), lw * 0.8);
+          float crown = length(q - vec2(0.0, 0.1 * sc)) - 0.038 * sc;
+          vec3 leaf = length(q - vec2(-0.012, 0.112 * sc)) < 0.016 * sc ? vec3(0.52, 0.76, 0.46) : vec3(0.36, 0.6, 0.36);
+          col = paint(col, crown, leaf, lw);
+        }
+      }
+
+      // Buissons du premier plan, en boules, avec leurs reflets.
+      {
+        float x4 = p.x + scroll * 1.15;
+        float best = 1.0;
+        vec2 hl = vec2(0.0);
+        for (int k = -1; k < 2; k++) {
+          float cell = floor(x4 / 0.22) + float(k);
+          float hb = hash(vec2(cell, 17.0));
+          if (hb < 0.45) continue;
+          float cx = (cell + 0.5) * 0.22;
+          for (int j = 0; j < 3; j++) {
+            float fj = float(j);
+            vec2 c = vec2(cx + (fj - 1.0) * 0.045, -0.005 + 0.025 * hash(vec2(cell, fj)) + (j == 1 ? 0.02 : 0.0));
+            float r = 0.04 + 0.015 * hash(vec2(cell, fj + 5.0));
+            float d = length(vec2(x4, p.y) - c) - r;
+            if (d < best) { best = d; hl = c + vec2(-r * 0.35, r * 0.4); }
+          }
+        }
+        if (best < 0.0) {
+          col = vec3(0.3, 0.52, 0.32);
+          if (length(vec2(x4, p.y) - hl) < 0.012) col = vec3(0.55, 0.78, 0.5);
+        }
+        col = mix(col, INK, inkLine(best, lw * 1.1));
+      }
+
       // Aquarelle : le papier boit la couleur de façon inégale.
       col *= 0.95 + 0.08 * fbm(gl_FragCoord.xy / (110.0 * pr));
       return col;
