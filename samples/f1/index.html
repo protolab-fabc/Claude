@@ -1495,6 +1495,9 @@ for (const part of labelled) {
 // Mise à jour de la scène
 // ------------------------------------------------------------------
 let portrait = false;
+// Pose de base (debout ou couché) : la caméra s'y réfère, sans l'inclinaison de l'intro.
+let baseRoll = 0;
+const baseQuat = new THREE.Quaternion();
 const v = new THREE.Vector3();
 const camPos = new THREE.Vector3();
 const camTarget = new THREE.Vector3();
@@ -1516,11 +1519,13 @@ function resize() {
   camera.updateProjectionMatrix();
   portrait = camera.aspect < 0.9;
   // En paysage, le moteur se couche comme les réacteurs : injecteur à gauche, flamme vers la droite.
-  engine.rotation.z = portrait ? 0 : Math.PI / 2;
+  baseRoll = portrait ? 0 : Math.PI / 2;
+  engine.rotation.z = baseRoll;
   fxRoot.rotation.copy(engine.rotation);
   engine.updateMatrixWorld(true);
   fxRoot.updateMatrixWorld(true);
   layoutCopies(engine.quaternion);
+  baseQuat.copy(engine.quaternion);
   labelsSvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
 }
 addEventListener('resize', resize);
@@ -1578,6 +1583,12 @@ function update(p, dt, time) {
   // L'eau des cascades tombe sans fin.
   if (!reduceMotion) waterTex.offset.y = (time * 0.12) % 1;
 
+  // Intro : le moteur est incliné de 20° vers la droite, puis se remet d'aplomb dès qu'on défile.
+  const roll = THREE.MathUtils.degToRad(-20) * (1 - smooth(0.03, 0.12, p));
+  engine.rotation.z = baseRoll + roll;
+  fxRoot.rotation.z = engine.rotation.z;
+  engine.updateMatrixWorld(true);
+
   // Caméra
   const ck = cameraKey(p);
   const halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
@@ -1587,8 +1598,8 @@ function update(p, dt, time) {
   const across = portrait ? 2 * halfTan * camera.aspect : 2 * halfTan;
   const dist = (Math.max((ck.L * 1.08) / along, (ck.W * 1.12) / across) + ck.W * 0.3) * 0.86;
   // Point visé et direction de vue sont exprimés dans le repère du moteur, puis suivent sa pose.
-  wantTarget.set(ck.x, ck.y, 0).applyQuaternion(engine.quaternion);
-  v.set(Math.sin(ck.az) * Math.cos(ck.el), Math.sin(ck.el), Math.cos(ck.az) * Math.cos(ck.el)).applyQuaternion(engine.quaternion);
+  wantTarget.set(ck.x, ck.y, 0).applyQuaternion(baseQuat);
+  v.set(Math.sin(ck.az) * Math.cos(ck.el), Math.sin(ck.el), Math.cos(ck.az) * Math.cos(ck.el)).applyQuaternion(baseQuat);
   wantPos.copy(wantTarget).addScaledVector(v, dist);
 
   const kc = reduceMotion || first ? 1 : 1 - Math.exp(-dt * 5);
