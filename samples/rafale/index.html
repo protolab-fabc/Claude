@@ -651,11 +651,11 @@ function mesh(geo, mat, x = 0, y = 0, z = 0) { const m = new THREE.Mesh(geo, mat
 const ringProfile = (rIn, rOut, y, t) => [[rIn, y + t / 2], [rOut, y + t / 2], [rOut, y - t / 2], [rIn, y - t / 2], [rIn, y + t / 2]];
 
 // Entrée d'air fixe et conduit en S : le centre du conduit, de la bouche jusqu'à la face de soufflante.
-const DUCT = [V3(-0.5, 7.0, 0.42), V3(-0.47, 6.2, 0.38), V3(-0.3, 5.0, 0.2), V3(-0.08, 4.15, 0.04), V3(0, 3.72, 0)];
+const DUCT = [V3(-0.05, 7.6, 0.6), V3(-0.05, 6.6, 0.55), V3(-0.02, 5.3, 0.32), V3(0, 4.2, 0.06), V3(0, 3.72, 0)];
 const ductCurve = new THREE.CatmullRomCurve3(DUCT);
 // Décalage du centre du conduit pour une hauteur y (l'air le suit dans l'entrée).
 function ductCenter(y) {
-  if (y >= 7.0) return { x: -0.5, z: 0.42 };
+  if (y >= DUCT[0].y) return { x: DUCT[0].x, z: DUCT[0].z };
   if (y <= 3.72) return { x: 0, z: 0 };
   for (let i = 0; i < DUCT.length - 1; i++) {
     const a = DUCT[i], b = DUCT[i + 1];
@@ -775,8 +775,8 @@ const rivetGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.012, 6);
     ring.lookAt(p.clone().add(ductCurve.getTangentAt(t)));
     g.add(ring);
   }
-  // Piège à couche limite : plaque de séparation entre l'entrée et le fuselage.
-  g.add(mesh(new THREE.BoxGeometry(0.04, 1.3, 1.0), dark, 0.18, 6.45, 0.42));
+  // Piège à couche limite : plaque de séparation entre l'entrée et le flanc du fuselage.
+  g.add(mesh(new THREE.BoxGeometry(1.1, 1.0, 0.04), dark, -0.05, 7.15, -0.03));
   addPart('intake', g, { dy: 3.6, order: 6, label: { text: "Entrée d'air", r: 0.6, y: 5.6 } });
 }
 
@@ -1072,6 +1072,14 @@ function hullGeometry(rows, scale = 1, segY = 160, segA = 56) {
   g.computeVertexNormals();
   return g;
 }
+// Rangée [centre x, demi-hauteur, demi-largeur] interpolée dans une table de sections.
+function interpRow(rows, y) {
+  let k = 0;
+  while (k < rows.length - 2 && y > rows[k + 1][0]) k++;
+  const A = rows[k], B = rows[k + 1];
+  const t = clamp((y - A[0]) / (B[0] - A[0]));
+  return [lerp(A[1], B[1], t), lerp(A[2], B[2], t), lerp(A[3], B[3], t)];
+}
 // Panneau plat extrudé, défini dans le plan (envergure s, y) ; side = +1 à droite (z > ZC), −1 à gauche.
 function planform(points, thick, mat, side, x, zRoot) {
   const shape = new THREE.Shape(points.map(([s, y]) => new THREE.Vector2(-side * s, y)));
@@ -1085,32 +1093,30 @@ function planform(points, thick, mat, side, x, zRoot) {
 {
   const skin = MAT.skin(), dk = MAT.skinDk(), glass = MAT.glass(), store = MAT.store();
   airframe.add(new THREE.Mesh(hullGeometry(HULL), skin));
-  // Radôme conique, un ton plus sombre.
-  airframe.add(new THREE.Mesh(hullGeometry(HULL.filter(([y]) => y >= 12.5), 1.012), dk));
   // Épine dorsale : de la verrière jusqu'au pied de la dérive.
   airframe.add(new THREE.Mesh(hullGeometry([[-3.6, 1.12, 0.22, 0.36], [-1.0, 1.15, 0.3, 0.42], [3.0, 1.28, 0.32, 0.44],
                                             [6.5, 1.5, 0.3, 0.4], [8.6, 1.62, 0.2, 0.3], [9.2, 1.62, 0.02, 0.05]], 1, 90, 40), skin));
-  // Verrière en bulle, haute, avec son arceau.
-  const canopy = mesh(new THREE.SphereGeometry(1, 48, 24), glass, 1.72, 9.9, ZC);
-  canopy.scale.set(0.55, 2.0, 0.48);
-  airframe.add(canopy);
-  const bow = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.035, 8, 40, Math.PI), dk);
-  bow.position.set(1.72, 9.4, ZC);
-  bow.scale.set(1.22, 1, 1);
-  bow.rotation.set(Math.PI / 2, Math.PI / 2, 0);
-  airframe.add(bow);
+  // Verrière en bulle : pare-brise incliné à l'avant, sommet haut, puis fondu dans l'épine dorsale.
+  const CANOPY = [[8.2, 1.62, 0.04, 0.3], [8.9, 1.85, 0.32, 0.42], [9.8, 1.98, 0.42, 0.47], [10.6, 1.9, 0.36, 0.44],
+                  [11.3, 1.68, 0.16, 0.34], [11.6, 1.58, 0.02, 0.12]];
+  airframe.add(new THREE.Mesh(hullGeometry(CANOPY, 1, 70, 48), glass));
+  // Arceaux : cadre du pare-brise et arceau central, en bandes un peu plus larges que le vitrage.
+  for (const y of [10.65, 9.55]) {
+    airframe.add(new THREE.Mesh(hullGeometry([[y - 0.05, ...interpRow(CANOPY, y - 0.05)], [y + 0.05, ...interpRow(CANOPY, y + 0.05)]], 1.03, 2, 48), dk));
+  }
   // Joues d'entrées d'air : elles habillent les conduits et les fondent dans le fuselage.
   for (const [mirror, axisZ] of [[1, 0], [-1, -1.75]]) {
-    const rows = [3.7, 4.6, 5.4, 6.2, 7.05].map((y) => {
+    // Section en ovale vertical, plus haute que large, comme la bouche en D du vrai avion.
+    const rows = [3.7, 4.6, 5.5, 6.5, 7.3, 7.65].map((y) => {
       const c = ductCenter(y);
-      const r = y > 6.9 ? 0.68 : 0.74;
-      return [y, c.x, r, r, axisZ + mirror * c.z];
+      const lip = y > 7.5 ? 0.94 : 1;
+      return [y, c.x, 0.76 * lip, 0.66 * lip, axisZ + mirror * c.z];
     });
     airframe.add(new THREE.Mesh(hullGeometry(rows, 1, 60, 40), skin));
   }
   // Perche de ravitaillement fixe, devant la verrière, et sonde de nez.
-  airframe.add(rod(V3(1.0, 11.0, ZC + 0.45), V3(1.45, 13.3, ZC + 0.55), 0.05, dk));
-  airframe.add(rod(V3(1.45, 13.3, ZC + 0.55), V3(1.42, 13.7, ZC + 0.55), 0.07, dk));
+  airframe.add(rod(V3(1.25, 11.3, ZC + 0.42), V3(1.85, 12.9, ZC + 0.55), 0.05, dk));
+  airframe.add(rod(V3(1.85, 12.9, ZC + 0.55), V3(1.87, 13.4, ZC + 0.55), 0.07, dk));
   airframe.add(rod(V3(0.4, 15.6, ZC), V3(0.4, 16.4, ZC), 0.014, dk));
 
   for (const side of [1, -1]) {
@@ -1119,8 +1125,10 @@ function planform(points, thick, mat, side, x, zRoot) {
     for (const pts of [[[0.9, -4.25], [2.9, -4.0], [2.9, -3.5], [0.9, -3.75]], [[3.2, -3.97], [5.6, -3.65], [5.6, -3.15], [3.2, -3.45]]]) {
       airframe.add(planform(pts, 0.2, dk, side, -0.08, 1.4));
     }
+    // Apex : raccord entre l'entrée d'air et le bord d'attaque de l'aile.
+    airframe.add(planform([[0, 6.9], [1.3, 4.4], [1.3, 3.4], [0, 3.4]], 0.14, skin, side, 0.05, 1.05));
     // Canard, haut sur l'épaule de l'entrée d'air, juste devant l'aile.
-    airframe.add(planform([[0, 8.2], [2.4, 6.6], [2.5, 6.1], [0, 6.2]], 0.08, skin, side, 0.95, 0.85));
+    airframe.add(planform([[0, 8.3], [2.4, 6.7], [2.5, 6.2], [0, 6.3]], 0.08, skin, side, 0.82, 0.9));
     // Missile en bout d'aile : corps, ogive, empennage.
     const tipZ = ZC + side * (1.4 + 5.85);
     airframe.add(rod(V3(-0.12, -3.4, tipZ), V3(-0.12, 0.0, tipZ), 0.09, store));
@@ -1176,7 +1184,7 @@ const FLOWS = [
     color: [[9.5, C(0x8ec3d6)], [3.6, C(0x8ec3d6)], [2.5, C(0xb9d6c8)], [1.2, C(0xf4d58a)], [0.4, C(0xf2a05a)],
             [-0.6, C(0xf08a5a)], [-1.6, C(0xf07a6a)], [-4.9, C(0xe0566a)], [-11, C(0xe6a0a0)]],
     radius(y, u) {
-      if (y > 7.0) return lerp(0.0, 0.5, u) + smooth(7.0, 9.5, y) * 0.5 * u;
+      if (y > DUCT[0].y) return lerp(0.0, 0.5, u) + smooth(DUCT[0].y, 9.5, y) * 0.5 * u;
       if (y > 3.72) return lerp(0.0, 0.45, u);
       if (y > 2.6) return lerp(0.28, 0.48, u);
       if (y > -0.5) return lerp(0.34, coreR(y) - 0.06, u);
@@ -1194,7 +1202,7 @@ const FLOWS = [
     speed: [[9.5, 3.6], [7.0, 3.2], [3.7, 3.0], [2.6, 3.4], [-0.5, 3.6], [-4.2, 4.6], [-4.9, 7.0], [-5.6, 8.5], [-10, 9.0]],
     color: [[9.5, C(0x8ec3d6)], [-0.8, C(0x8ec3d6)], [-1.8, C(0xf2a05a)], [-4.9, C(0xf07a6a)], [-10, C(0xe6a0a0)]],
     radius(y, u) {
-      if (y > 7.0) return lerp(0.25, 0.56, u) + smooth(7.0, 9.5, y) * 0.5;
+      if (y > DUCT[0].y) return lerp(0.25, 0.56, u) + smooth(DUCT[0].y, 9.5, y) * 0.5;
       if (y > 3.72) return lerp(0.3, 0.55, u);
       if (y > 2.6) return lerp(0.52, 0.66, u);
       if (y > -0.5) return lerp(coreR(y) + 0.04, 0.69, u);
@@ -1419,8 +1427,8 @@ const KEYS = [
 ];
 
 const INTRO_KEYS = [
-  { p: 0.0,  y: 5.0, L: 24, W: 15, fa: 0.55, el: 0.5 },
-  { p: 0.05, y: 5.0, L: 24, W: 15, fa: 0.55, el: 0.5 },
+  { p: 0.0,  y: 5.0, L: 23, W: 14, fa: 0.6, el: 0.2 },
+  { p: 0.05, y: 5.0, L: 23, W: 14, fa: 0.6, el: 0.2 },
   { p: 0.13, y: 0.5, L: 14, W: 7,  fa: 0.25, el: 0.5 },
 ];
 function introKey(pAll) {
@@ -1530,6 +1538,8 @@ function resize() {
   camera.updateProjectionMatrix();
   portrait = camera.aspect < 0.9;
   // En portrait, le moteur se met à la verticale pour occuper l'écran.
+  // Ordre ZYX : la rotation autour de Y reste un roulis autour de l'axe de l'avion.
+  engine.rotation.order = 'ZYX';
   engine.rotation.z = portrait ? 0 : Math.PI / 2;
   engine.updateMatrixWorld(true);
   axisFront.set(0, 1, 0).applyQuaternion(engine.quaternion);
@@ -1550,6 +1560,9 @@ function chapterWeight(c, p) {
 
 function update(pAll, dt, time) {
   const p = clamp((pAll - INTRO) / (1 - INTRO));
+  // En ouverture, l'avion est légèrement incliné ; il se remet à plat pendant la plongée.
+  engine.rotation.y = -0.42 * (1 - smooth(0.06, 0.17, pAll));
+  engine.updateMatrixWorld(true);
   // Phases de démontage
   const tNacelle = smooth(0.08, 0.24, p);
   const tCasing = smooth(0.2, 0.34, p);
