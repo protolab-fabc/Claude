@@ -396,8 +396,8 @@ const fireLight = new THREE.PointLight(0xffa060, 0, 6, 1.6);
 scene.add(fireLight);
 
 // ------------------------------------------------------------------
-// Matériaux : tons neutres répartis sur toute l'échelle de gris, pour que chaque pièce
-// tombe sur une densité de caractères différente. Les parties chaudes gardent leur teinte.
+// Matériaux : une teinte franche par famille de pièces ; l'ASCII la reprend pour colorer
+// ses caractères, et l'éclairage en règle la densité.
 // Une instance par pièce pour pouvoir atténuer chacune.
 // ------------------------------------------------------------------
 const ramp = new THREE.DataTexture(new Uint8Array([70, 140, 205, 255]), 4, 1, THREE.RedFormat);
@@ -405,16 +405,16 @@ ramp.minFilter = ramp.magFilter = THREE.NearestFilter;
 ramp.needsUpdate = true;
 const flat = (o) => () => new THREE.MeshToonMaterial({ gradientMap: ramp, ...o });
 const MAT = {
-  paint:  flat({ color: 0x8c8f9a, side: THREE.DoubleSide }),
-  ti:     flat({ color: 0xe6e8f0 }),
-  steel:  flat({ color: 0xb4b8c4, side: THREE.DoubleSide }),
-  dark:   flat({ color: 0x4a4c58 }),
-  hot:    flat({ color: 0xd88a5a }),
-  bronze: flat({ color: 0xc8a070, side: THREE.DoubleSide }),
-  flap:   flat({ color: 0x6c707e, side: THREE.DoubleSide }),
-  hole:   flat({ color: 0x18181f }),
-  pipe:   flat({ color: 0xc0603e }),
-  silver: flat({ color: 0xd8dbe2, side: THREE.DoubleSide }),
+  paint:  flat({ color: 0x3f7dff, side: THREE.DoubleSide }),   // carter externe : bleu
+  ti:     flat({ color: 0xc8f4ff }),                            // aubes, cône : blanc cyan
+  steel:  flat({ color: 0xa86bff, side: THREE.DoubleSide }),   // carter du cœur, brides : violet
+  dark:   flat({ color: 0xff3fb4 }),                            // disques, boîtiers : magenta
+  hot:    flat({ color: 0xff7a2e }),                            // turbines, pétales : orange
+  bronze: flat({ color: 0xffd23f, side: THREE.DoubleSide }),   // chambre, rampes : jaune
+  flap:   flat({ color: 0x2fe0c8, side: THREE.DoubleSide }),   // volets de tuyère : turquoise
+  hole:   flat({ color: 0x1a1030 }),
+  pipe:   flat({ color: 0xff3a3a }),                            // tuyauteries : rouge
+  silver: flat({ color: 0x8fd0ff, side: THREE.DoubleSide }),   // canal de post-combustion : bleu clair
   glow:   flat({ color: 0xffd98a, emissive: 0xff9a40, emissiveIntensity: 1.0 }),
   abglow: flat({ color: 0xffc89a, emissive: 0xff7a40, emissiveIntensity: 1.0, transparent: true, opacity: 0.85 }),
 };
@@ -459,7 +459,7 @@ colorRT.depthTexture = new THREE.DepthTexture(1, 1);
 const normalRT = new THREE.WebGLRenderTarget(1, 1);
 // Double face : les coques vues par leur envers doivent masquer ce qui est derrière elles.
 const normalMat = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
-const CELL = { w: innerWidth < 720 ? 4 : 5, h: innerWidth < 720 ? 7 : 8 };
+const CELL = { w: innerWidth < 720 ? 3 : 4, h: innerWidth < 720 ? 5 : 6 };
 const ink = new THREE.ShaderMaterial({
   depthTest: false,
   depthWrite: false,
@@ -591,13 +591,16 @@ const ink = new THREE.ShaderMaterial({
 
       // Une onde lente fait respirer la palette sur la diagonale.
       t = clamp(t + 0.07 * sin(time * 1.3 + id.x * 0.08 + id.y * 0.05), 0.0, 1.0);
-      vec3 ink = palette(t);
-      // Les parties chaudes (flamme, flux brûlés) virent à l'orange.
-      float warm = clamp((c.r - c.b) * 2.2, 0.0, 1.0);
-      ink = mix(ink, vec3(1.0, 0.58, 0.28) * (0.55 + t * 0.6), warm * 0.7);
+      // Couleur : la teinte de la pièce, saturée et portée à pleine luminosité, mêlée à la palette.
+      float peak = max(c.r, max(c.g, c.b));
+      vec3 hue = peak > 0.02 ? c / peak : vec3(0.0);
+      hue = clamp(mix(vec3(luma(hue)), hue, 1.5), 0.0, 1.0);
+      vec3 ink = mix(palette(t), hue * (0.45 + 0.75 * t), peak > 0.02 ? 0.7 : 0.0);
 
       float m = code > 32.0 ? glyph(code, local) : 0.0;
-      col = BG + ink * m + ink * 0.05 * t * step(32.5, code);
+      // Fond de cellule teinté : les formes restent lisibles même avec de tout petits caractères.
+      float fill = empty ? 0.0 : 0.16 * (0.3 + t);
+      col = BG + ink * fill + ink * m * 1.15;
       vec2 q = vUv - 0.5;
       col *= 1.0 - dot(q, q) * 0.8;
       gl_FragColor = vec4(col, 1.0);
