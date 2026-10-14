@@ -523,12 +523,16 @@ const ink = new THREE.ShaderMaterial({
         // Couché ou debout, le moteur garde les mêmes couleurs : on le teinte selon ses propres axes.
         vec3 no = texture2D(tNormal, vUv).a < 0.75 ? normalize(engineInv * nw) : nw;
         vec3 alb = pow(clamp(src.rgb, 0.0, 1.0), vec3(1.0 / 2.2));
-        float key = 0.82 + 0.18 * max(dot(nw, normalize(vec3(0.35, 0.8, 0.5))), 0.0);
+        float lam = max(dot(nw, normalize(vec3(0.35, 0.8, 0.5))), 0.0);
+        float key = 0.82 + 0.18 * lam;
         // Les matières colorées (cuivre, conduits, vannes) gardent leur teinte : l'orientation ne fait que les nuancer.
         float sat = max(alb.r, max(alb.g, alb.b)) - min(alb.r, min(alb.g, alb.b));
         vec3 tint = mix(orient(no), vec3(0.6 + 0.4 * nw.y * 0.5 + 0.2), smoothstep(0.15, 0.5, sat) * 0.75);
         col = alb * tint * key;
-        col *= 1.0 - 0.75 * occlusion(z);
+        // Ombres tramées : un dégradé doux, plus un grain de points sombres d'autant plus dense que l'ombre est profonde.
+        float shade = clamp(occlusion(z) * 1.15 + smoothstep(0.45, 0.0, lam) * 0.4, 0.0, 1.0);
+        float grain = step(hash(floor(gl_FragCoord.xy / (pr * 1.5)) + 17.0), max(shade - 0.18, 0.0) * 1.1);
+        col *= 1.0 - 0.45 * shade - 0.28 * grain;
 
         // Trait fin : ruptures de profondeur, et plis marqués tant que l'objet est proche.
         float edgeD = 0.0, edgeN = 0.0;
@@ -1061,8 +1065,6 @@ const box = (cat, x, y, z, sx, sy, sz) => BOXES[cat].push([x, y, z, sx, sy, sz])
   };
   tree(13, -13, 'leaf', 7);
   tree(-13, 13, 'leaf2', 19);
-  // Cubes en suspension.
-  for (const [x, y, z, s] of [[-11, 9, -14, 2.2], [13, -9, -9, 1.6], [-15, -15, 9, 1.3], [10, 16, -6, 1.1], [-8, 20, 8, 1.8], [24, 4, -30, 3]]) box('stone', x, y, z, s, s, s);
 }
 const ALBEDO = { stone: 0xffffff, warm: 0xfff6ea, leaf: 0xff5a4a, leaf2: 0x6fdc8a, trunk: 0xf2ece4, pool: 0x7fd6f0 };
 // Eau : stries qui défilent vers le bas.
