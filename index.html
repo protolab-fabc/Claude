@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moteurs démontés</title>
+<meta name="description" content="Six moteurs qui se démontent au fil du défilement, chacun dans son style graphique.">
+<style>
+  :root {
+    --bg: #f4f1ea;
+    --ink: #1c1a17;
+    --body: #4a463f;
+    --muted: #6e695f;
+    --rule: rgba(28, 26, 23, 0.14);
+    --accent: #c4452a;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151412;
+      --ink: #f1ede4;
+      --body: #c4beb2;
+      --muted: #9a9488;
+      --rule: rgba(241, 237, 228, 0.14);
+      --accent: #f07a55;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+  main { max-width: 960px; margin: 0 auto; padding: 72px 24px 64px; }
+  h1 { font-size: clamp(36px, 6vw, 56px); font-weight: 600; line-height: 1; letter-spacing: -0.02em; margin: 0 0 14px; }
+  .lede { color: var(--body); font-size: 17px; line-height: 1.55; max-width: 52ch; margin: 0 0 48px; }
+  ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+  li { border-bottom: 1px solid var(--rule); }
+  a {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 4px 24px;
+    padding: 22px 4px;
+    color: inherit;
+    text-decoration: none;
+  }
+  a h2 { margin: 0; font-size: 21px; font-weight: 600; }
+  a p { margin: 0; color: var(--body); font-size: 15px; line-height: 1.5; grid-column: 1; }
+  a span { grid-row: 1 / span 2; grid-column: 2; align-self: center; color: var(--muted); font-size: 14px; white-space: nowrap; }
+  a span::after { content: "→"; display: inline-block; margin-left: 6px; transition: transform 160ms ease-out; }
+  @media (hover: hover) and (pointer: fine) {
+    a:hover h2 { color: var(--accent); }
+    a:hover span::after { transform: translateX(4px); }
+  }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  footer { margin-top: 40px; color: var(--muted); font-size: 14px; }
+  @media (max-width: 560px) {
+    a { grid-template-columns: 1fr; }
+    a span { grid-row: auto; grid-column: 1; margin-top: 6px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    a span::after { transition: none; }
+  }
+</style>
+</head>
+<body>
+  <main>
+    <h1>Moteurs démontés</h1>
+    <p class="lede">Six moteurs qui se démontent pièce par pièce au fil du défilement, chacun dans son propre style graphique.</p>
+    <ul>
+      <li><a href="samples/turboreacteur/index.html">
+        <h2>Turboréacteur</h2>
+        <p>Un turbofan de ligne et ses flux d'air, en aplats encrés façon Sable.</p>
+        <span>Dessin à plat</span>
+      </a></li>
+      <li><a href="samples/statoreacteur/index.html">
+        <h2>Statoréacteur</h2>
+        <p>Ondes de choc, chambre et jet supersonique, en pixel art façon A Short Hike.</p>
+        <span>Pixel art</span>
+      </a></li>
+      <li><a href="samples/rafale/index.html">
+        <h2>M88 du Rafale</h2>
+        <p>Le moteur à post-combustion du Rafale, rendu en ASCII art vivant.</p>
+        <span>ASCII</span>
+      </a></li>
+      <li><a href="samples/f1/index.html">
+        <h2>F-1 de Saturn V</h2>
+        <p>Le moteur-fusée et ses ergols, dans une architecture infinie façon Manifold Garden.</p>
+        <span>Manifold Garden</span>
+      </a></li>
+      <li><a href="samples/pw150a/index.html">
+        <h2>PW150A</h2>
+        <p>Le turbopropulseur du Dash 8-400, en dessin animé des années 1930 façon Cuphead.</p>
+        <span>Dessin animé</span>
+      </a></li>
+      <li><a href="samples/extrudeur-mk4/index.html">
+        <h2>Extrudeur Prusa MK4</h2>
+        <p>La tête d'impression d'une imprimante 3D, en cyberpunk dessiné à la main.</p>
+        <span>Cyberpunk</span>
+      </a></li>
+    </ul>
+    <footer>Maquettes procédurales générées en code avec Three.js, non officielles.</footer>
+  </main>
+</body>
+</html>
