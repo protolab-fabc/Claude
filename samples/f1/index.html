@@ -1155,7 +1155,7 @@ function plumeMaterial(core) {
         float t = clamp((-5.4 - vY) / 20.0, 0.0, 1.0);
         vec3 col = mix(vec3(1.0, 0.93, 0.72), vec3(0.98, 0.55, 0.26), smoothstep(0.0, 0.7, t));
         float bands = 0.82 + 0.18 * sin(vY * 2.6 + time * 16.0);
-        float a = (0.25 + 0.75 * rim) * pow(1.0 - t, 1.3) * bands * smoothstep(-5.3, -6.2, vY);
+        float a = 0.7 * (0.25 + 0.75 * rim) * pow(1.0 - t, 1.3) * bands * smoothstep(-5.3, -6.2, vY);
         ` : `
         float t = clamp((-5.5 - vY) / 6.0, 0.0, 1.0);
         vec3 col = vec3(0.24, 0.21, 0.27);
@@ -1185,7 +1185,7 @@ const plume = new THREE.Group();
 // ------------------------------------------------------------------
 const SAMPLES = 320, TRAIL = 22;
 function trailMaterial() {
-  const m = new LineMaterial({ linewidth: 2.4 * PR, vertexColors: true, transparent: true, depthWrite: false, depthTest: false });
+  const m = new LineMaterial({ linewidth: 3.2 * PR, vertexColors: true, transparent: true, depthWrite: false, depthTest: false });
   m.onBeforeCompile = (shader) => {
     shader.uniforms.tSceneDepth = { value: colorRT.depthTexture };
     shader.uniforms.depthRes = { value: depthRes };
@@ -1194,50 +1194,66 @@ function trailMaterial() {
         'vColor.xyz = ( position.y < 0.5 ) ? instanceColorStart : instanceColorEnd;',
         'vColor.xyz = ( position.y < 0.5 ) ? instanceColorStart : instanceColorEnd;\n\t\t\t\tvTrail = ( position.y < 0.5 ) ? instanceAlphaStart : instanceAlphaEnd;');
     shader.fragmentShader = 'varying float vTrail;\n' + DEPTH_TEST +
-      shader.fragmentShader.replace('float alpha = opacity;', 'float alpha = opacity * vTrail * (1.0 - 0.7 * hiddenBy());');
+      shader.fragmentShader.replace('float alpha = opacity;', 'float alpha = opacity * vTrail * (1.0 - 0.5 * hiddenBy());');
   };
   m.customProgramCacheKey = () => 'trail';
   return m;
 }
+const INJ_TOP = V3(0, 4.45, 0);
 const loxPath = (k) => {
   const s = k ? -1 : 1;
   return [pumpAt(6.6, -0.15, s * 0.62), pumpAt(5.72, -0.15, s * 0.62), pumpAt(5.2, -0.1, s * 0.48), pumpAt(4.75, 0, s * 0.15),
-          pumpAt(4.4, 0.3, s * 0.4), ...loxDuct(k), polar(LOX_IN[k], 0.5, 4.7), V3(0, 4.3, 0)];
+          pumpAt(4.4, 0.3, s * 0.4), ...loxDuct(k), polar(LOX_IN[k], 0.5, 4.7), INJ_TOP];
 };
+// Le kérosène fait le tour du collecteur, remonte dans les tubes de la paroi puis entre dans l'injecteur.
 const fuelPath = (k) => {
   const s = k ? -1 : 1;
   return [pumpAt(4.2, -0.35, s * 1.5), pumpAt(3.42, -0.35, s * 1.45), pumpAt(3.05, -0.2, s * 1.2), pumpAt(3.1, 0, s * 0.55),
-          pumpAt(3.25, 0.35, s * 0.55), ...fuelDuct(k), polar(FUEL_IN[k] + s * 0.4, 1.25, 3.38), polar(FUEL_IN[k] + s * 1.1, 1.25, 3.38)];
+          pumpAt(3.25, 0.35, s * 0.55), ...fuelDuct(k), polar(FUEL_IN[k] + s * 0.4, 1.25, 3.38), polar(FUEL_IN[k] + s * 0.9, 1.2, 3.6),
+          polar(FUEL_IN[k] + s * 1.1, 1.18, 4.1), polar(FUEL_IN[k] + s * 1.2, 0.5, 4.35), INJ_TOP];
 };
+const HX_A = Math.atan2(HX.z, HX.x);
 const gasPath = () => {
   const tm = pumpAt(2.1).addScaledVector(GG.clone().setY(0).sub(PUMP.clone().setY(0)).normalize(), 1.0);
-  const hxA = Math.atan2(HX.z, HX.x);
-  const around = [];
-  for (let i = 1; i <= 10; i++) around.push(polar(hxA + i * 0.28, MAN_R, MAN_Y));
   return [GG.clone().setY(GG.y + 0.3), GG.clone().setY(GG.y - 0.5), tm, pumpAt(1.9, 0.3, 0.3), pumpAt(1.4), pumpAt(1.0),
-          HX.clone().setY(0.85), HX.clone().setY(-0.1), polar(hxA, MAN_R, MAN_Y + 0.3), polar(hxA + 0.1, MAN_R, MAN_Y), ...around];
+          HX.clone().setY(0.85), HX.clone().setY(-0.1), polar(HX_A, MAN_R, MAN_Y + 0.3), polar(HX_A + 0.1, MAN_R, MAN_Y)];
 };
 const C = (hex) => new THREE.Color(hex);
+// Après l'alimentation, chaque particule poursuit sa propre route :
+// core — brûlée dans la chambre, elle s'écarte avec la paroi, passe le col, sort de la tuyère et file dans la flamme ;
+// film — le gaz de turbine fait le tour du collecteur, longe la paroi de l'extension, puis s'enflamme plus bas.
+const HOT_A = C(0xfff0b8), HOT_B = C(0xff8a3a), HOT_C = C(0xe0502a);
 const FLOWS = [
-  { path: loxPath(0), color: C(0x2f86cf), particles: 16, speed: 2.4, len: 1.6, jitter: 0.09 },
-  { path: loxPath(1), color: C(0x2f86cf), particles: 16, speed: 2.4, len: 1.6, jitter: 0.09 },
-  { path: fuelPath(0), color: C(0xd9861f), particles: 13, speed: 2.1, len: 1.4, jitter: 0.08 },
-  { path: fuelPath(1), color: C(0xd9861f), particles: 13, speed: 2.1, len: 1.4, jitter: 0.08 },
-  { path: gasPath(), color: C(0x7a6690), particles: 22, speed: 2.8, len: 1.8, jitter: 0.12 },
+  { path: loxPath(0), color: C(0x2f86cf), particles: 26, speed: 2.6, len: 1.7, jitter: 0.09, tail: 'core' },
+  { path: loxPath(1), color: C(0x2f86cf), particles: 26, speed: 2.6, len: 1.7, jitter: 0.09, tail: 'core' },
+  { path: fuelPath(0), color: C(0xd9861f), particles: 20, speed: 2.4, len: 1.5, jitter: 0.08, tail: 'core' },
+  { path: fuelPath(1), color: C(0xd9861f), particles: 20, speed: 2.4, len: 1.5, jitter: 0.08, tail: 'core' },
+  { path: gasPath(), color: C(0x6a5a86), particles: 34, speed: 2.8, len: 1.8, jitter: 0.12, tail: 'film' },
 ];
 const flowGroup = new THREE.Group();
+flowGroup.renderOrder = 3;
 fxScene.add(flowGroup);
+// Distance parcourue après l'alimentation → descente, qui accélère avec la détente des gaz.
+const descent = (d, k) => d + k * d * d;
+const solveDescent = (h, k) => (-1 + Math.sqrt(1 + 4 * k * h)) / (2 * k);
+const CORE_K = 0.06, FILM_K = 0.05;
+const CORE_END = -18, FILM_END = -12;
 function spawn(f, p) {
-  p.s = -Math.random() * f.L * 0.6;
-  p.rate = 0.8 + Math.random() * 0.4;
+  p.s = -Math.random() * f.L * 0.5;
+  p.rate = 0.85 + Math.random() * 0.3;
   p.off = new THREE.Vector3().randomDirection().multiplyScalar(Math.random() * f.jitter);
+  p.u = 0.2 + 0.8 * Math.sqrt(Math.random());
+  p.a = f.tail === 'film' ? HX_A + 0.1 + (Math.random() * 2 - 1) * Math.PI : Math.random() * TAU;
+  p.wob = Math.random() * TAU;
 }
 for (const f of FLOWS) {
   const c = curve(f.path);
   f.L = c.getLength();
   f.pts = c.getSpacedPoints(SAMPLES - 1);
+  f.hot = f.tail === 'core' ? solveDescent(INJ_TOP.y - CORE_END, CORE_K) : solveDescent(MAN_Y - FILM_END, FILM_K);
+  f.total = f.L + f.hot;
   f.p = [];
-  for (let i = 0; i < f.particles; i++) { const p = {}; spawn(f, p); p.s = Math.random() * (f.L + f.len); f.p.push(p); }
+  for (let i = 0; i < f.particles; i++) { const p = {}; spawn(f, p); p.s = Math.random() * f.total; f.p.push(p); }
   const segs = f.particles * (TRAIL - 1);
   const geo = new LineSegmentsGeometry();
   geo.setPositions(new Float32Array(segs * 6));
@@ -1248,13 +1264,39 @@ for (const f of FLOWS) {
   f.mat = trailMaterial();
   f.mesh = new LineSegments2(geo, f.mat);
   f.mesh.frustumCulled = false;
+  f.mesh.renderOrder = 3;
   flowGroup.add(f.mesh);
 }
 const tmpP = new THREE.Vector3();
-function pointAt(f, s, out) {
-  const u = clamp(s / f.L) * (SAMPLES - 1);
-  const i = Math.min(SAMPLES - 2, Math.floor(u));
-  return out.copy(f.pts[i]).lerp(f.pts[i + 1], u - i);
+const tmpC = new THREE.Color();
+// Position et couleur d'une particule à l'abscisse s de son trajet complet.
+function flowPoint(f, p, s, out, col) {
+  if (s <= f.L) {
+    const u = clamp(s / f.L) * (SAMPLES - 1);
+    const i = Math.min(SAMPLES - 2, Math.floor(u));
+    out.copy(f.pts[i]).lerp(f.pts[i + 1], u - i).add(p.off);
+    col.copy(f.color);
+    return out;
+  }
+  const d = s - f.L;
+  if (f.tail === 'core') {
+    const y = INJ_TOP.y - descent(d, CORE_K);
+    let r;
+    if (y > Y_EXIT) r = gasR(y) * 0.88 * p.u * smooth(INJ_TOP.y, 3.6, y);
+    else r = p.u * lerp(gasR(Y_EXIT) * 0.88, 2.7, smooth(Y_EXIT, -11, y)) + 0.25 * p.u * Math.sin(y * 0.7 + p.wob) * smooth(Y_EXIT, -10, y);
+    out.set(Math.cos(p.a) * r, y, Math.sin(p.a) * r);
+    const t = clamp(d / f.hot);
+    col.copy(f.color).lerp(HOT_A, smooth(0, 0.06, t)).lerp(HOT_B, smooth(0.15, 0.55, t)).lerp(HOT_C, smooth(0.6, 1, t));
+  } else {
+    const y = MAN_Y - descent(d, FILM_K);
+    const a = lerp(HX_A + 0.1, p.a, smooth(0, 1.6, MAN_Y - y));
+    let r;
+    if (y > Y_EXIT) r = lerp(MAN_R, gasR(y) - 0.1, smooth(MAN_Y, MAN_Y - 0.6, y));
+    else r = gasR(Y_EXIT) - 0.1 - (Y_EXIT - y) * 0.06;
+    out.set(Math.cos(a) * r, y, Math.sin(a) * r);
+    col.copy(f.color).lerp(HOT_B, smooth(-7.5, -10, y));
+  }
+  return out;
 }
 function updateFlow(dt, vis) {
   for (const f of FLOWS) {
@@ -1266,25 +1308,27 @@ function updateFlow(dt, vis) {
     const alp = f.alpha.array;
     let o = 0, oa = 0;
     for (const p of f.p) {
-      p.s += dt * f.speed * p.rate;
-      if (p.s - p.len > f.L) spawn(f, p);
-      p.len = f.len;
-      let px = 0, py = 0, pz = 0, pa = 0;
+      // Les traînées s'allongent dans la flamme, où les gaz vont beaucoup plus vite.
+      p.s += dt * f.speed * p.rate * (p.s > f.L ? 1.6 : 1);
+      if (p.s - f.len * 2 > f.total) spawn(f, p);
+      const len = p.s > f.L ? f.len * 2 : f.len;
+      let px = 0, py = 0, pz = 0, pa = 0, pr = 0, pg = 0, pb = 0;
       for (let j = 0; j < TRAIL; j++) {
         const q = j / (TRAIL - 1);
-        const s = p.s - f.len * (1 - q);
-        pointAt(f, s, tmpP).add(p.off);
-        const inside = s >= 0 && s <= f.L;
-        const life = smooth(0, 0.6, s) * smooth(f.L, f.L - 0.6, s);
-        const a = inside ? q ** 1.5 * life : 0;
+        const s = p.s - len * (1 - q);
+        flowPoint(f, p, clamp(s, 0, f.total), tmpP, tmpC);
+        const inside = s >= 0 && s <= f.total;
+        const life = smooth(0, 0.6, s) * smooth(f.total, f.total - 2.5, s);
+        const a = inside ? q ** 1.4 * life : 0;
         if (j > 0) {
           pos[o] = px; pos[o + 1] = py; pos[o + 2] = pz;
           pos[o + 3] = tmpP.x; pos[o + 4] = tmpP.y; pos[o + 5] = tmpP.z;
-          col[o] = col[o + 3] = f.color.r; col[o + 1] = col[o + 4] = f.color.g; col[o + 2] = col[o + 5] = f.color.b;
+          col[o] = pr; col[o + 1] = pg; col[o + 2] = pb;
+          col[o + 3] = tmpC.r; col[o + 4] = tmpC.g; col[o + 5] = tmpC.b;
           alp[oa] = pa; alp[oa + 1] = a;
           o += 6; oa += 2;
         }
-        px = tmpP.x; py = tmpP.y; pz = tmpP.z; pa = a;
+        px = tmpP.x; py = tmpP.y; pz = tmpP.z; pa = a; pr = tmpC.r; pg = tmpC.g; pb = tmpC.b;
       }
     }
     f.mesh.geometry.attributes.instanceStart.data.needsUpdate = true;
@@ -1324,8 +1368,8 @@ const CHAPTERS = [
 
 // Images-clés caméra : point visé (x, y), hauteur L et largeur W à cadrer, azimut et élévation.
 const KEYS = [
-  { p: 0.0,   x: 0.8,  y: -2.8, L: 22,  W: 9,   az: 0.32,  el: 0.1 },
-  { p: 0.05,  x: 0.8,  y: -2.8, L: 22,  W: 9,   az: 0.32,  el: 0.1 },
+  { p: 0.0,   x: 0.8,  y: -4.2, L: 24.5, W: 9,  az: 0.32,  el: 0.1 },
+  { p: 0.05,  x: 0.8,  y: -4.2, L: 24.5, W: 9,  az: 0.32,  el: 0.1 },
   { p: 0.17,  x: 1.5,  y: 3.4,  L: 8,   W: 7,   az: 0.55,  el: 0.3 },
   { p: 0.23,  x: 1.5,  y: 3.4,  L: 8,   W: 7,   az: 0.7,   el: 0.34 },
   { p: 0.33,  x: 0.2,  y: -7.5, L: 20,  W: 10,  az: -0.3,  el: -0.12 },
@@ -1512,7 +1556,7 @@ function update(p, dt, time) {
   first = false;
   // Décentrage optique : en paysage, le sujet glisse vers la droite pour libérer la colonne de texte.
   if (!portrait && innerWidth > 720) {
-    const shift = lerp(0.1, 0.045, smooth(0.04, 0.14, p));
+    const shift = lerp(0.04, 0.015, smooth(0.04, 0.14, p));
     camera.setViewOffset(innerWidth, innerHeight, -innerWidth * shift, 0, innerWidth, innerHeight);
   } else if (camera.view) camera.clearViewOffset();
   camera.position.copy(camPos);
