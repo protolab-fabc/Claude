@@ -418,17 +418,18 @@ const MAT = {
   ivory:  flat(0xf1e3c4),
   red:    flat(0xd9473b),
   cream:  flat(0xf8eed6),
-  black:  flat(0x2a2420),
+  black:  flat(0x34302e),
   yellow: flat(0xf2c14e),
   blue:   flat(0x3d5c8c),
   teal:   flat(0x6fb0a8),
   steel:  flat(0x9fb4c8),
-  silver: flat(0xd0d8de),
+  silver: flat(0xdfe2e0),
   copper: flat(0xe08e45),
   brass:  flat(0xe0b04a),
   hot:    flat(0xe0603d),
   orange: flat(0xe8913f),
   bronze: flat(0x9a8470),
+  grey:   flat(0xb7bcc2),
   green:  flat(0x5f9e8f),
   dark:   flat(0x3a322c),
   hole:   flat(0x241d18),
@@ -642,7 +643,7 @@ function ring(center, axis, R, r, mat) {
 }
 const polar = (a, r, y, cx = 0) => V3(cx + Math.cos(a) * r, y, Math.sin(a) * r);
 
-const XP = 0.8;   // décalage de l'arbre d'hélice
+const XP = 0.25;  // léger décalage de l'arbre d'hélice, au-dessus du cœur
 const Y_PROP = 5.4;
 
 // ------------------------------------------------------------------
@@ -700,8 +701,8 @@ function bladeRow(target, y, n, r0, len, chord, pitch, mat, thick = 0.025) {
 }
 const boltGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.04, 6);
 
-// --- Carter du générateur de gaz : deux demi-coquilles qui s'écartent ---
-const CASE = [[0.6, 3.35], [0.62, 2.0], [0.8, 1.86], [0.99, 1.56], [1.0, 1.2], [0.9, 1.02], [0.92, 0.05], [0.82, -0.32], [0.76, -0.5], [0.78, -1.9]];
+// --- Carter du générateur de gaz : long fût métallique en deux demi-coquilles qui s'écartent ---
+const CASE = [[0.62, 2.5], [0.64, 1.6], [0.78, 1.45], [0.8, 1.0], [0.74, 0.82], [0.76, -0.6], [0.7, -0.9], [0.7, -2.3]];
 const caseR = (y) => {
   if (y >= CASE[0][1]) return CASE[0][0];
   for (let i = 0; i < CASE.length - 1; i++) {
@@ -711,125 +712,135 @@ const caseR = (y) => {
   return CASE[CASE.length - 1][0];
 };
 {
-  const shell = [...CASE.map(([r, y]) => [r + 0.05, y]), ...CASE.slice().reverse()];
+  const shell = [...CASE.map(([r, y]) => [r + 0.04, y]), ...CASE.slice().reverse()];
   shell.push(shell[0]);
   for (const [id, phi, dx] of [['case-top', 0, 1.7], ['case-bottom', Math.PI, -1.7]]) {
     const g = new THREE.Group();
-    g.add(lathe(shell, MAT.ivory(), 64, phi, Math.PI));
+    g.add(lathe(shell, MAT.silver(), 64, phi, Math.PI));
     addPart(id, g, { dx, order: 0, half: true,
-      label: id === 'case-top' ? { text: 'Carter', at: [caseR(0.5) + 0.06, 0.5, 0] } : null });
+      label: id === 'case-top' ? { text: 'Carter', at: [caseR(-0.2) + 0.05, -0.2, 0] } : null });
   }
 }
 
 // --- Compresseur BP : trois étages axiaux ---
 {
   const g = new THREE.Group();
-  g.add(lathe([[0.001, 3.3], [0.2, 3.25], [0.24, 2.0], [0.001, 1.95]], MAT.silver()));
+  g.add(lathe([[0.001, 2.45], [0.2, 2.4], [0.24, 1.5], [0.001, 1.45]], MAT.silver()));
   const m = MAT.steel();
-  [[3.0, 18], [2.6, 20], [2.2, 22]].forEach(([y, n]) => bladeRow(g, y, n, 0.22, 0.34, 0.13, 0.55, m));
-  addPart('lpc', g, { dy: 1.1, order: 1, label: { text: 'Compresseur axial', at: [0.58, 2.6, 0] } });
+  [[2.2, 18], [1.95, 20], [1.7, 22]].forEach(([y, n]) => bladeRow(g, y, n, 0.22, 0.36, 0.12, 0.55, m));
+  addPart('lpc', g, { dy: 1.1, order: 1, label: { text: 'Compresseur axial', at: [0.6, 1.95, 0] } });
 }
 
 // --- Compresseur centrifuge HP ---
 {
   const g = new THREE.Group();
-  const m = MAT.silver();
-  g.add(lathe([[0.001, 1.86], [0.22, 1.86], [0.3, 1.62], [0.6, 1.32], [0.84, 1.22], [0.84, 1.13], [0.001, 1.13]], m));
-  const vane = new THREE.BoxGeometry(0.72, 0.16, 0.025);
+  g.add(lathe([[0.001, 1.45], [0.2, 1.45], [0.28, 1.25], [0.52, 1.02], [0.72, 0.93], [0.72, 0.86], [0.001, 0.86]], MAT.silver()));
+  const vane = new THREE.BoxGeometry(0.6, 0.14, 0.025);
   const inst = new THREE.InstancedMesh(vane, MAT.steel(), 16);
   const d = new THREE.Object3D();
   for (let i = 0; i < 16; i++) {
     const a = (i / 16) * TAU;
-    d.position.copy(polar(a, 0.53, 1.5));
+    d.position.copy(polar(a, 0.46, 1.15));
     d.rotation.set(0, -a, 0);
-    d.rotateZ(-0.8);
+    d.rotateZ(-0.75);
     d.rotateX(0.35);
     d.updateMatrix();
     inst.setMatrixAt(i, d.matrix);
   }
   g.add(inst);
-  addPart('impeller', g, { dy: 0.35, order: 1, label: { text: 'Rouet centrifuge', at: [0.86, 1.18, 0] } });
+  addPart('impeller', g, { dy: 0.35, order: 1, label: { text: 'Rouet centrifuge', at: [0.74, 0.9, 0] } });
 }
 
-// --- Chambre de combustion annulaire, injecteurs et rampe ---
+// --- Chambre de combustion annulaire, rampe et injecteurs ---
 {
   const g = new THREE.Group();
-  const m = MAT.copper();
-  g.add(lathe([[0.48, 1.0], [0.86, 1.0], [0.86, 0.05], [0.66, -0.12], [0.48, 0.0], [0.48, 1.0]], m));
-  for (const y of [0.72, 0.42, 0.18]) crown(g, new THREE.CylinderGeometry(0.035, 0.035, 0.02, 10), MAT.hole(), 24, (i) => ({ a: (i / 24) * TAU + y, r: 0.865, y }));
-  // Rampe de carburant en laiton et ses quatorze injecteurs.
-  const fm = new THREE.Mesh(new THREE.TorusGeometry(1.06, 0.045, 10, 96), MAT.brass());
-  fm.rotation.x = Math.PI / 2; fm.position.y = 0.85;
+  g.add(lathe([[0.4, 0.75], [0.7, 0.75], [0.7, -0.35], [0.54, -0.48], [0.4, -0.38], [0.4, 0.75]], MAT.copper()));
+  for (const y of [0.5, 0.2, -0.1]) crown(g, new THREE.CylinderGeometry(0.03, 0.03, 0.02, 10), MAT.hole(), 24, (i) => ({ a: (i / 24) * TAU + y, r: 0.705, y }));
+  const fm = new THREE.Mesh(new THREE.TorusGeometry(0.9, 0.04, 10, 96), MAT.brass());
+  fm.rotation.x = Math.PI / 2; fm.position.y = 0.62;
   g.add(fm);
   for (let i = 0; i < 14; i++) {
     const a = (i / 14) * TAU;
-    g.add(rod(polar(a, 0.86, 0.85), polar(a, 1.06, 0.85), 0.03, MAT.brass(), 8));
-    g.add(mesh(new THREE.SphereGeometry(0.055, 12, 8), MAT.brass(), ...polar(a, 1.06, 0.85).toArray()));
+    g.add(rod(polar(a, 0.7, 0.62), polar(a, 0.9, 0.62), 0.026, MAT.brass(), 8));
+    g.add(mesh(new THREE.SphereGeometry(0.05, 12, 8), MAT.brass(), ...polar(a, 0.9, 0.62).toArray()));
   }
-  addPart('combustor', g, { dy: -0.4, order: 1, label: { text: 'Chambre de combustion', at: [1.1, 0.85, 0] } });
+  addPart('combustor', g, { dy: -0.4, order: 1, label: { text: 'Chambre de combustion', at: [0.94, 0.62, 0] } });
 }
 
 // --- Turbines : HP, BP, puis turbine libre à deux étages ---
 {
   const g = new THREE.Group();
   const stage = (y, R, mat, n) => {
-    g.add(lathe([[0.001, y + 0.07], [R * 0.62, y + 0.07], [R * 0.62, y - 0.07], [0.001, y - 0.07]], mat));
-    bladeRow(g, y, n, R * 0.6, R * 0.42, 0.11, -0.6, mat, 0.03);
+    g.add(lathe([[0.001, y + 0.06], [R * 0.62, y + 0.06], [R * 0.62, y - 0.06], [0.001, y - 0.06]], mat));
+    bladeRow(g, y, n, R * 0.6, R * 0.42, 0.1, -0.6, mat, 0.03);
   };
-  stage(-0.55, 0.66, MAT.hot(), 32);
-  stage(-0.85, 0.68, MAT.orange(), 32);
-  stage(-1.25, 0.72, MAT.brass(), 36);
-  stage(-1.6, 0.74, MAT.brass(), 36);
-  addPart('turbines', g, { dy: -1.3, order: 2, label: { text: 'Turbines HP · BP · libre', at: [0.76, -1.05, 0] } });
+  stage(-0.7, 0.62, MAT.hot(), 32);
+  stage(-0.98, 0.64, MAT.orange(), 32);
+  stage(-1.35, 0.66, MAT.brass(), 36);
+  stage(-1.68, 0.67, MAT.brass(), 36);
+  addPart('turbines', g, { dy: -1.4, order: 2, label: { text: 'Turbines HP · BP · libre', at: [0.7, -1.2, 0] } });
 }
 
-// --- Arbre de turbine libre, qui remonte jusqu'au réducteur ---
+// --- Arbre de turbine libre, jusqu'au réducteur ---
 {
   const g = new THREE.Group();
-  g.add(rod(V3(0, -1.75, 0), V3(0, 3.9, 0), 0.07, MAT.blue(), 16));
-  for (const y of [-1.0, 0.6, 2.4, 3.6]) g.add(ring(V3(0, y, 0), V3(0, 1, 0), 0.1, 0.03, MAT.dark()));
+  g.add(rod(V3(0, -1.85, 0), V3(0, 4.4, 0), 0.07, MAT.blue(), 16));
+  for (const y of [-1.1, 0.95, 2.5, 3.9]) g.add(ring(V3(0, y, 0), V3(0, 1, 0), 0.1, 0.03, MAT.dark()));
   addPart('shaft', g, { order: 0 });
 }
 
-// --- Conduit d'échappement : coude qui rejette les gaz vers le haut et l'arrière ---
-const EXH = [V3(0, -1.95, 0), V3(0.05, -2.45, 0), V3(0.45, -2.95, 0), V3(1.15, -3.2, 0)];
+// --- Cheminée d'échappement : courte, inclinée vers le haut et l'arrière ---
+const EXH = [V3(0.15, -1.75, 0), V3(0.55, -1.95, 0), V3(1.0, -2.2, 0), V3(1.25, -2.38, 0)];
 const exhCurve = curve(EXH);
 const EXH_OUT = exhCurve.getPoint(1);
 const EXH_DIR = exhCurve.getTangent(1).normalize();
 {
   const g = new THREE.Group();
-  g.add(lathe([[0.78, -1.88], [0.86, -1.88], [0.86, -2.02], [0.7, -2.08]], MAT.bronze()));
-  g.add(new THREE.Mesh(new THREE.TubeGeometry(exhCurve, 48, 0.6, 24), MAT.bronze()));
-  g.add(ring(EXH_OUT, EXH_DIR, 0.62, 0.06, MAT.dark()));
-  for (const t of [0.35, 0.65]) g.add(ring(exhCurve.getPoint(t), exhCurve.getTangent(t), 0.61, 0.035, MAT.dark()));
-  addPart('exhaust', g, { dy: -2.4, dx: 0.5, order: 3, label: { text: "Coude d'échappement", at: EXH_OUT.clone().add(V3(0.45, 0, 0)).toArray() } });
+  g.add(new THREE.Mesh(new THREE.TubeGeometry(exhCurve, 32, 0.42, 24), MAT.bronze()));
+  g.add(ring(EXH_OUT, EXH_DIR, 0.44, 0.05, MAT.dark()));
+  g.add(ring(exhCurve.getPoint(0.55), exhCurve.getTangent(0.55), 0.43, 0.03, MAT.blue()));
+  addPart('exhaust', g, { dy: -1.0, dx: 1.6, order: 3, label: { text: "Cheminée d'échappement", at: EXH_OUT.clone().add(V3(0.35, 0, 0)).toArray() } });
 }
 
-// --- Entrée d'air en S, sous le cône ---
-const INTAKE = [V3(-0.98, 5.0, 0), V3(-0.98, 4.35, 0), V3(-0.78, 3.75, 0), V3(-0.3, 3.38, 0), V3(0, 3.28, 0)];
+// --- Carter d'entrée : tambour noir percé de deux grandes ouïes grillagées ---
+const INLET_Y = 3.15;
 {
   const g = new THREE.Group();
-  g.add(pipe(INTAKE, 0.42, MAT.teal(), 64));
-  g.add(ring(INTAKE[0], V3(0, 1, 0), 0.44, 0.08, MAT.cream()));
-  // Grille anti-oiseaux.
-  for (const a of [0, Math.PI / 3, (2 * Math.PI) / 3]) {
-    const bar = mesh(new THREE.BoxGeometry(0.84, 0.03, 0.03), MAT.dark(), INTAKE[0].x, INTAKE[0].y - 0.05, 0);
-    bar.rotation.y = a;
-    g.add(bar);
+  const black = MAT.black();
+  g.add(lathe([[0.62, 3.82], [0.86, 3.75], [0.9, 3.5], [0.9, 2.8], [0.8, 2.55], [0.62, 2.5]], black, 64));
+  g.add(lathe([[0.001, 3.82], [0.62, 3.82], [0.62, 3.78], [0.001, 3.78]], black, 48));
+  for (const s of [1, -1]) {
+    const c = V3(0, INLET_Y, s * 0.9);
+    // Ouïe : disque sombre en retrait, cerclé de métal clair, barré d'une grille.
+    g.add(mesh(new THREE.CylinderGeometry(0.46, 0.46, 0.04, 40).rotateX(Math.PI / 2), MAT.hole(), 0, INLET_Y, s * 0.89));
+    g.add(ring(c, V3(0, 0, 1), 0.47, 0.05, MAT.silver()));
+    for (let k = -2; k <= 2; k++) {
+      g.add(mesh(new THREE.BoxGeometry(0.02, Math.sqrt(0.46 ** 2 - (k * 0.16) ** 2) * 2, 0.02), MAT.steel(), k * 0.16, INLET_Y, s * 0.91));
+      g.add(mesh(new THREE.BoxGeometry(Math.sqrt(0.46 ** 2 - (k * 0.16) ** 2) * 2, 0.02, 0.02), MAT.steel(), 0, INLET_Y + k * 0.16, s * 0.91));
+    }
   }
-  addPart('intake', g, { dx: -2.2, dy: 1.0, order: 2, label: { text: "Entrée d'air en S", at: [-1.42, 4.4, 0] } });
+  for (const y of [3.78, 2.55]) crown(g, boltGeo, MAT.silver(), 24, (i) => ({ a: (i / 24) * TAU, r: y > 3 ? 0.84 : 0.76, y: y + 0.02, rot: 'axial' }));
+  addPart('intake', g, { dx: -2.3, dy: 1.3, order: 2, label: { text: "Carter d'entrée", at: [-0.92, INLET_Y, 0] } });
 }
 
-// --- Réducteur : boîtier rouge décalé, qui porte l'hélice au-dessus du cœur ---
+// --- Réducteur : boîtier gris compact, coiffé de ses boîtiers noirs ---
 {
   const g = new THREE.Group();
-  const red = MAT.red();
-  g.add(lathe([[0.001, 5.25], [0.5, 5.25], [0.64, 5.1], [0.92, 4.62], [1.06, 4.0], [1.06, 3.62], [0.001, 3.62]], red, 72).translateX(XP));
-  g.add(lathe([[0.001, 3.72], [0.7, 3.72], [0.66, 3.35], [0.001, 3.35]], red, 72));
-  addPart('gearbox', g, { dy: 2.0, order: 2, label: { text: 'Réducteur', at: [XP + 1.08, 4.2, 0] } });
+  const grey = MAT.grey();
+  g.add(lathe([[0.001, 5.25], [0.52, 5.25], [0.68, 5.1], [0.86, 4.7], [0.92, 4.2], [0.9, 3.85], [0.001, 3.85]], grey, 72).translateX(XP));
+  // Bossages et carters latéraux, pour casser la rondeur.
+  g.add(mesh(new THREE.BoxGeometry(0.5, 0.7, 1.5), grey, XP - 0.35, 4.3, 0));
+  g.add(mesh(new THREE.BoxGeometry(0.4, 0.5, 0.4), grey, XP + 0.85, 4.15, 0.35));
+  // Régulateur d'hélice et boîtiers noirs sur le dessus.
+  g.add(mesh(new THREE.BoxGeometry(0.42, 0.42, 0.5), MAT.black(), XP + 1.05, 4.55, -0.15));
+  g.add(mesh(new THREE.BoxGeometry(0.3, 0.3, 0.3), MAT.black(), XP + 1.0, 4.05, 0.3));
+  g.add(mesh(new THREE.CylinderGeometry(0.12, 0.12, 0.28, 16), MAT.dark(), XP + 1.32, 4.55, -0.15).rotateZ(Math.PI / 2));
+  g.add(lathe([[0.86, 3.92], [0.98, 3.92], [0.98, 3.82], [0.86, 3.82], [0.86, 3.92]], MAT.dark(), 64).translateX(XP));
+  crown(g, boltGeo, MAT.dark(), 28, (i) => ({ a: (i / 28) * TAU, r: 0.94, y: 3.94, rot: 'axial' }), XP);
+  addPart('gearbox', g, { dy: 2.0, order: 2, label: { text: 'Réducteur', at: [XP + 1.3, 4.3, 0] } });
 }
 
-// --- Engrenages du réducteur : pignon sur l'arbre de turbine, grande roue sur l'arbre d'hélice ---
+// --- Engrenages du réducteur : petit pignon d'entrée, grande roue de sortie ---
 function gearGeometry(r, teeth, depth, toothH) {
   const shape = new THREE.Shape();
   const steps = teeth * 4;
@@ -850,22 +861,24 @@ function gearGeometry(r, teeth, depth, toothH) {
 }
 const gears = {};
 {
+  // Train à deux étages : le pignon de turbine attaque une roue intermédiaire, qui mène la couronne d'hélice.
   const g = new THREE.Group();
-  gears.pinion = mesh(gearGeometry(0.24, 12, 0.22, 0.06), MAT.brass(), 0, 4.1, 0);
-  gears.wheel = mesh(gearGeometry(0.5, 24, 0.2, 0.06), MAT.yellow(), XP, 4.1, 0);
+  gears.pinion = mesh(gearGeometry(0.2, 10, 0.2, 0.05), MAT.brass(), 0, 4.45, 0.62);
+  gears.wheel = mesh(gearGeometry(0.62, 30, 0.18, 0.05), MAT.yellow(), XP, 4.45, 0);
   g.add(gears.pinion, gears.wheel);
-  g.add(rod(V3(XP, 3.8, 0), V3(XP, 5.3, 0), 0.09, MAT.blue(), 16));
-  addPart('gears', g, { dx: 2.6, dy: 2.0, order: 3, label: { text: 'Engrenages', at: [XP + 0.6, 4.1, 0] } });
+  g.add(rod(V3(XP, 4.1, 0), V3(XP, 5.3, 0), 0.09, MAT.blue(), 16));
+  addPart('gears', g, { dx: 2.6, dy: 2.2, order: 3, label: { text: 'Engrenages', at: [XP + 0.7, 4.45, 0] } });
 }
 
-// --- Hélice : six pales noires aux bouts jaunes, moyeu bleu ---
+// --- Hélice : pales en cimeterre noires, bande blanche près du bout ---
 const propRotor = new THREE.Group();
 propRotor.position.x = XP;
 function paddle(s0, s1, L) {
-  // Pale « palette » vue en plan : large au milieu, bout arrondi ; puis vrillée le long de l'envergure.
-  const chord = (s) => 0.2 + 0.28 * Math.sin(Math.PI * Math.min(1, (s / L) * 1.05));
+  // Pale vue en plan : large au tiers, bout arrondi, bord d'attaque qui se recourbe vers l'arrière.
+  const chord = (s) => 0.22 + 0.36 * Math.sin(Math.PI * Math.min(1, (s / L) * 0.95 + 0.08)) * (1 - 0.25 * (s / L));
+  const sweep = (s) => -0.35 * (s / L) ** 2;
   const up = [], down = [];
-  for (let i = 0; i <= 16; i++) { const s = lerp(s0, s1, i / 16); up.push([s, chord(s) * 0.55]); down.push([s, -chord(s) * 0.45]); }
+  for (let i = 0; i <= 18; i++) { const s = lerp(s0, s1, i / 18); up.push([s, sweep(s) + chord(s) * 0.55]); down.push([s, sweep(s) - chord(s) * 0.45]); }
   const pts = [...up, ...down.reverse()].map(([x, y]) => new THREE.Vector2(x, y));
   const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts), { depth: 0.05, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 1, curveSegments: 4 });
   g.translate(0, 0, -0.025);
@@ -873,78 +886,87 @@ function paddle(s0, s1, L) {
   for (let i = 0; i < pos.count; i++) {
     const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
     const a = 0.95 - 0.55 * (x / L);
-    pos.setXYZ(i, x + 0.45, y * Math.cos(a) - z * Math.sin(a), y * Math.sin(a) + z * Math.cos(a));
+    pos.setXYZ(i, x + 0.55, y * Math.cos(a) - z * Math.sin(a), y * Math.sin(a) + z * Math.cos(a));
   }
   g.computeVertexNormals();
-  // Envergure le long de X, corde le long de Y, puis l'axe de l'hélice ramené sur Y.
   g.rotateX(Math.PI / 2);
   return g;
 }
 {
-  const L = 2.45;
-  const body = paddle(0, L * 0.84, L), tip = paddle(L * 0.84, L, L);
-  const black = MAT.black(), yellow = MAT.yellow();
+  const L = 2.7;
+  const body = paddle(0, L * 0.78, L), band = paddle(L * 0.78, L * 0.84, L), tip = paddle(L * 0.84, L, L);
+  const black = MAT.black(), white = MAT.cream();
   for (let i = 0; i < 6; i++) {
     const a = (i / 6) * TAU;
     const b = new THREE.Group();
-    b.add(new THREE.Mesh(body, black), new THREE.Mesh(tip, yellow));
+    b.add(new THREE.Mesh(body, black), new THREE.Mesh(band, white), new THREE.Mesh(tip, black));
     b.position.y = Y_PROP;
     b.rotation.y = -a;
     propRotor.add(b);
   }
-  propRotor.add(lathe([[0.001, 5.62], [0.5, 5.62], [0.56, 5.4], [0.52, 5.2], [0.001, 5.2]], MAT.blue(), 48));
-  crown(propRotor, new THREE.CylinderGeometry(0.1, 0.1, 0.12, 14), MAT.dark(), 6, (i) => ({ a: (i / 6) * TAU, r: 0.5, y: Y_PROP, rot: 'radial' }));
+  propRotor.add(lathe([[0.001, 5.62], [0.62, 5.62], [0.66, 5.4], [0.6, 5.2], [0.001, 5.2]], MAT.dark(), 48));
+  crown(propRotor, new THREE.CylinderGeometry(0.11, 0.11, 0.14, 14), MAT.grey(), 6, (i) => ({ a: (i / 6) * TAU, r: 0.6, y: Y_PROP, rot: 'radial' }));
   const g = new THREE.Group();
   g.add(propRotor);
-  addPart('prop', g, { dy: 3.8, order: 4, label: { text: 'Hélice à six pales', at: [XP + 2.2, Y_PROP, 0] } });
+  addPart('prop', g, { dy: 4.0, order: 4, label: { text: 'Hélice à six pales', at: [XP + 2.4, Y_PROP, 0] } });
 }
 
-// --- Cône d'hélice, rouge et crème ---
+// --- Cône d'hélice : long, pointu, noir laqué ---
 const spinner = new THREE.Group();
 spinner.position.x = XP;
 {
-  spinner.add(lathe([[0.001, 5.62], [0.6, 5.62], [0.58, 5.85], [0.45, 6.2], [0.28, 6.42]], MAT.red(), 48));
-  spinner.add(lathe([[0.28, 6.42], [0.12, 6.6], [0.001, 6.66]], MAT.cream(), 48));
-  // Spirale peinte sur le cône.
-  const pts = [];
-  for (let i = 0; i <= 30; i++) { const t = i / 30; const y = lerp(5.66, 6.4, t); const r = lerp(0.6, 0.29, t ** 1.3) + 0.012; pts.push(polar(t * Math.PI * 1.6, r, y)); }
-  spinner.add(pipe(pts, 0.035, MAT.cream(), 48));
+  spinner.add(lathe([[0.001, 5.62], [0.8, 5.62], [0.79, 5.9], [0.7, 6.35], [0.52, 6.8], [0.3, 7.15], [0.12, 7.35], [0.001, 7.42]], MAT.black(), 56));
+  spinner.add(ring(V3(0, 5.66, 0), V3(0, 1, 0), 0.8, 0.035, MAT.grey()));
   const g = new THREE.Group();
   g.add(spinner);
-  addPart('spinner', g, { dy: 5.6, order: 5, label: { text: "Cône d'hélice", at: [XP + 0.5, 6.0, 0] } });
+  addPart('spinner', g, { dy: 5.4, order: 5, label: { text: "Cône d'hélice", at: [XP + 0.6, 6.4, 0] } });
 }
 
-// --- Accessoires : boîtier, démarreur-génératrice, pompe, réservoir d'huile, FADEC ---
+// --- Accessoires à l'arrière : boîtier, démarreur, régulateur, harnais blanc et deux FADEC posés dessous ---
 {
   const g = new THREE.Group();
-  g.add(mesh(new THREE.BoxGeometry(0.36, 1.3, 0.92), MAT.green(), -1.0, 1.75, 0));
-  g.add(mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.7, 24), MAT.blue(), -1.02, 0.8, 0.18));
-  g.add(ring(V3(-1.02, 0.6, 0.18), V3(0, 1, 0), 0.27, 0.03, MAT.dark()));
-  g.add(mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.35, 18), MAT.red(), -1.02, 2.55, -0.25));
-  const tank = mesh(new THREE.CapsuleGeometry(0.2, 0.6, 6, 16), MAT.yellow(), -0.72, 1.55, -0.72);
-  g.add(tank);
-  g.add(mesh(new THREE.BoxGeometry(0.42, 0.6, 0.16), MAT.black(), 0.05, 2.35, 0.95));
-  for (let i = 0; i < 3; i++) g.add(mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.1, 12).rotateX(Math.PI / 2), MAT.brass(), -0.1 + i * 0.15, 2.55, 1.06));
-  g.add(pipe([V3(-1.0, 2.3, 0.3), V3(-0.75, 2.4, 0.75), V3(-0.15, 2.4, 1.0)], 0.03, MAT.dark(), 24));
-  g.add(pipe([V3(-0.72, 1.2, -0.72), V3(-0.95, 1.05, -0.35), V3(-1.0, 1.2, -0.1)], 0.035, MAT.brass(), 24));
-  addPart('accessories', g, { dx: -2.6, dy: -0.4, order: 2, label: { text: 'Accessoires et FADEC', at: [-1.2, 1.75, 0] } });
+  g.add(lathe([[0.001, -2.28], [0.72, -2.28], [0.74, -2.5], [0.62, -2.95], [0.5, -3.1], [0.001, -3.1]], MAT.grey(), 64));
+  g.add(mesh(new THREE.CylinderGeometry(0.28, 0.28, 0.62, 24), MAT.black(), 0, -3.4, 0));
+  g.add(ring(V3(0, -3.12, 0), V3(0, 1, 0), 0.3, 0.03, MAT.blue()));
+  g.add(mesh(new THREE.BoxGeometry(0.4, 0.5, 0.42), MAT.black(), 0.62, -2.75, 0.2));
+  g.add(mesh(new THREE.BoxGeometry(0.3, 0.36, 0.3), MAT.black(), 0.55, -3.15, -0.3));
+  g.add(mesh(new THREE.BoxGeometry(0.34, 0.4, 0.34), MAT.red(), -0.55, -2.75, 0.32));
+  // Harnais blanc qui descend vers les deux calculateurs.
+  const F1 = V3(-2.15, -2.3, 0.1), F2 = V3(-2.15, -3.55, 0.1);
+  g.add(mesh(new THREE.BoxGeometry(0.34, 1.0, 0.7), MAT.black(), F1.x, F1.y, F1.z));
+  for (let k = 0; k < 4; k++) g.add(mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.14, 12).rotateZ(Math.PI / 2), MAT.brass(), F1.x + 0.22, F1.y - 0.32 + k * 0.21, F1.z + 0.2));
+  g.add(mesh(new THREE.BoxGeometry(0.22, 0.6, 0.5), MAT.black(), F2.x, F2.y, F2.z));
+  g.add(pipe([V3(-0.4, -2.95, 0.4), V3(-1.1, -2.9, 0.55), V3(-1.6, -2.55, 0.4), F1.clone().add(V3(0.17, 0.0, 0.2))], 0.05, MAT.cream(), 48));
+  g.add(pipe([V3(-0.3, -3.3, 0.25), V3(-1.2, -3.4, 0.4), F2.clone().add(V3(0.12, 0.1, 0.1))], 0.04, MAT.cream(), 40));
+  g.add(pipe([F1.clone().add(V3(0, -0.5, 0)), F1.clone().add(V3(0.05, -0.75, 0.05)), F2.clone().add(V3(0, 0.3, 0))], 0.03, MAT.cream(), 24));
+  for (const t of [0.3, 0.6]) g.add(ring(curve([V3(-0.4, -2.95, 0.4), V3(-1.1, -2.9, 0.55), V3(-1.6, -2.55, 0.4)]).getPoint(t), V3(1, 0, 0), 0.07, 0.025, MAT.blue()));
+  addPart('accessories', g, { dx: -1.2, dy: -1.4, order: 2, label: { text: 'Accessoires et FADEC', at: [-2.35, -2.3, 0.1] } });
 }
 
-// --- Détails du carter : brides, boulons, pattes d'accrochage ---
+// --- Détails du carter : brides, boulons, colliers bleus, tuyauteries sous le ventre, pattes ---
 {
   const top = partById['case-top'].obj, bottom = partById['case-bottom'].obj;
-  const ivory = partById['case-top'].mats[0];
+  const silver = partById['case-top'].mats[0];
   // La demi-coquille du haut couvre x ≥ 0, soit les angles de −90° à +90° dans le plan (x, z).
-  for (const [y, R] of [[1.95, 0.84], [1.05, 1.0], [0.0, 0.98], [-0.42, 0.86], [-1.85, 0.86]]) {
+  for (const [y, R, mat] of [[2.45, 0.7, MAT.dark()], [1.52, 0.86, MAT.dark()], [1.2, 0.86, MAT.blue()], [0.86, 0.84, MAT.dark()],
+                             [0.2, 0.82, MAT.dark()], [-0.62, 0.82, MAT.dark()], [-1.0, 0.76, MAT.blue()], [-1.45, 0.76, MAT.dark()], [-2.25, 0.76, MAT.dark()]]) {
     for (const [obj, phi, a0] of [[top, 0, -Math.PI / 2], [bottom, Math.PI, Math.PI / 2]]) {
-      obj.add(lathe([[R - 0.08, y + 0.04], [R, y + 0.04], [R, y - 0.04], [R - 0.08, y - 0.04], [R - 0.08, y + 0.04]], MAT.dark(), 64, phi, Math.PI));
-      crown(obj, boltGeo, MAT.dark(), 12, (i) => ({ a: a0 + ((i + 0.5) / 12) * Math.PI, r: R - 0.02, y: y + 0.06, rot: 'axial' }));
+      obj.add(lathe([[R - 0.08, y + 0.035], [R, y + 0.035], [R, y - 0.035], [R - 0.08, y - 0.035], [R - 0.08, y + 0.035]], mat, 64, phi, Math.PI));
+      if (mat.color.getHex() !== 0x3d5c8c) crown(obj, boltGeo, MAT.dark(), 12, (i) => ({ a: a0 + ((i + 0.5) / 12) * Math.PI, r: R - 0.02, y: y + 0.05, rot: 'axial' }));
     }
   }
+  // Panneaux rivetés et petite plaque cuivrée sur le flanc.
+  top.add(mesh(new THREE.BoxGeometry(0.06, 0.32, 0.32), MAT.copper(), 0.62, 1.95, 0.28).rotateY(-0.42));
+  // Tuyauteries qui courent sous le ventre, du carter d'entrée jusqu'aux accessoires.
+  for (const [z, r, mat] of [[0.32, 0.045, MAT.steel()], [0.12, 0.05, MAT.cream()], [-0.14, 0.04, MAT.steel()], [-0.34, 0.035, MAT.brass()]]) {
+    const pts = [V3(-0.62, 3.7, z * 1.4), V3(-0.92, 3.3, z * 1.5), V3(-0.95, 1.6, z), V3(-0.92, 0.0, z), V3(-0.85, -1.6, z), V3(-0.8, -2.55, z * 0.8)];
+    bottom.add(pipe(pts, r, mat, 96));
+    for (const y of [2.2, 0.6, -1.0]) bottom.add(ring(V3(-0.93, y, z), V3(0, 1, 0), r + 0.02, 0.015, MAT.blue()));
+  }
   // Pattes d'accrochage sur le dessus.
-  for (const y of [1.25, -0.25]) {
-    top.add(mesh(new THREE.BoxGeometry(0.22, 0.3, 0.34), ivory, caseR(y) + 0.12, y, 0));
-    top.add(mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.36, 14).rotateX(Math.PI / 2), MAT.dark(), caseR(y) + 0.2, y, 0));
+  for (const y of [1.35, -0.8]) {
+    top.add(mesh(new THREE.BoxGeometry(0.22, 0.3, 0.34), silver, caseR(y) + 0.1, y, 0));
+    top.add(mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.36, 14).rotateX(Math.PI / 2), MAT.dark(), caseR(y) + 0.18, y, 0));
   }
   for (const id of ['case-top', 'case-bottom']) {
     const s = new Set();
@@ -969,7 +991,7 @@ const puffs = [];
 }
 
 // ------------------------------------------------------------------
-// Flux : air aspiré par la prise en S, comprimé, brûlé puis rejeté ; souffle hélicoïdal de l'hélice.
+// Flux : air aspiré par les ouïes du carter d'entrée, comprimé, brûlé puis rejeté ; souffle hélicoïdal de l'hélice.
 // Chaque particule suit son propre trajet, et reste visible en transparence derrière les parois.
 // ------------------------------------------------------------------
 const depthRes = new THREE.Vector2(1, 1);
@@ -999,15 +1021,16 @@ const PTS = 90, TRAIL = 20;
 // Trajet d'une particule d'air : waypoints [position, couleur].
 function airRoute() {
   const a = Math.random() * TAU, j = () => (Math.random() * 2 - 1);
-  const jx = j() * 0.25, jz = j() * 0.25;
+  const side = Math.random() < 0.5 ? 1 : -1;
   const pol = (r, y) => polar(a, r, y);
+  // L'air arrive par le flanc, traverse la grille de l'ouïe, puis file le long de l'axe.
   return [
-    [V3(-1.15 + jx * 2, 8.6, jz * 3), COLD], [V3(-0.98 + jx, 5.6, jz), COLD], [V3(-0.98 + jx, 4.9, jz), COLD],
-    [V3(-0.98 + jx, 4.3, jz), COLD], [V3(-0.76 + jx * 0.8, 3.72, jz * 0.8), COLD], [V3(-0.28, 3.36, jz * 0.6), COLD],
-    [pol(0.38, 3.05), COLD], [pol(0.42, 2.2), COLD], [pol(0.6, 1.55), COLD], [pol(0.88, 1.2), COLD],
-    [pol(0.72, 0.8), HOT], [pol(0.66, 0.2), FIRE], [pol(0.6, -0.4), FIRE], [pol(0.6, -1.0), HOT], [pol(0.58, -1.7), SMOKE],
-    [EXH[1].clone().add(V3(j() * 0.25, 0, j() * 0.25)), SMOKE], [EXH[2].clone().add(V3(j() * 0.25, 0, j() * 0.25)), SMOKE],
-    [EXH_OUT.clone().add(V3(j() * 0.2, 0, j() * 0.25)), SMOKE],
+    [V3(j() * 0.9, INLET_Y + 1.2 + j() * 0.6, side * 4.2), COLD], [V3(j() * 0.35, INLET_Y + j() * 0.3, side * 1.6), COLD],
+    [V3(j() * 0.3, INLET_Y + j() * 0.25, side * 0.9), COLD], [V3(j() * 0.2, INLET_Y - 0.2, side * 0.45), COLD],
+    [pol(0.36, 2.45), COLD], [pol(0.42, 1.9), COLD], [pol(0.5, 1.2), COLD], [pol(0.72, 0.92), COLD],
+    [pol(0.6, 0.55), HOT], [pol(0.56, 0.0), FIRE], [pol(0.55, -0.5), FIRE], [pol(0.55, -1.1), HOT], [pol(0.5, -1.6), SMOKE],
+    [EXH[1].clone().add(V3(j() * 0.15, 0, j() * 0.2)), SMOKE], [EXH[2].clone().add(V3(j() * 0.15, 0, j() * 0.2)), SMOKE],
+    [EXH_OUT.clone().add(V3(j() * 0.15, 0, j() * 0.2)), SMOKE],
     [EXH_OUT.clone().addScaledVector(EXH_DIR, 2.2).add(V3(j() * 0.5, j() * 0.3, j() * 0.5)), SMOKE],
   ];
 }
@@ -1111,11 +1134,11 @@ const CHAPTERS = [
     text: "Six pales en composite de 4,1 m qui tournent autour de 1 020 tours par minute. C'est elle qui fait presque tout le travail : le moteur derrière ne sert qu'à la faire tourner.",
     specs: [['Pales', '6'], ['Diamètre', '4,1 m']] },
   { id: 'air', num: 'Acte 2', name: 'Le grand souffle', from: 0.24, to: 0.38,
-    text: "L'air entre par la bouche sous le cône, remonte un conduit en S jusqu'au compresseur, brûle dans la chambre puis traverse les turbines avant de ressortir par le coude d'échappement." },
+    text: "L'air entre par les grandes ouïes grillagées du carter d'entrée, file le long de l'axe dans les compresseurs, brûle dans la chambre puis traverse les turbines avant de ressortir par la cheminée d'échappement." },
   { id: 'exploded', num: 'Acte 3', name: 'Vue éclatée', from: 0.42, to: 0.6,
     text: "Tout le monde en scène : l'hélice et son cône, le réducteur et ses engrenages, l'entrée d'air, le carter, les compresseurs, la chambre, les turbines, l'échappement et les accessoires." },
   { id: 'gearbox', num: 'Acte 4', name: 'Le réducteur', from: 0.61, to: 0.675, focus: ['gearbox', 'gears'],
-    text: "La turbine libre tourne bien trop vite pour une hélice. Un petit pignon entraîne une grande roue, et l'arbre d'hélice, décalé vers le haut, laisse la place à l'entrée d'air en dessous.",
+    text: "La turbine libre tourne bien trop vite pour une hélice. Un petit pignon entraîne une grande couronne, qui fait tourner l'arbre d'hélice bien plus lentement mais avec bien plus de force.",
     specs: [['Hélice', '≈ 1 020 tr/min']] },
   { id: 'compressor', num: 'Acte 5', name: 'Les compresseurs', from: 0.68, to: 0.745, focus: ['lpc', 'impeller'],
     text: "Trois étages axiaux serrent l'air une première fois, puis un rouet centrifuge le projette vers l'extérieur et finit le travail avant la chambre.",
@@ -1123,7 +1146,7 @@ const CHAPTERS = [
   { id: 'hot', num: 'Acte 6', name: 'Feu et turbines', from: 0.75, to: 0.815, focus: ['combustor', 'turbines'],
     text: "Quatorze injecteurs arrosent la chambre annulaire. Les turbines haute et basse pression entraînent les compresseurs ; la turbine libre, à deux étages, fait tourner l'hélice par son propre arbre." },
   { id: 'acc', num: 'Acte 7', name: 'Les coulisses', from: 0.82, to: 0.885, focus: ['accessories'],
-    text: "Boîtier d'accessoires, démarreur-génératrice, pompe à carburant, réservoir d'huile, et le FADEC : un calculateur à double canal qui pilote le moteur à la place du pilote.",
+    text: "À l'arrière, le boîtier d'accessoires, le démarreur-génératrice et la régulation ; un harnais descend vers le FADEC, un calculateur à double canal qui pilote le moteur à la place du pilote.",
     specs: [['FADEC', 'double canal']] },
   { id: 'outro', num: 'Rideau', name: 'Rideau !', from: 0.9, to: 1.01,
     text: "Deux PW150A emmènent le Dash 8-400, l'un des avions de ligne à hélices les plus rapides : autour de 660 km/h en croisière." },
@@ -1132,24 +1155,24 @@ const CHAPTERS = [
 // Images-clés : point visé (x, y) dans le repère du moteur, hauteur L le long de l'axe, largeur W,
 // azimut autour de l'axe (az) et élévation le long de l'axe (el, vers l'avant si positive).
 const KEYS = [
-  { p: 0.0,   x: 0.4,  y: 1.2,  L: 14.5, W: 8,  az: 0.35,  el: 0.5 },
-  { p: 0.05,  x: 0.4,  y: 1.2,  L: 14.5, W: 8,  az: 0.35,  el: 0.5 },
-  { p: 0.15,  x: 0.8,  y: 4.4,  L: 7,   W: 7,   az: 0.3,   el: 0.72 },
-  { p: 0.21,  x: 0.8,  y: 4.4,  L: 7,   W: 7,   az: 0.4,   el: 0.66 },
-  { p: 0.31,  x: -0.2, y: 1.6,  L: 13,  W: 6,   az: -0.35, el: 0.12 },
-  { p: 0.37,  x: -0.2, y: 1.6,  L: 13,  W: 6,   az: -0.25, el: 0.1 },
-  { p: 0.5,   x: 0.0,  y: 1.6,  L: 21,  W: 10,  az: 0.22,  el: 0.12 },
-  { p: 0.59,  x: 0.0,  y: 1.6,  L: 21,  W: 10,  az: 0.26,  el: 0.12 },
-  { p: 0.625, x: 1.8,  y: 6.1,  L: 4.6, W: 5.2, az: 0.3,   el: 0.3 },
-  { p: 0.66,  x: 1.8,  y: 6.1,  L: 4.6, W: 5.2, az: 0.4,   el: 0.32 },
-  { p: 0.695, x: 0.0,  y: 2.6,  L: 4.4, W: 3.4, az: 0.35,  el: 0.28 },
-  { p: 0.73,  x: 0.0,  y: 2.6,  L: 4.4, W: 3.4, az: 0.45,  el: 0.3 },
-  { p: 0.765, x: 0.0,  y: -0.9, L: 4.8, W: 3.6, az: 0.3,   el: -0.22 },
-  { p: 0.80,  x: 0.0,  y: -0.9, L: 4.8, W: 3.6, az: 0.4,   el: -0.2 },
-  { p: 0.835, x: -3.6, y: 1.4,  L: 4.2, W: 3.6, az: -0.45, el: 0.22 },
-  { p: 0.87,  x: -3.6, y: 1.4,  L: 4.2, W: 3.6, az: -0.35, el: 0.2 },
-  { p: 0.95,  x: 0.4,  y: 1.2,  L: 14,  W: 8,   az: 0.5,   el: 0.42 },
-  { p: 1.0,   x: 0.4,  y: 1.2,  L: 14,  W: 8,   az: 0.55,  el: 0.42 },
+  { p: 0.0,   x: 0.3,  y: 1.7,  L: 15,  W: 8,   az: 0.32,  el: 0.42 },
+  { p: 0.05,  x: 0.3,  y: 1.7,  L: 15,  W: 8,   az: 0.32,  el: 0.42 },
+  { p: 0.15,  x: 0.3,  y: 5.3,  L: 7,   W: 7,   az: 0.3,   el: 0.66 },
+  { p: 0.21,  x: 0.3,  y: 5.3,  L: 7,   W: 7,   az: 0.4,   el: 0.6 },
+  { p: 0.31,  x: 0.0,  y: 1.0,  L: 13,  W: 6,   az: 0.12,  el: 0.08 },
+  { p: 0.37,  x: 0.0,  y: 1.0,  L: 13,  W: 6,   az: 0.2,   el: 0.06 },
+  { p: 0.5,   x: 0.0,  y: 2.6,  L: 24,  W: 10,  az: 0.22,  el: 0.1 },
+  { p: 0.59,  x: 0.0,  y: 2.6,  L: 24,  W: 10,  az: 0.26,  el: 0.1 },
+  { p: 0.625, x: 1.4,  y: 6.5,  L: 4.6, W: 5.2, az: 0.3,   el: 0.3 },
+  { p: 0.66,  x: 1.4,  y: 6.5,  L: 4.6, W: 5.2, az: 0.4,   el: 0.32 },
+  { p: 0.695, x: 0.0,  y: 2.1,  L: 4.2, W: 3.2, az: 0.35,  el: 0.28 },
+  { p: 0.73,  x: 0.0,  y: 2.1,  L: 4.2, W: 3.2, az: 0.45,  el: 0.3 },
+  { p: 0.765, x: 0.0,  y: -1.3, L: 4.8, W: 3.4, az: 0.3,   el: -0.22 },
+  { p: 0.80,  x: 0.0,  y: -1.3, L: 4.8, W: 3.4, az: 0.4,   el: -0.2 },
+  { p: 0.835, x: -1.9, y: -4.3, L: 4.4, W: 3.8, az: 0.1,   el: 0.12 },
+  { p: 0.87,  x: -1.9, y: -4.3, L: 4.4, W: 3.8, az: 0.2,   el: 0.1 },
+  { p: 0.95,  x: 0.3,  y: 1.7,  L: 16,  W: 8,   az: 0.45,  el: 0.38 },
+  { p: 1.0,   x: 0.3,  y: 1.7,  L: 16,  W: 8,   az: 0.5,   el: 0.38 },
 ];
 
 let portrait = false;
