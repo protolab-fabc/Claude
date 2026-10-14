@@ -190,6 +190,21 @@
   }
   .rail button:focus-visible { outline: 1px solid var(--rust); outline-offset: 4px; }
 
+  .legend {
+    right: 32px; bottom: 22px;
+    display: flex;
+    gap: 22px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--umber);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .legend i { display: block; width: 22px; height: 4px; border: 1px solid var(--ink); }
+  .legend .cold { background: #7fb2c9; }
+  .legend .hot { background: linear-gradient(90deg, #5f9ea8, #ffd27a, #e9773a, #c4512b); }
+
   .progress {
     left: 0; bottom: 0;
     height: 2px;
@@ -280,6 +295,7 @@
   .no-webgl #scene { display: none; }
 
   @media (max-width: 720px) {
+    .legend { left: 16px; right: auto; top: 44px; bottom: auto; flex-direction: column; gap: 6px; font-size: 9px; }
     .topbar { padding: 16px; letter-spacing: 0.16em; font-size: 11px; }
     .topbar .hide-sm { display: none; }
     .hero { left: 16px; right: 16px; bottom: 16px; padding: 18px 18px 20px; background: var(--paper); border: 1.5px solid var(--ink); }
@@ -328,6 +344,10 @@
 
   <div id="panels"></div>
   <nav class="overlay rail" id="rail" aria-label="Chapitres"></nav>
+  <div class="overlay legend" aria-hidden="true">
+    <span><i class="cold"></i>Flux secondaire · air froid</span>
+    <span><i class="hot"></i>Flux primaire · comprimé puis chauffé</span>
+  </div>
   <div class="overlay progress" id="progress"></div>
 
   <main id="track"></main>
@@ -713,6 +733,116 @@ const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1, 32), MAT.da
 const shaftPart = addPart('shaft', shaft, { order: 0 });
 
 // ------------------------------------------------------------------
+// Flux d'air : des traits qui suivent le trajet réel de l'air.
+// Secondaire (froid) entre nacelle et carter ; primaire comprimé, chauffé puis détendu.
+// ------------------------------------------------------------------
+// Interpolation linéaire dans une table [[y, valeur], …] triée par y décroissant.
+function table(rows, y) {
+  if (y >= rows[0][0]) return rows[0][1];
+  for (let i = 0; i < rows.length - 1; i++) {
+    const [y0, v0] = rows[i], [y1, v1] = rows[i + 1];
+    if (y <= y0 && y >= y1) {
+      const t = (y0 - y) / (y0 - y1);
+      return typeof v0 === 'number' ? lerp(v0, v1, t) : v0.clone().lerp(v1, t);
+    }
+  }
+  return rows[rows.length - 1][1];
+}
+const C = (hex) => new THREE.Color(hex);
+const tailconeR = (y) => (y > -2.72 ? 0.62 : Math.max(0, lerp(0.62, 0, (-2.72 - y) / 2.0)));
+const nozzleR = (y) => (y > -2.72 ? casingRadius(y) : y > -4.25 ? lerp(1.36, 1.03, (-2.72 - y) / 1.53) : Math.max(0.78, 1.03 - (-4.25 - y) * 0.07));
+
+const FLOWS = [
+  {
+    // Flux primaire : traverse le cœur du moteur.
+    count: 460, start: 6.6, end: -10, width: 0.035,
+    speed: [[9, 3.2], [3.4, 3.0], [0.4, 1.8], [-0.9, 2.6], [-2.7, 4.0], [-4.3, 6.5], [-10, 7.5]],
+    color: [[9, C(0x5f9ea8)], [0.3, C(0x6aa3a0)], [-0.1, C(0xffd27a)], [-0.8, C(0xffb04a)], [-2.6, C(0xe9773a)],
+            [-4.4, C(0xc4512b)], [-10, C(0xd9a07a)]],
+    radius(y, u) {
+      let inner, outer;
+      if (y > 4.7) { inner = 0.1; outer = 1.05 + (y - 4.7) * 0.08; }
+      else if (y > 3.9) { inner = lerp(0.58, 0.08, (y - 3.9) / 0.8); outer = 1.1; }
+      else if (y > -2.72) { inner = 0.52; outer = casingRadius(y) - 0.07; }
+      else { inner = tailconeR(y) + 0.04; outer = nozzleR(y) - 0.05; }
+      return lerp(inner, outer, u);
+    },
+    swirl: [[9, 0], [4.0, 0.9], [0.3, 0.9], [-0.9, -0.7], [-2.7, -0.7], [-3.5, 0]],
+  },
+  {
+    // Flux secondaire : contourne le cœur, entre carter et nacelle.
+    bypass: true,
+    count: 560, start: 6.6, end: -9, width: 0.04,
+    speed: [[9, 3.4], [3.7, 3.2], [0.1, 4.2], [-9, 4.6]],
+    color: [[9, C(0x7fb2c9)], [0.1, C(0x7fb2c9)], [-9, C(0xa9cad6)]],
+    radius(y, u) {
+      let inner, outer;
+      if (y > 4.7) { inner = 1.2; outer = 2.1 + (y - 4.7) * 0.12; }
+      else if (y > 0.1) { inner = casingRadius(Math.min(y, 3.1)) + 0.12; outer = 2.12; }
+      else {
+        inner = (y > -2.7 ? casingRadius(y) : nozzleR(y)) + 0.12;
+        outer = Math.max(inner + 0.25, 2.12 - (0.1 - y) * 0.11);
+      }
+      return lerp(inner, outer, u);
+    },
+    swirl: [[9, 0], [4.0, 0.5], [3.0, 0], [-9, 0]],
+  },
+];
+
+const flowGroup = new THREE.Group();
+engine.add(flowGroup);
+const flowMat = new THREE.MeshBasicMaterial({ color: 0xffffff, depthWrite: false });
+for (const f of FLOWS) {
+  f.mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(f.width, 1, f.width), flowMat, f.count);
+  f.mesh.frustumCulled = false;
+  f.p = [];
+  for (let i = 0; i < f.count; i++) {
+    f.p.push({ y: lerp(f.end, f.start, Math.random()), a: Math.random() * Math.PI * 2, u: Math.random() });
+    f.mesh.setColorAt(i, f.color[0][1]);
+  }
+  flowGroup.add(f.mesh);
+}
+
+// Quand le moteur s'éclate, l'air suit les pièces : on décale chaque y comme la pièce qui l'entoure.
+const FLOW_ANCHORS = [[4.3, 'spinner'], [3.7, 'fan'], [2.65, 'lpc'], [1.13, 'hpc'], [-0.36, 'combustor'],
+                      [-1.12, 'hpt'], [-2.1, 'lpt'], [-3.5, 'nozzle'], [-4.2, 'tailcone']];
+function explodeOffset(y) {
+  const off = (i) => partById[FLOW_ANCHORS[i][1]].obj.position.y;
+  if (y >= FLOW_ANCHORS[0][0]) return off(0);
+  for (let i = 0; i < FLOW_ANCHORS.length - 1; i++) {
+    const y0 = FLOW_ANCHORS[i][0], y1 = FLOW_ANCHORS[i + 1][0];
+    if (y <= y0 && y >= y1) return lerp(off(i), off(i + 1), (y0 - y) / (y0 - y1));
+  }
+  return off(FLOW_ANCHORS.length - 1);
+}
+
+const flowDummy = new THREE.Object3D();
+// Réglés depuis update() : épaisseur relative à la distance caméra, effacement du flux secondaire en gros plan.
+let flowScale = 1, bypassVis = 1;
+function updateFlow(dt) {
+  for (const f of FLOWS) {
+    for (let i = 0; i < f.count; i++) {
+      const q = f.p[i];
+      const v = table(f.speed, q.y);
+      q.y -= v * dt;
+      q.a += table(f.swirl, q.y) * dt;
+      if (q.y < f.end) { q.y = f.start; q.a = Math.random() * Math.PI * 2; q.u = Math.random(); }
+      const r = f.radius(q.y, q.u);
+      flowDummy.position.set(Math.cos(q.a) * r, q.y + explodeOffset(q.y), Math.sin(q.a) * r);
+      // Plus l'air va vite, plus le trait s'allonge ; il naît et s'éteint progressivement.
+      const life = smooth(f.start, f.start - 1.2, q.y) * smooth(f.end, f.end + 2, q.y);
+      const k = life * (f.bypass ? bypassVis : 1);
+      flowDummy.scale.set(k * flowScale, (0.08 + v * 0.11) * k * (0.5 + 0.5 * flowScale), k * flowScale);
+      flowDummy.updateMatrix();
+      f.mesh.setMatrixAt(i, flowDummy.matrix);
+      f.mesh.setColorAt(i, table(f.color, q.y));
+    }
+    f.mesh.instanceMatrix.needsUpdate = true;
+    f.mesh.instanceColor.needsUpdate = true;
+  }
+}
+
+// ------------------------------------------------------------------
 // Récit : chapitres, caméra
 // ------------------------------------------------------------------
 const CHAPTERS = [
@@ -904,6 +1034,9 @@ function update(p, dt, time) {
   shaft.scale.y = lerp(7.2, 19.5, ts);
   shaft.position.y = lerp(0.4, -0.9, ts);
 
+  // En mouvement réduit, les flux restent visibles mais immobiles.
+  updateFlow(reduceMotion ? 0 : dt);
+
   // Rotation : les deux arbres tournent à des régimes différents et ralentissent au démontage.
   if (!reduceMotion) {
     const throttle = 1 - 0.88 * tAxialMean;
@@ -924,6 +1057,7 @@ function update(p, dt, time) {
     if (w > 0.5) active = c;
     if (c.focus && w > focusWeight) { focus = c.focus; focusWeight = w; }
   }
+  bypassVis = 1 - focusWeight;
   for (const c of CHAPTERS) c.btn?.classList.toggle('active', c === active);
   progressEl.style.transform = `scaleX(${p.toFixed(4)})`;
 
@@ -953,6 +1087,7 @@ function update(p, dt, time) {
   const along = portrait ? 2 * halfTan : 2 * halfTan * camera.aspect;
   const across = portrait ? 2 * halfTan * camera.aspect : 2 * halfTan;
   const dist = Math.max((ck.L * 1.12) / along, (ck.W * 1.2) / across) + ck.W * 0.5;
+  flowScale = clamp(dist / 24, 0.3, 1.2);
   axisPoint(ck.y, wantTarget);
   v.copy(axisFront).multiplyScalar(ck.fa);
   v.y += ck.el;
@@ -1035,12 +1170,14 @@ function frame() {
   // Passe des normales : les pièces presque effacées ne doivent pas laisser de traits.
   const hidden = parts.filter((part) => part.opacity < 0.5 && part.obj.visible);
   for (const part of hidden) part.obj.visible = false;
+  flowGroup.visible = false;
   scene.overrideMaterial = normalMat;
   renderer.setRenderTarget(normalRT);
   renderer.clear();
   renderer.render(scene, camera);
   scene.overrideMaterial = null;
   for (const part of hidden) part.obj.visible = true;
+  flowGroup.visible = true;
 
   renderer.setRenderTarget(null);
   renderer.clear();
