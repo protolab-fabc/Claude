@@ -3,8 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rafale — carnet de bord</title>
-<meta name="description" content="Un Rafale au-dessus de la mer du soir, puis son bloc propulsif — deux moteurs M88 et leurs entrées d'air — démonté pièce par pièce au fil du défilement.">
+<title>M88 — carnet de bord</title>
+<meta name="description" content="Le bloc propulsif du Rafale — deux moteurs M88 et leurs entrées d'air — démonté pièce par pièce au fil du défilement, sur la mer du soir.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Spectral:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -210,7 +210,7 @@
     font-size: 14px;
   }
 
-  #track { position: relative; height: 1300vh; }
+  #track { position: relative; height: 1100vh; }
 
   footer {
     position: relative;
@@ -303,7 +303,7 @@
 </script>
 </head>
 <body>
-  <canvas id="scene" aria-label="Modèle 3D d'un Rafale dont le bloc propulsif se décompose au défilement"></canvas>
+  <canvas id="scene" aria-label="Modèle 3D du bloc propulsif d'un Rafale qui se décompose au défilement"></canvas>
   <div class="fallback">WebGL n'est pas disponible sur cet appareil — le modèle 3D ne peut pas s'afficher.</div>
 
   <svg id="labels" class="overlay" aria-hidden="true"></svg>
@@ -314,8 +314,8 @@
   </div>
 
   <div class="overlay hero" id="hero">
-    <h1>Le cœur<br>d'un <em>Rafale</em></h1>
-    <p>Un Rafale au-dessus de la mer, à la tombée du jour. Faites défiler pour plonger dans son fuselage et démonter le bloc propulsif, de l'entrée d'air jusqu'à la tuyère.</p>
+    <h1>Deux cœurs<br>pour un <em>Rafale</em></h1>
+    <p>Le bloc propulsif d'un Rafale : deux moteurs M88 nourris par des entrées d'air fixes. Faites défiler pour démonter le moteur droit, de l'entrée d'air jusqu'à la tuyère.</p>
     <div class="scroll-hint"><i></i>Défiler</div>
   </div>
 
@@ -407,11 +407,6 @@ const MAT = {
   pipe:   flat({ color: 0x9a5a4a }),
   glow:   flat({ color: 0xffcf7a, emissive: 0xff9a40, emissiveIntensity: 0.9 }),
   abglow: flat({ color: 0xffc89a, emissive: 0xff7a40, emissiveIntensity: 0.9, transparent: true, opacity: 0.85 }),
-  // Cellule
-  skin:   flat({ color: 0x95a3a3, side: THREE.DoubleSide }),
-  skinDk: flat({ color: 0x5d6b6c, side: THREE.DoubleSide }),
-  glass:  flat({ color: 0x4d6f72, emissive: 0x3c6a68, emissiveIntensity: 0.3 }),
-  store:  flat({ color: 0xd2ccb4 }),
 };
 
 // ------------------------------------------------------------------
@@ -1029,135 +1024,6 @@ for (const part of parts) for (const m of part.mats) if (!matOwner.has(m)) matOw
 
 
 // ------------------------------------------------------------------
-// Cellule du Rafale : fuselage, verrière, aile delta, canards, dérive, emports.
-// Repère moteur : axe avant = +Y, haut = +X, les deux moteurs côte à côte selon Z.
-// Elle n'est pas une « pièce » : elle s'efface d'un bloc quand la caméra plonge vers les moteurs.
-// ------------------------------------------------------------------
-const ZC = -0.875;   // axe de symétrie de l'avion, entre les deux moteurs
-const airframe = new THREE.Group();
-engine.add(airframe);
-
-// Fuselage : sections en super-ellipse interpolées le long de l'axe.
-// [y, centre x, demi-hauteur, demi-largeur, centre z (par défaut l'axe de l'avion)]
-// Proportions calées sur l'avion réel : nez court, entrées d'air vers 40 % de la longueur.
-const HULL = [[-4.9, 0.15, 0.95, 1.8], [-1.0, 0.2, 1.05, 1.88], [3.0, 0.3, 1.1, 1.8], [4.8, 0.5, 1.0, 1.4],
-              [6.5, 0.75, 0.9, 0.95], [8.5, 0.85, 0.85, 0.82], [10.5, 0.8, 0.75, 0.72], [12.5, 0.65, 0.58, 0.56],
-              [14.2, 0.5, 0.36, 0.35], [15.3, 0.42, 0.1, 0.1], [15.7, 0.4, 0.004, 0.004]];
-function hullGeometry(rows, scale = 1, segY = 160, segA = 56) {
-  const pos = [], idx = [];
-  const y0 = rows[0][0], y1 = rows[rows.length - 1][0];
-  for (let i = 0; i <= segY; i++) {
-    const y = lerp(y0, y1, i / segY);
-    let k = 0;
-    while (k < rows.length - 2 && y > rows[k + 1][0]) k++;
-    const A = rows[k], B = rows[k + 1];
-    const lin = (y - A[0]) / (B[0] - A[0]);
-    const t = lin * 0.4 + smooth(A[0], B[0], y) * 0.6;
-    const cx = lerp(A[1], B[1], t), rx = lerp(A[2], B[2], t) * scale, rz = lerp(A[3], B[3], t) * scale;
-    const cz = lerp(A[4] ?? ZC, B[4] ?? ZC, t);
-    for (let j = 0; j < segA; j++) {
-      const a = (j / segA) * TAU;
-      const c = Math.cos(a), s = Math.sin(a);
-      pos.push(cx + rx * Math.sign(c) * Math.abs(c) ** 0.8, y, cz + rz * Math.sign(s) * Math.abs(s) ** 0.8);
-    }
-  }
-  for (let i = 0; i < segY; i++) {
-    for (let j = 0; j < segA; j++) {
-      const a = i * segA + j, b = i * segA + ((j + 1) % segA), c = (i + 1) * segA + j, d = (i + 1) * segA + ((j + 1) % segA);
-      idx.push(a, c, b, b, c, d);
-    }
-  }
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  g.setIndex(idx);
-  g.computeVertexNormals();
-  return g;
-}
-// Rangée [centre x, demi-hauteur, demi-largeur] interpolée dans une table de sections.
-function interpRow(rows, y) {
-  let k = 0;
-  while (k < rows.length - 2 && y > rows[k + 1][0]) k++;
-  const A = rows[k], B = rows[k + 1];
-  const t = clamp((y - A[0]) / (B[0] - A[0]));
-  return [lerp(A[1], B[1], t), lerp(A[2], B[2], t), lerp(A[3], B[3], t)];
-}
-// Panneau plat extrudé, défini dans le plan (envergure s, y) ; side = +1 à droite (z > ZC), −1 à gauche.
-function planform(points, thick, mat, side, x, zRoot) {
-  const shape = new THREE.Shape(points.map(([s, y]) => new THREE.Vector2(-side * s, y)));
-  const g = new THREE.ExtrudeGeometry(shape, { depth: thick, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 1 });
-  g.translate(0, 0, -thick / 2);
-  g.rotateY(Math.PI / 2);   // (s, y, épaisseur) → (épaisseur, y, s)
-  const m = new THREE.Mesh(g, mat);
-  m.position.set(x, 0, ZC + side * zRoot);
-  return m;
-}
-{
-  const skin = MAT.skin(), dk = MAT.skinDk(), glass = MAT.glass(), store = MAT.store();
-  airframe.add(new THREE.Mesh(hullGeometry(HULL), skin));
-  // Épine dorsale : de la verrière jusqu'au pied de la dérive.
-  airframe.add(new THREE.Mesh(hullGeometry([[-3.6, 1.12, 0.22, 0.36], [-1.0, 1.15, 0.3, 0.42], [3.0, 1.28, 0.32, 0.44],
-                                            [6.5, 1.5, 0.3, 0.4], [8.6, 1.62, 0.2, 0.3], [9.2, 1.62, 0.02, 0.05]], 1, 90, 40), skin));
-  // Verrière en bulle : pare-brise incliné à l'avant, sommet haut, puis fondu dans l'épine dorsale.
-  const CANOPY = [[8.2, 1.62, 0.04, 0.3], [8.9, 1.85, 0.32, 0.42], [9.8, 1.98, 0.42, 0.47], [10.6, 1.9, 0.36, 0.44],
-                  [11.3, 1.68, 0.16, 0.34], [11.6, 1.58, 0.02, 0.12]];
-  airframe.add(new THREE.Mesh(hullGeometry(CANOPY, 1, 70, 48), glass));
-  // Arceaux : cadre du pare-brise et arceau central, en bandes un peu plus larges que le vitrage.
-  for (const y of [10.65, 9.55]) {
-    airframe.add(new THREE.Mesh(hullGeometry([[y - 0.05, ...interpRow(CANOPY, y - 0.05)], [y + 0.05, ...interpRow(CANOPY, y + 0.05)]], 1.03, 2, 48), dk));
-  }
-  // Joues d'entrées d'air : elles habillent les conduits et les fondent dans le fuselage.
-  for (const [mirror, axisZ] of [[1, 0], [-1, -1.75]]) {
-    // Section en ovale vertical, plus haute que large, comme la bouche en D du vrai avion.
-    const rows = [3.7, 4.6, 5.5, 6.5, 7.3, 7.65].map((y) => {
-      const c = ductCenter(y);
-      const lip = y > 7.5 ? 0.94 : 1;
-      return [y, c.x, 0.76 * lip, 0.66 * lip, axisZ + mirror * c.z];
-    });
-    airframe.add(new THREE.Mesh(hullGeometry(rows, 1, 60, 40), skin));
-  }
-  // Perche de ravitaillement fixe, devant la verrière, et sonde de nez.
-  airframe.add(rod(V3(1.25, 11.3, ZC + 0.42), V3(1.85, 12.9, ZC + 0.55), 0.05, dk));
-  airframe.add(rod(V3(1.85, 12.9, ZC + 0.55), V3(1.87, 13.4, ZC + 0.55), 0.07, dk));
-  airframe.add(rod(V3(0.4, 15.6, ZC), V3(0.4, 16.4, ZC), 0.014, dk));
-
-  for (const side of [1, -1]) {
-    // Aile delta à faible envergure, élevons au bord de fuite.
-    airframe.add(planform([[0, 5.0], [5.6, -1.6], [5.8, -3.6], [0, -4.3]], 0.16, skin, side, -0.08, 1.4));
-    for (const pts of [[[0.9, -4.25], [2.9, -4.0], [2.9, -3.5], [0.9, -3.75]], [[3.2, -3.97], [5.6, -3.65], [5.6, -3.15], [3.2, -3.45]]]) {
-      airframe.add(planform(pts, 0.2, dk, side, -0.08, 1.4));
-    }
-    // Apex : raccord entre l'entrée d'air et le bord d'attaque de l'aile.
-    airframe.add(planform([[0, 6.9], [1.3, 4.4], [1.3, 3.4], [0, 3.4]], 0.14, skin, side, 0.05, 1.05));
-    // Canard, haut sur l'épaule de l'entrée d'air, juste devant l'aile.
-    airframe.add(planform([[0, 8.3], [2.4, 6.7], [2.5, 6.2], [0, 6.3]], 0.08, skin, side, 0.82, 0.9));
-    // Missile en bout d'aile : corps, ogive, empennage.
-    const tipZ = ZC + side * (1.4 + 5.85);
-    airframe.add(rod(V3(-0.12, -3.4, tipZ), V3(-0.12, 0.0, tipZ), 0.09, store));
-    airframe.add(mesh(new THREE.ConeGeometry(0.09, 0.35, 16), dk, -0.12, 0.17, tipZ));
-    for (let k = 0; k < 4; k++) {
-      const fin = mesh(new THREE.BoxGeometry(0.02, 0.4, 0.26), dk, -0.12, -3.1, tipZ);
-      fin.rotation.y = (k * Math.PI) / 2;
-      airframe.add(fin);
-    }
-    // Bidon sous l'aile, sur son pylône.
-    const tank = mesh(new THREE.SphereGeometry(1, 28, 14), store, -0.78, -0.4, ZC + side * 4.4);
-    tank.scale.set(0.3, 1.5, 0.3);
-    airframe.add(tank);
-    airframe.add(mesh(new THREE.BoxGeometry(0.46, 1.1, 0.08), dk, -0.36, -0.3, ZC + side * 4.4));
-  }
-  // Dérive, son carénage de tête et le carénage arrière à sa base.
-  const finShape = new THREE.Shape([[-0.8, 1.1], [2.8, 4.5], [3.9, 4.6], [4.3, 1.1]].map(([a, b]) => new THREE.Vector2(a, b)));
-  const finGeo = new THREE.ExtrudeGeometry(finShape, { depth: 0.14, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 1 });
-  finGeo.translate(0, 0, -0.07);
-  finGeo.rotateZ(-Math.PI / 2);   // (−y, x) → (x, y)
-  airframe.add(mesh(finGeo, skin, 0, 0, ZC));
-  airframe.add(rod(V3(4.55, -2.5, ZC), V3(4.6, -4.3, ZC), 0.11, dk));
-  airframe.add(rod(V3(1.3, -3.2, ZC), V3(1.25, -5.1, ZC), 0.2, skin));
-}
-const airMats = [];
-airframe.traverse((o) => { if (o.material && !airMats.includes(o.material)) airMats.push(o.material); });
-
-// ------------------------------------------------------------------
 // Flux d'air : des particules qui suivent le trajet réel de l'air en laissant une traînée qui s'efface.
 // Secondaire (froid) autour du cœur ; primaire comprimé, brûlé, puis réchauffé par la post-combustion.
 // ------------------------------------------------------------------
@@ -1373,13 +1239,8 @@ function updateFlow(dt) {
 // ------------------------------------------------------------------
 // Récit : chapitres, caméra
 // ------------------------------------------------------------------
-// L'introduction (l'avion entier, puis la plongée) occupe le début du défilement ;
-// le démontage du moteur se joue ensuite sur une progression ramenée à 0–1.
-const INTRO = 0.2;
 const CHAPTERS = [
-  { id: 'hero', intro: true, from: 0, to: 0.06 },
-  { id: 'airframe', intro: true, num: '00', name: 'Le Rafale', from: 0.08, to: 0.19,
-    text: "Biréacteur à aile delta et plan canard. Ses deux moteurs occupent l'arrière du fuselage, côte à côte ; deux entrées d'air fixes, sous l'aile, les alimentent. La cellule s'efface : place au bloc propulsif." },
+  { id: 'hero', from: 0, to: 0.06 },
   { id: 'outer', num: '01', name: 'Carter externe', from: 0.09, to: 0.25,
     text: "Un M88 tient dans un cylindre d'à peine 70 cm de diamètre. Sous le carter externe, un étroit canal de dérivation enveloppe le cœur : un double flux à faible taux de dilution, pensé pour la vitesse plutôt que pour l'économie." },
   { id: 'core', num: '02', name: 'Le cœur', from: 0.27, to: 0.4,
@@ -1427,21 +1288,6 @@ const KEYS = [
   { p: 1.0,   y: 0.6,  L: 23,  W: 8,   fa: 0.14, el: 0.38 },
 ];
 
-const INTRO_KEYS = [
-  { p: 0.0,  y: 5.0, L: 23, W: 14, fa: 0.6, el: 0.2 },
-  { p: 0.05, y: 5.0, L: 23, W: 14, fa: 0.6, el: 0.2 },
-  { p: 0.13, y: 0.5, L: 14, W: 7,  fa: 0.25, el: 0.5 },
-];
-function introKey(pAll) {
-  const keys = [...INTRO_KEYS, { ...KEYS[0], p: INTRO }];
-  let i = 0;
-  while (i < keys.length - 2 && pAll > keys[i + 1].p) i++;
-  const a = keys[i], b = keys[i + 1];
-  const t = smooth(a.p, b.p, pAll);
-  const out = {};
-  for (const k of ['y', 'L', 'W', 'fa', 'el']) out[k] = lerp(a[k], b[k], t);
-  return out;
-}
 function cameraKey(p) {
   let i = 0;
   while (i < KEYS.length - 2 && p > KEYS[i + 1].p) i++;
@@ -1474,10 +1320,7 @@ for (const c of CHAPTERS) {
   btn.type = 'button';
   btn.innerHTML = `<span>${c.name}</span><i></i>`;
   btn.setAttribute('aria-label', c.name);
-  btn.addEventListener('click', () => {
-    const mid = (c.from + Math.min(c.to, 1)) / 2;
-    scrollToProgress(c.intro ? mid : INTRO + mid * (1 - INTRO));
-  });
+  btn.addEventListener('click', () => scrollToProgress((c.from + Math.min(c.to, 1)) / 2));
   railEl.appendChild(btn);
   c.btn = btn;
 }
@@ -1524,7 +1367,6 @@ const camTarget = new THREE.Vector3();
 const wantPos = new THREE.Vector3();
 const wantTarget = new THREE.Vector3();
 let first = true;
-let airVis = 1;
 let angleN1 = 0, angleN2 = 0;
 
 function resize() {
@@ -1539,8 +1381,6 @@ function resize() {
   camera.updateProjectionMatrix();
   portrait = camera.aspect < 0.9;
   // En portrait, le moteur se met à la verticale pour occuper l'écran.
-  // Ordre ZYX : la rotation autour de Y reste un roulis autour de l'axe de l'avion.
-  engine.rotation.order = 'ZYX';
   engine.rotation.z = portrait ? 0 : Math.PI / 2;
   engine.updateMatrixWorld(true);
   axisFront.set(0, 1, 0).applyQuaternion(engine.quaternion);
@@ -1559,11 +1399,7 @@ function chapterWeight(c, p) {
   return fadeIn * fadeOut;
 }
 
-function update(pAll, dt, time) {
-  const p = clamp((pAll - INTRO) / (1 - INTRO));
-  // En ouverture, l'avion est légèrement incliné ; il se remet à plat pendant la plongée.
-  engine.rotation.y = -0.42 * (1 - smooth(0.06, 0.17, pAll));
-  engine.updateMatrixWorld(true);
+function update(p, dt, time) {
   // Phases de démontage
   const tNacelle = smooth(0.08, 0.24, p);
   const tCasing = smooth(0.2, 0.34, p);
@@ -1611,7 +1447,7 @@ function update(pAll, dt, time) {
   // Chapitres : opacité des panneaux, pièce mise en avant
   let focus = null, focusWeight = 0, active = null;
   for (const c of CHAPTERS) {
-    const w = chapterWeight(c, c.intro ? pAll : p);
+    const w = chapterWeight(c, p);
     c.el.style.opacity = w.toFixed(3);
     c.el.style.transform = `translateY(${((1 - w) * 12).toFixed(2)}px)`;
     c.el.style.visibility = w < 0.002 ? 'hidden' : 'visible';
@@ -1620,7 +1456,7 @@ function update(pAll, dt, time) {
   }
   bypassVis = 1 - focusWeight;
   for (const c of CHAPTERS) c.btn?.classList.toggle('active', c === active);
-  progressEl.style.transform = `scaleX(${pAll.toFixed(4)})`;
+  progressEl.style.transform = `scaleX(${p.toFixed(4)})`;
 
   const k = 1 - Math.exp(-dt * 7);
   for (const part of parts) {
@@ -1646,7 +1482,7 @@ function update(pAll, dt, time) {
   fireLight.intensity = (tCasing * 2 + 0.5) * combustor.opacity;
 
   // Caméra
-  const ck = pAll < INTRO ? introKey(pAll) : cameraKey(p);
+  const ck = cameraKey(p);
   const halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
   const along = portrait ? 2 * halfTan : 2 * halfTan * camera.aspect;
   const across = portrait ? 2 * halfTan * camera.aspect : 2 * halfTan;
@@ -1657,19 +1493,9 @@ function update(pAll, dt, time) {
   v.z += 1;
   v.normalize();
   wantPos.copy(wantTarget).addScaledVector(v, dist);
-  ink.uniforms.scroll.value = pAll;
+  ink.uniforms.scroll.value = p;
   ink.uniforms.fogNear.value = dist * 0.9;
   ink.uniforms.fogFar.value = dist * 3.2;
-
-  // La cellule s'efface pendant la plongée vers les moteurs.
-  airVis = 1 - smooth(0.11, 0.19, pAll);
-  for (const m of airMats) {
-    const transparent = airVis < 0.995;
-    if (m.transparent !== transparent) { m.transparent = transparent; m.needsUpdate = true; }
-    m.opacity = airVis;
-    m.depthWrite = airVis > 0.5;
-  }
-  airframe.visible = airVis > 0.01;
 
   const kc = reduceMotion || first ? 1 : 1 - Math.exp(-dt * 5);
   camPos.lerp(wantPos, kc);
@@ -1678,7 +1504,7 @@ function update(pAll, dt, time) {
   // Décentrage optique : en paysage, le sujet glisse vers la droite pour libérer la colonne de texte,
   // davantage sur le hero où le titre est large.
   if (!portrait && innerWidth > 720) {
-    const shift = lerp(0.2, 0.09, smooth(0.04, 0.14, pAll));
+    const shift = lerp(0.24, 0.09, smooth(0.04, 0.14, p));
     camera.setViewOffset(innerWidth, innerHeight, -innerWidth * shift, 0, innerWidth, innerHeight);
   } else if (camera.view) camera.clearViewOffset();
   camera.position.copy(camPos);
@@ -1746,8 +1572,6 @@ function frame() {
   const hidden = parts.filter((part) => part.opacity < 0.5 && part.obj.visible);
   for (const part of hidden) part.obj.visible = false;
   flowGroup.visible = false;
-  const airShown = airframe.visible;
-  if (airVis < 0.5) airframe.visible = false;
   scene.overrideMaterial = normalMat;
   renderer.setRenderTarget(normalRT);
   renderer.clear();
@@ -1755,7 +1579,6 @@ function frame() {
   scene.overrideMaterial = null;
   for (const part of hidden) part.obj.visible = true;
   flowGroup.visible = true;
-  airframe.visible = airShown;
 
   renderer.setRenderTarget(null);
   renderer.clear();
