@@ -413,7 +413,6 @@ const MAT = {
   lox:     flat(0x7fb8f0),
   fuel:    flat(0xffc266),
   gas:     flat(0xe8e2f2),
-  accent:  flat(0xff6a4a),
   hole:    flat(0x4a4260),
 };
 
@@ -802,7 +801,15 @@ const actLow = (a) => polar(a, 1.42, 3.55), actHigh = (a) => polar(a, 2.35, 6.6)
 // ------------------------------------------------------------------
 // Détails : cerclages, brides boulonnées, cloisons, orifices, vannes, harnais.
 // ------------------------------------------------------------------
-const steel = MAT.steel(), dark = MAT.dark(), hole = MAT.hole(), pale = MAT.pale(), accent = MAT.accent();
+const steel = MAT.steel(), dark = MAT.dark(), hole = MAT.hole(), pale = MAT.pale();
+// Vanne : corps à boisseau arrondi posé sur la conduite, chapeau boulonné, actionneur cylindrique et son couvercle.
+function valve(id, at, r) {
+  addTo(id, mesh(new THREE.SphereGeometry(r, 28, 18), pale, at.x, at.y, at.z));
+  addTo(id, mesh(new THREE.CylinderGeometry(r * 0.55, r * 0.6, r * 0.7, 24), pale, at.x, at.y + r * 0.95, at.z));
+  addTo(id, ring(V3(at.x, at.y + r * 1.25, at.z), V3(0, 1, 0), r * 0.58, r * 0.08, steel));
+  addTo(id, mesh(new THREE.CylinderGeometry(r * 0.42, r * 0.42, r * 1.1, 20), steel, at.x, at.y + r * 1.85, at.z));
+  addTo(id, mesh(new THREE.CylinderGeometry(r * 0.5, r * 0.5, r * 0.14, 20), dark, at.x, at.y + r * 2.45, at.z));
+}
 
 // Chambre : cerclages, collecteurs de kérosène, ferrures des vérins, câblage.
 {
@@ -864,9 +871,7 @@ const steel = MAT.steel(), dark = MAT.dark(), hole = MAT.hole(), pale = MAT.pale
     // Coude d'entrée et vanne d'oxygène principale.
     addTo('dome', rod(polar(a, 0.8, 4.66), polar(a, 1.25, 4.62), 0.2, white));
     addTo('dome', ring(polar(a, 1.25, 4.62), polar(a, 1, 0).setY(0), 0.22, 0.04, steel));
-    const v = polar(a, 1.02, 4.95);
-    addTo('dome', mesh(new THREE.BoxGeometry(0.34, 0.3, 0.34), accent, v.x, v.y, v.z));
-    addTo('dome', mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.32, 16), steel, v.x, v.y + 0.3, v.z));
+    valve('dome', polar(a, 1.05, 4.63), 0.24);
   }
   // Rangée de goujons sur le dôme.
   for (const [r, y, n] of [[1.02, Y_INJ + 0.55, 36], [0.72, Y_INJ + 0.77, 24]]) {
@@ -965,9 +970,7 @@ crown('gimbal', boltGeo, dark, 8, (i) => ({ a: (i / 8) * TAU + Math.PI / 8, r: 0
   addTo('gg', lathe([[0.24, GG.y + 0.35], [0.2, GG.y + 0.5], [0.001, GG.y + 0.55]], pale0).translateX(GG.x).translateZ(GG.z));
   addTo('gg', lathe([[0.24, GG.y - 0.35], [0.12, GG.y - 0.5], [0.001, GG.y - 0.52]], pale0).translateX(GG.x).translateZ(GG.z));
   for (const s of [1, -1]) {
-    const v = GG.clone().add(V3(0, 0.62, 0)).addScaledVector(side, s * 0.22);
-    addTo('gg', mesh(new THREE.BoxGeometry(0.2, 0.22, 0.2), accent, v.x, v.y, v.z));
-    addTo('gg', mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.22, 12), steel, v.x, v.y + 0.2, v.z));
+    valve('gg', GG.clone().add(V3(0, 0.62, 0)).addScaledVector(side, s * 0.22), 0.1);
   }
   const tm = pumpAt(2.1).addScaledVector(GG.clone().setY(0).sub(PUMP.clone().setY(0)).normalize(), 1.0);
   addTo('gg', pipe([GG.clone().setY(GG.y - 0.45), GG.clone().setY(GG.y - 0.65).lerp(tm, 0.3), tm], 0.11, MAT.gas(), 32));
@@ -996,9 +999,7 @@ crown('gimbal', boltGeo, dark, 8, (i) => ({ a: (i / 8) * TAU + Math.PI / 8, r: 0
     addTo('loxducts', ring(lp[4], lp[3].clone().sub(lp[4]), 0.23, 0.045, steel));
     addTo('loxducts', ring(lp[1], lp[2].clone().sub(lp[1]), 0.22, 0.03, steel));
     addTo('fuelducts', ring(fp[3], fp[2].clone().sub(fp[3]), 0.21, 0.045, steel));
-    const v = fp[2].clone().lerp(fp[3], 0.45);
-    addTo('fuelducts', mesh(new THREE.BoxGeometry(0.3, 0.32, 0.3), accent, v.x, v.y + 0.04, v.z));
-    addTo('fuelducts', mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.3, 14), steel, v.x, v.y + 0.34, v.z));
+    valve('fuelducts', fp[2].clone().lerp(fp[3], 0.45), 0.22);
   }
 }
 
@@ -1010,7 +1011,9 @@ crown('gimbal', boltGeo, dark, 8, (i) => ({ a: (i / 8) * TAU + Math.PI / 8, r: 0
     addTo('actuators', ring(hi, V3(-Math.sin(a), 0, Math.cos(a)), 0.13, 0.05, steel));
     addTo('actuators', ring(lo, V3(-Math.sin(a), 0, Math.cos(a)), 0.1, 0.04, steel));
     const c = lo.clone().lerp(hi, 0.7);
-    addTo('actuators', mesh(new THREE.BoxGeometry(0.24, 0.3, 0.24), accent, c.x, c.y, c.z));
+    // Servovalve : un fourreau cylindrique dans l'axe du vérin, cerclé à ses deux bouts.
+    addTo('actuators', rod(c.clone().addScaledVector(dir, -0.2), c.clone().addScaledVector(dir, 0.2), 0.2, pale, 24));
+    for (const t of [-0.2, 0.2]) addTo('actuators', ring(c.clone().addScaledVector(dir, t), dir, 0.2, 0.025, steel));
     const n = V3(Math.cos(a), 0, Math.sin(a));
     addTo('actuators', pipe([c.clone().addScaledVector(n, 0.12), c.clone().addScaledVector(n, 0.45).addScaledVector(dir, 0.3), hi.clone().addScaledVector(n, 0.5).add(V3(0, 0.4, 0))], 0.03, dark, 32));
     for (const t of [0.5, 0.6]) addTo('actuators', ring(lo.clone().lerp(hi, t), dir, 0.16, 0.018, steel));
