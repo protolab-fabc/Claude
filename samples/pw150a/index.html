@@ -1,0 +1,1464 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PW150A — dessin animé</title>
+<meta name="description" content="Le turbopropulseur PW150A du Dash 8-400, démonté pièce par pièce au fil du défilement, façon dessin animé des années 1930.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Rye&display=swap" rel="stylesheet">
+<style>
+  @property --iris { syntax: '<length>'; inherits: false; initial-value: 0px; }
+  :root {
+    --sky: #e9dfc0;
+    --cream: #fbf3dc;
+    --ink: #1d1712;
+    --body: #3b3128;
+    --muted: #6b5c4c;
+    --red: #c93a31;
+    --yellow: #f2c14e;
+    --blue: #2f5d8a;
+    --display: "Rye", "Georgia", serif;
+    --serif: "Libre Baskerville", Georgia, serif;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  * { box-sizing: border-box; }
+  html { background: var(--sky); scrollbar-color: var(--ink) var(--sky); }
+  ::selection { background: var(--red); color: var(--cream); }
+  body {
+    margin: 0;
+    background: var(--sky);
+    color: var(--ink);
+    font-family: var(--serif);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+  .overlay { position: fixed; pointer-events: none; z-index: 2; }
+
+  /* Ouverture à l'iris, comme au début d'un court-métrage */
+  #iris {
+    position: fixed; inset: 0; z-index: 10; pointer-events: none;
+    background: radial-gradient(circle at 58% 48%, transparent var(--iris), var(--ink) calc(var(--iris) + 1px));
+    animation: iris 1.2s var(--ease-out) 0.15s forwards;
+  }
+  @keyframes iris {
+    0% { --iris: 0px; opacity: 1; }
+    85% { --iris: 120vmax; opacity: 1; }
+    100% { --iris: 150vmax; opacity: 0; }
+  }
+
+  .topbar {
+    top: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 22px 32px;
+    font-size: 14px;
+    font-variant: small-caps;
+    letter-spacing: 0.02em;
+    color: var(--body);
+  }
+  .topbar b { color: var(--ink); font-weight: 700; }
+
+  /* Carton de titre crème, comme au générique */
+  .hero {
+    left: 32px; top: 14vh;
+    width: min(500px, calc(100vw - 64px));
+    padding: 26px 28px 26px;
+    background: var(--cream);
+    border: 3px solid var(--ink);
+    border-radius: 18px;
+    box-shadow: 7px 7px 0 var(--ink);
+  }
+  .hero h1 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(44px, 5.2vw, 80px);
+    line-height: 0.98;
+    margin: 0 0 22px;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+  .hero h1 em { font-style: normal; color: var(--red); }
+  .hero p {
+    margin: 0;
+    max-width: 38ch;
+    color: var(--body);
+    font-size: 17px;
+    line-height: 1.6;
+  }
+  .scroll-hint {
+    margin-top: 26px;
+    display: inline-flex;
+    gap: 12px;
+    align-items: center;
+    font-family: var(--display);
+    font-size: 16px;
+    color: var(--ink);
+  }
+  /* Une petite flèche qui sautille, image par image */
+  .scroll-hint i {
+    display: block;
+    width: 14px; height: 14px;
+    border-right: 3px solid var(--ink);
+    border-bottom: 3px solid var(--ink);
+    transform: rotate(45deg);
+    animation: hop 0.8s steps(4) infinite;
+  }
+  @keyframes hop {
+    0%, 100% { transform: translateY(-3px) rotate(45deg); }
+    50% { transform: translateY(4px) rotate(45deg); }
+  }
+
+  /* Panneaux : cartons de titre crème, gros trait d'encre */
+  .panel {
+    left: 32px; bottom: 9vh;
+    width: min(410px, calc(100vw - 64px));
+    padding: 20px 24px 22px;
+    background: var(--cream);
+    border: 3px solid var(--ink);
+    border-radius: 16px;
+    box-shadow: 6px 6px 0 var(--ink);
+    opacity: 0;
+    will-change: opacity, transform;
+  }
+  .panel .num {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    font-variant: small-caps;
+    letter-spacing: 0.08em;
+    color: var(--red);
+    font-weight: 700;
+  }
+  .panel h2 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(28px, 2.7vw, 38px);
+    line-height: 1.05;
+    margin: 0 0 12px;
+    color: var(--ink);
+  }
+  .panel p {
+    margin: 0;
+    color: var(--body);
+    font-size: 15px;
+    line-height: 1.65;
+  }
+  .panel dl {
+    margin: 16px 0 0;
+    padding-top: 12px;
+    border-top: 2px dashed rgba(29, 23, 18, 0.35);
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 18px;
+    font-size: 14px;
+  }
+  .panel dt { color: var(--muted); font-style: italic; }
+  .panel dd { margin: 0; color: var(--ink); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+  .rail {
+    right: 32px; top: 50%;
+    transform: translateY(-50%);
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .rail button {
+    all: unset;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 6px 0;
+    font-family: var(--display);
+    font-size: 15px;
+    color: rgba(29, 23, 18, 0.45);
+    transition: color 200ms ease;
+  }
+  .rail button span {
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateX(6px);
+    transition: opacity 200ms ease, transform 200ms var(--ease-out);
+  }
+  .rail button i {
+    display: block;
+    width: 10px; height: 10px;
+    border: 2px solid currentColor;
+    border-radius: 50%;
+    transition: transform 200ms var(--ease-out), background 200ms ease;
+  }
+  .rail button.active { color: var(--ink); }
+  .rail button.active i { background: var(--red); border-color: var(--ink); transform: scale(1.4); }
+  .rail button.active span { opacity: 1; transform: none; }
+  @media (hover: hover) and (pointer: fine) {
+    .rail button:hover { color: var(--ink); }
+    .rail button:hover span { opacity: 1; transform: none; }
+  }
+  .rail button:focus-visible { outline: 2px solid var(--red); outline-offset: 4px; }
+
+  .legend {
+    right: 32px; bottom: 22px;
+    display: flex;
+    gap: 22px;
+    font-size: 14px;
+    color: var(--body);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .legend i { display: block; width: 24px; height: 4px; border-radius: 2px; }
+  .legend .air { background: #3f86c4; }
+  .legend .hot { background: linear-gradient(90deg, #3f86c4, #f2a53a, #d9433b); }
+  .legend .wind { background: var(--blue); }
+
+  .progress {
+    left: 0; bottom: 0;
+    height: 4px;
+    width: 100%;
+    background: var(--red);
+    transform-origin: left;
+    transform: scaleX(0);
+  }
+
+  #labels { inset: 0; width: 100%; height: 100%; overflow: visible; }
+  #labels line { stroke: var(--ink); stroke-width: 2.5; stroke-linecap: round; }
+  #labels circle { fill: var(--red); stroke: var(--ink); stroke-width: 2; }
+  #labels rect { fill: var(--cream); stroke: var(--ink); stroke-width: 2.5; }
+  #labels text {
+    fill: var(--ink);
+    font-family: var(--serif);
+    font-weight: 700;
+    font-size: 15px;
+  }
+  @media (min-width: 1600px) { #labels text { font-size: 17px; } }
+
+  #track { position: relative; height: 1200vh; }
+
+  footer {
+    position: relative;
+    z-index: 3;
+    background: var(--cream);
+    border-top: 4px solid var(--ink);
+    padding: 96px 32px 64px;
+  }
+  footer .inner { max-width: 1120px; margin: 0 auto; }
+  footer h3 {
+    font-family: var(--display);
+    font-weight: 400;
+    font-size: clamp(36px, 4.4vw, 58px);
+    line-height: 1;
+    margin: 0 0 14px;
+  }
+  footer .lede { color: var(--body); max-width: 56ch; line-height: 1.65; margin: 0 0 48px; font-size: 16px; }
+  .specs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+    gap: 18px;
+    margin: 0;
+  }
+  .specs div {
+    padding: 18px 20px;
+    background: #fff9ea;
+    border: 3px solid var(--ink);
+    border-radius: 14px;
+    box-shadow: 5px 5px 0 var(--ink);
+  }
+  .specs dt { font-size: 13px; font-variant: small-caps; letter-spacing: 0.02em; color: var(--muted); margin-bottom: 10px; }
+  .specs dd { margin: 0; font-family: var(--display); font-size: 32px; line-height: 1.05; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .colophon {
+    margin-top: 56px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  .fallback {
+    display: none;
+    position: fixed;
+    inset: 0;
+    place-items: center;
+    padding: 28px;
+    text-align: center;
+    color: var(--body);
+  }
+  .no-webgl .fallback { display: grid; }
+  .no-webgl #scene { display: none; }
+
+  @media (max-width: 720px) {
+    .legend { left: 16px; right: auto; top: 46px; bottom: auto; flex-direction: column; gap: 6px; font-size: 12px; }
+    .topbar { padding: 16px; font-size: 12px; }
+    .topbar .hide-sm { display: none; }
+    .hero { left: 16px; right: 16px; top: auto; bottom: 16px; width: auto; padding: 18px 18px 20px; box-shadow: 5px 5px 0 var(--ink); }
+    .hero h1 { font-size: 40px; margin-bottom: 12px; }
+    .hero p { font-size: 14px; }
+    .scroll-hint { margin-top: 14px; }
+    .panel { left: 16px; right: 16px; bottom: 16px; width: auto; padding: 16px 18px 18px; }
+    .panel p { font-size: 14px; }
+    .panel dl { display: none; }
+    #labels text { font-size: 12px; }
+    .rail { right: 12px; top: 72px; transform: none; }
+    .rail button span { display: none; }
+    footer { padding: 64px 16px 48px; }
+    .specs dd { font-size: 26px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #iris { display: none; }
+    .scroll-hint i { animation: none; }
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+  <canvas id="scene" aria-label="Modèle 3D du turbopropulseur PW150A qui se décompose au défilement"></canvas>
+  <div class="fallback">WebGL n'est pas disponible sur cet appareil — le modèle 3D ne peut pas s'afficher.</div>
+  <div id="iris" aria-hidden="true"></div>
+
+  <svg id="labels" class="overlay" aria-hidden="true"></svg>
+
+  <div class="overlay topbar">
+    <span><b>PW150A</b> &nbsp;/&nbsp; Turbopropulseur du Dash 8-400</span>
+    <span class="hide-sm">Maquette procédurale · non officielle</span>
+  </div>
+
+  <div class="overlay hero" id="hero">
+    <h1>Le <em>PW150A</em><br>fait son numéro</h1>
+    <p>Le turbopropulseur du Dash 8-400 : une grande hélice à six pales, un réducteur, et un petit cœur de turbine qui tourne à toute allure. Faites défiler, le spectacle commence !</p>
+    <div class="scroll-hint"><i></i>Défiler</div>
+  </div>
+
+  <div id="panels"></div>
+  <nav class="overlay rail" id="rail" aria-label="Chapitres"></nav>
+  <div class="overlay legend" aria-hidden="true">
+    <span><i class="air"></i>Air aspiré · comprimé puis brûlé</span>
+    <span><i class="wind"></i>Souffle de l'hélice</span>
+  </div>
+  <div class="overlay progress" id="progress"></div>
+
+  <main id="track"></main>
+
+  <footer>
+    <div class="inner">
+      <h3>Ordres de grandeur</h3>
+      <p class="lede">Valeurs indicatives pour le PW150A du Dash 8-400. La maquette ci-dessus est volontairement caricaturée : l'hélice, en vrai deux fois plus grande, est réduite pour que le moteur reste lisible.</p>
+      <dl class="specs">
+        <div><dt>Puissance</dt><dd>≈ 5 000 ch</dd></div>
+        <div><dt>Hélice</dt><dd>Ø 4,1 m · 6 pales</dd></div>
+        <div><dt>Régime hélice</dt><dd>≈ 1 020 tr/min</dd></div>
+        <div><dt>Compresseur</dt><dd>3 axiaux + 1 centrifuge</dd></div>
+      </dl>
+      <div class="colophon">
+        <span>Modèle généré en code avec Three.js, rendu façon dessin animé des années 1930 : encre, aquarelle et pellicule.</span>
+        <span>Sample · design &amp; motion</span>
+      </div>
+    </div>
+  </footer>
+
+<script type="module">
+import * as THREE from 'three';
+import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
+import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ------------------------------------------------------------------
+// Utilitaires
+// ------------------------------------------------------------------
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+const smoother = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * t * (t * (t * 6 - 15) + 10); };
+const TAU = Math.PI * 2;
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+// Les dessins animés de l'époque tournaient « en deux » : douze images par seconde pour le mouvement.
+const onTwos = (t) => Math.floor(t * 12) / 12;
+
+// ------------------------------------------------------------------
+// Rendu
+// ------------------------------------------------------------------
+const canvas = document.getElementById('scene');
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+} catch (err) {
+  document.body.classList.add('no-webgl');
+  throw err;
+}
+const PR = Math.min(devicePixelRatio, 1.5);
+renderer.setPixelRatio(PR);
+renderer.autoClear = false;
+
+const scene = new THREE.Scene();
+const fxScene = new THREE.Scene();
+const fxRoot = new THREE.Group();
+fxRoot.matrixAutoUpdate = false;
+fxScene.add(fxRoot);
+const camera = new THREE.PerspectiveCamera(30, 1, 0.3, 400);
+
+// Albédos francs, comme des aplats de gouache : l'ombre, les reflets et l'encre viennent du post-traitement.
+const flat = (color, o = {}) => () => new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide, ...o });
+const MAT = {
+  ivory:  flat(0xf1e3c4),
+  red:    flat(0xd9473b),
+  cream:  flat(0xf8eed6),
+  black:  flat(0x2a2420),
+  yellow: flat(0xf2c14e),
+  blue:   flat(0x3d5c8c),
+  teal:   flat(0x6fb0a8),
+  steel:  flat(0x9fb4c8),
+  silver: flat(0xd0d8de),
+  copper: flat(0xe08e45),
+  brass:  flat(0xe0b04a),
+  hot:    flat(0xe0603d),
+  orange: flat(0xe8913f),
+  bronze: flat(0x9a8470),
+  green:  flat(0x5f9e8f),
+  dark:   flat(0x3a322c),
+  hole:   flat(0x241d18),
+};
+
+// ------------------------------------------------------------------
+// Passes : couleur (+ profondeur), normales, puis le « banc-titre » :
+// ombres peintes, reflets, encre qui frémit, décor à l'aquarelle et pellicule usée.
+// ------------------------------------------------------------------
+const colorRT = new THREE.WebGLRenderTarget(1, 1, { samples: 4 });
+colorRT.depthTexture = new THREE.DepthTexture(1, 1);
+const normalRT = new THREE.WebGLRenderTarget(1, 1, { samples: 4 });
+const normalMat = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
+const ink = new THREE.ShaderMaterial({
+  depthTest: false,
+  depthWrite: false,
+  uniforms: {
+    tColor: { value: colorRT.texture },
+    tDepth: { value: colorRT.depthTexture },
+    tNormal: { value: normalRT.texture },
+    resolution: { value: new THREE.Vector2(1, 1) },
+    near: { value: camera.near },
+    far: { value: camera.far },
+    pr: { value: PR },
+    time: { value: 0 },
+    frame: { value: 0 },
+    aspect: { value: 1 },
+    scroll: { value: 0 },
+  },
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
+  `,
+  fragmentShader: /* glsl */`
+    #include <packing>
+    uniform sampler2D tColor, tDepth, tNormal;
+    uniform vec2 resolution;
+    uniform float near, far, pr, time, frame, aspect, scroll;
+    varying vec2 vUv;
+
+    const vec3 INK = vec3(0.114, 0.09, 0.07);
+    const vec3 SHADE = vec3(0.6, 0.5, 0.58);
+
+    float rawDepth(vec2 uv) { return texture2D(tDepth, uv).x; }
+    bool isBg(vec2 uv) { return rawDepth(uv) >= 0.99999; }
+    float viewZ(vec2 uv) { return -perspectiveDepthToViewZ(rawDepth(uv), near, far); }
+    vec3 nrm(vec2 uv) { return normalize(texture2D(tNormal, uv).xyz * 2.0 - 1.0); }
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float noise(vec2 p) {
+      vec2 i = floor(p), f = fract(p);
+      vec2 u = f * f * (3.0 - 2.0 * f);
+      return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
+    }
+    float fbm(vec2 p) { float v = 0.0, a = 0.5; for (int i = 0; i < 4; i++) { v += a * noise(p); p *= 2.07; a *= 0.5; } return v; }
+    // Trait d'encre le long de la frontière f = 0, d'épaisseur w pixels.
+    float inkLine(float f, float w) { float d = abs(f) / max(fwidth(f), 1e-5); return 1.0 - smoothstep(w * 0.5, w, d); }
+
+    // Décor peint : soleil à rayons, nuages cernés, collines et arbres sucettes.
+    vec3 backdrop() {
+      vec2 p = vec2(vUv.x * aspect, vUv.y);
+      float lw = 2.6 * pr;
+      vec3 col = mix(vec3(0.97, 0.9, 0.74), vec3(0.62, 0.81, 0.78), smoothstep(0.32, 1.0, vUv.y));
+
+      // Soleil et rayons qui tournent lentement, image par image.
+      vec2 sun = vec2(0.84 * aspect, 0.82);
+      vec2 ds = p - sun;
+      float ang = atan(ds.y, ds.x) + frame * 0.004;
+      float ray = step(0.5, fract(ang / 6.2832 * 18.0));
+      col = mix(col, col * vec3(1.03, 1.0, 0.92) + vec3(0.035, 0.03, 0.0), ray * 0.6 * (1.0 - smoothstep(0.0, 1.5, length(ds))));
+      float sd = length(ds) - 0.07;
+      if (sd < 0.0) col = mix(vec3(0.99, 0.83, 0.38), vec3(1.0, 0.92, 0.6), smoothstep(-0.07, 0.0, -length(ds - vec2(-0.02, 0.02)) + 0.02));
+      col = mix(col, INK, inkLine(sd, lw));
+
+      // Nuages : trois boules et un ventre plat, qui dérivent.
+      for (int k = 0; k < 3; k++) {
+        float fk = float(k);
+        float cx = mod(0.15 + fk * 0.52 + frame * 0.0006 * (1.0 + fk * 0.4) - scroll * 0.25, 1.7) * aspect - 0.25;
+        vec2 c = vec2(cx, 0.66 + 0.09 * mod(fk * 1.7, 2.0));
+        float s = 0.045 + 0.012 * fk;
+        float f = min(min(length(p - c) - s, length(p - c - vec2(s * 1.15, -s * 0.3)) - s * 0.78), length(p - c + vec2(s * 1.2, s * 0.35)) - s * 0.7);
+        f = min(f, length(p - c - vec2(s * 0.3, s * 0.55)) - s * 0.62);
+        f = max(f, (c.y - s * 0.55) - p.y);
+        if (f < 0.0) col = mix(vec3(1.0, 0.98, 0.93), vec3(0.88, 0.86, 0.84), smoothstep(c.y + s * 0.3, c.y - s * 0.6, p.y));
+        col = mix(col, INK, inkLine(f, lw));
+      }
+
+      // Collines lointaines.
+      float x1 = p.x + scroll * 0.35;
+      float h1 = 0.37 + 0.028 * sin(x1 * 3.1 + 1.0) + 0.014 * sin(x1 * 7.3);
+      float f1 = p.y - h1;
+      if (f1 < 0.0) col = mix(vec3(0.5, 0.67, 0.58), vec3(0.42, 0.58, 0.52), smoothstep(0.0, -0.08, f1));
+      col = mix(col, INK, inkLine(f1, lw) * 0.85);
+
+      // Collines proches, sillons, arbres sucettes.
+      float x2 = p.x + scroll * 0.8;
+      float h2 = 0.24 + 0.045 * sin(x2 * 2.2 + 2.0) + 0.02 * sin(x2 * 5.1);
+      float f2 = p.y - h2;
+      if (f2 < 0.0) {
+        col = vec3(0.76, 0.78, 0.42);
+        float furrow = fract((h2 - p.y) * 26.0 + sin(x2 * 9.0) * 0.4);
+        if (furrow < 0.12) col *= 0.88;
+      }
+      col = mix(col, INK, inkLine(f2, lw));
+      float cell = floor(x2 * 3.2);
+      float hc = hash(vec2(cell, 4.0));
+      if (hc > 0.35) {
+        float tx = (cell + 0.3 + 0.4 * hash(vec2(cell, 9.0))) / 3.2;
+        float base = 0.24 + 0.045 * sin(tx * 2.2 + 2.0) + 0.02 * sin(tx * 5.1);
+        float sc = 0.8 + 0.4 * hash(vec2(cell, 2.0));
+        vec2 q = vec2(x2 - tx, p.y - base);
+        float trunk = max(abs(q.x) - 0.006 * sc, max(-q.y - 0.01, q.y - 0.08 * sc));
+        float crown = length(q - vec2(0.0, 0.1 * sc)) - 0.038 * sc;
+        if (trunk < 0.0) col = vec3(0.55, 0.36, 0.24);
+        col = mix(col, INK, inkLine(trunk, lw * 0.8));
+        if (crown < 0.0) col = mix(vec3(0.36, 0.6, 0.36), vec3(0.5, 0.74, 0.44), smoothstep(0.0, 0.03 * sc, length(q - vec2(-0.012, 0.115 * sc))) < 0.5 ? 1.0 : 0.0);
+        col = mix(col, INK, inkLine(crown, lw));
+      }
+      // Aquarelle : le papier boit la couleur de façon inégale.
+      col *= 0.95 + 0.08 * fbm(gl_FragCoord.xy / (110.0 * pr));
+      return col;
+    }
+
+    void main() {
+      vec2 texel = 1.0 / resolution;
+      bool bg = isBg(vUv);
+      vec4 src = texture2D(tColor, vUv);
+      vec3 col;
+      float z = bg ? 1e5 : viewZ(vUv);
+      vec3 n = bg ? vec3(0.0, 0.0, 1.0) : nrm(vUv);
+
+      if (bg) {
+        col = backdrop();
+        // Pièce estompée devant le décor.
+        if (src.a > 0.01) col = mix(col, pow(clamp(src.rgb / src.a, 0.0, 1.0), vec3(1.0 / 2.2)), src.a);
+      } else {
+        vec3 alb = pow(clamp(src.rgb, 0.0, 1.0), vec3(1.0 / 2.2));
+        // Ombre peinte en deux temps, lumière en haut à gauche ; l'ombre vire au mauve.
+        vec3 L = normalize(vec3(-0.45, 0.75, 0.55));
+        float d = dot(n, L);
+        float lit = mix(0.0, 0.55, smoothstep(-0.2, -0.08, d)) + 0.45 * smoothstep(0.32, 0.44, d);
+        col = alb * mix(SHADE, vec3(1.0), lit);
+        // Reflet brillant en forme de goutte, typique des objets de l'époque.
+        float spec = dot(reflect(-L, n), vec3(0.0, 0.0, 1.0));
+        col = mix(col, vec3(1.0, 0.98, 0.92), smoothstep(0.9, 0.93, spec) * 0.85);
+        // Rebord clair au contour opposé à la lumière.
+        col += vec3(0.08, 0.07, 0.05) * smoothstep(0.55, 0.85, 1.0 - n.z) * step(d, 0.0);
+        col *= 0.94 + 0.09 * fbm(gl_FragCoord.xy / (80.0 * pr) + 3.0);
+      }
+
+      // Encre : un trait épais qui « bouille » d'une image à l'autre, plus gras sur les silhouettes.
+      float w = pr * (1.7 + 1.4 * noise(gl_FragCoord.xy / (34.0 * pr) + frame * 3.7));
+      float edge = 0.0;
+      for (int i = 0; i < 8; i++) {
+        float a = float(i) * 0.7854;
+        vec2 q = vUv + vec2(cos(a), sin(a)) * w * texel;
+        bool bq = isBg(q);
+        if (bq != bg) { edge = 1.0; continue; }
+        if (bg) continue;
+        float zq = viewZ(q);
+        edge = max(edge, smoothstep(0.015, 0.04, abs(zq - z) / z));
+        edge = max(edge, smoothstep(0.32, 0.55, 1.0 - dot(n, nrm(q))));
+      }
+      col = mix(col, INK, edge);
+
+      // Pellicule : virage sépia léger, scintillement, grain, rayures, poussières, vignettage.
+      float l = dot(col, vec3(0.299, 0.587, 0.114));
+      col = mix(col, l * vec3(1.08, 0.97, 0.8), 0.14);
+      col *= 1.0 + (hash(vec2(frame, 3.1)) - 0.5) * 0.05;
+      col += (hash(floor(gl_FragCoord.xy / pr) + frame * 17.3) - 0.5) * 0.075;
+      for (int k = 0; k < 2; k++) {
+        float fk = float(k);
+        float sx = hash(vec2(frame, fk * 7.0 + 0.5));
+        float on = step(0.6, hash(vec2(frame, fk * 7.0 + 1.5)));
+        float dxp = abs(vUv.x - sx) * resolution.x / pr;
+        col = mix(col, vec3(0.3, 0.24, 0.18), on * (1.0 - smoothstep(0.4, 1.1, dxp)) * 0.35 * smoothstep(0.3, 0.7, noise(vec2(vUv.y * 12.0, frame + fk))));
+      }
+      vec2 cellD = floor(gl_FragCoord.xy / (5.0 * pr));
+      if (hash(cellD + frame * 1.7) > 0.99955) col = mix(col, INK, 0.7);
+      vec2 qv = (vUv - 0.5) * vec2(1.0, 1.15);
+      col *= 1.0 - smoothstep(0.38, 0.95, length(qv)) * 0.6;
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `,
+});
+const inkScene = new THREE.Scene();
+inkScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), ink));
+const quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+// ------------------------------------------------------------------
+// Géométrie
+// Axe du cœur = Y local, avant (hélice) en +Y. L'arbre d'hélice est décalé en +X, au-dessus du cœur.
+// ------------------------------------------------------------------
+function lathe(points, mat, segments = 72, phiStart = 0, phiLength = TAU) {
+  const g = new THREE.LatheGeometry(points.map(([r, y]) => new THREE.Vector2(r, y)), segments, phiStart, phiLength);
+  return new THREE.Mesh(g, mat);
+}
+function mesh(geo, mat, x = 0, y = 0, z = 0) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); return m; }
+function rod(a, b, r, mat, seg = 16) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, a.distanceTo(b), seg), mat);
+  m.position.copy(a).add(b).multiplyScalar(0.5);
+  m.quaternion.setFromUnitVectors(V3(0, 1, 0), b.clone().sub(a).normalize());
+  return m;
+}
+const curve = (points) => new THREE.CatmullRomCurve3(points, false, 'centripetal');
+function pipe(points, r, mat, seg = 64) { return new THREE.Mesh(new THREE.TubeGeometry(curve(points), seg, r, 20), mat); }
+function ring(center, axis, R, r, mat) {
+  const m = new THREE.Mesh(new THREE.TorusGeometry(R, r, 12, 48), mat);
+  m.position.copy(center);
+  m.quaternion.setFromUnitVectors(V3(0, 0, 1), axis.clone().normalize());
+  return m;
+}
+const polar = (a, r, y, cx = 0) => V3(cx + Math.cos(a) * r, y, Math.sin(a) * r);
+
+const XP = 0.8;   // décalage de l'arbre d'hélice
+const Y_PROP = 5.4;
+
+// ------------------------------------------------------------------
+// Assemblage
+// ------------------------------------------------------------------
+const rig = new THREE.Group();     // porte le petit rebond « caoutchouc » du dessin animé
+scene.add(rig);
+const engine = new THREE.Group();
+rig.add(engine);
+
+const parts = [];
+const partById = {};
+function addPart(id, obj, opts = {}) {
+  engine.add(obj);
+  const mats = new Set();
+  obj.traverse((o) => { if (o.material) mats.add(o.material); });
+  const part = { id, obj, mats: [...mats], opacity: 1, dx: 0, dy: 0, dz: 0, order: 0, ...opts };
+  parts.push(part);
+  partById[id] = part;
+  return part;
+}
+function addTo(id, obj) {
+  const part = partById[id];
+  part.obj.add(obj);
+  obj.traverse((o) => { if (o.material && !part.mats.includes(o.material)) part.mats.push(o.material); });
+}
+// Couronne d'objets instanciés autour d'un axe parallèle à Y passant par (cx, 0).
+function crown(target, geo, mat, count, place, cx = 0) {
+  const d = new THREE.Object3D();
+  const inst = new THREE.InstancedMesh(geo, mat, count);
+  for (let i = 0; i < count; i++) {
+    const { a, r, y, rot = 'radial' } = place(i);
+    d.position.set(cx + Math.cos(a) * r, y, Math.sin(a) * r);
+    d.rotation.set(0, 0, 0);
+    if (rot === 'radial') d.rotation.set(0, -a, Math.PI / 2);
+    else if (rot === 'axial') d.rotation.set(0, -a, 0);
+    d.updateMatrix();
+    inst.setMatrixAt(i, d.matrix);
+  }
+  if (typeof target === 'string') addTo(target, inst); else target.add(inst);
+}
+// Rangée d'aubes : boîte radiale, inclinée d'un angle de calage autour de son envergure.
+function bladeRow(target, y, n, r0, len, chord, pitch, mat, thick = 0.025) {
+  const geo = new THREE.BoxGeometry(len, chord, thick).translate(r0 + len / 2, 0, 0);
+  const d = new THREE.Object3D();
+  const inst = new THREE.InstancedMesh(geo, mat, n);
+  for (let i = 0; i < n; i++) {
+    d.position.set(0, y, 0);
+    d.rotation.set(0, -(i / n) * TAU, 0);
+    d.rotateX(pitch);
+    d.updateMatrix();
+    inst.setMatrixAt(i, d.matrix);
+  }
+  if (typeof target === 'string') addTo(target, inst); else target.add(inst);
+}
+const boltGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.04, 6);
+
+// --- Carter du générateur de gaz : deux demi-coquilles qui s'écartent ---
+const CASE = [[0.6, 3.35], [0.62, 2.0], [0.8, 1.86], [0.99, 1.56], [1.0, 1.2], [0.9, 1.02], [0.92, 0.05], [0.82, -0.32], [0.76, -0.5], [0.78, -1.9]];
+const caseR = (y) => {
+  if (y >= CASE[0][1]) return CASE[0][0];
+  for (let i = 0; i < CASE.length - 1; i++) {
+    const [r0, y0] = CASE[i], [r1, y1] = CASE[i + 1];
+    if (y <= y0 && y >= y1) return lerp(r0, r1, (y0 - y) / (y0 - y1));
+  }
+  return CASE[CASE.length - 1][0];
+};
+{
+  const shell = [...CASE.map(([r, y]) => [r + 0.05, y]), ...CASE.slice().reverse()];
+  shell.push(shell[0]);
+  for (const [id, phi, dx] of [['case-top', 0, 1.7], ['case-bottom', Math.PI, -1.7]]) {
+    const g = new THREE.Group();
+    g.add(lathe(shell, MAT.ivory(), 64, phi, Math.PI));
+    addPart(id, g, { dx, order: 0, half: true,
+      label: id === 'case-top' ? { text: 'Carter', at: [caseR(0.5) + 0.06, 0.5, 0] } : null });
+  }
+}
+
+// --- Compresseur BP : trois étages axiaux ---
+{
+  const g = new THREE.Group();
+  g.add(lathe([[0.001, 3.3], [0.2, 3.25], [0.24, 2.0], [0.001, 1.95]], MAT.silver()));
+  const m = MAT.steel();
+  [[3.0, 18], [2.6, 20], [2.2, 22]].forEach(([y, n]) => bladeRow(g, y, n, 0.22, 0.34, 0.13, 0.55, m));
+  addPart('lpc', g, { dy: 1.1, order: 1, label: { text: 'Compresseur axial', at: [0.58, 2.6, 0] } });
+}
+
+// --- Compresseur centrifuge HP ---
+{
+  const g = new THREE.Group();
+  const m = MAT.silver();
+  g.add(lathe([[0.001, 1.86], [0.22, 1.86], [0.3, 1.62], [0.6, 1.32], [0.84, 1.22], [0.84, 1.13], [0.001, 1.13]], m));
+  const vane = new THREE.BoxGeometry(0.72, 0.16, 0.025);
+  const inst = new THREE.InstancedMesh(vane, MAT.steel(), 16);
+  const d = new THREE.Object3D();
+  for (let i = 0; i < 16; i++) {
+    const a = (i / 16) * TAU;
+    d.position.copy(polar(a, 0.53, 1.5));
+    d.rotation.set(0, -a, 0);
+    d.rotateZ(-0.8);
+    d.rotateX(0.35);
+    d.updateMatrix();
+    inst.setMatrixAt(i, d.matrix);
+  }
+  g.add(inst);
+  addPart('impeller', g, { dy: 0.35, order: 1, label: { text: 'Rouet centrifuge', at: [0.86, 1.18, 0] } });
+}
+
+// --- Chambre de combustion annulaire, injecteurs et rampe ---
+{
+  const g = new THREE.Group();
+  const m = MAT.copper();
+  g.add(lathe([[0.48, 1.0], [0.86, 1.0], [0.86, 0.05], [0.66, -0.12], [0.48, 0.0], [0.48, 1.0]], m));
+  for (const y of [0.72, 0.42, 0.18]) crown(g, new THREE.CylinderGeometry(0.035, 0.035, 0.02, 10), MAT.hole(), 24, (i) => ({ a: (i / 24) * TAU + y, r: 0.865, y }));
+  // Rampe de carburant en laiton et ses quatorze injecteurs.
+  const fm = new THREE.Mesh(new THREE.TorusGeometry(1.06, 0.045, 10, 96), MAT.brass());
+  fm.rotation.x = Math.PI / 2; fm.position.y = 0.85;
+  g.add(fm);
+  for (let i = 0; i < 14; i++) {
+    const a = (i / 14) * TAU;
+    g.add(rod(polar(a, 0.86, 0.85), polar(a, 1.06, 0.85), 0.03, MAT.brass(), 8));
+    g.add(mesh(new THREE.SphereGeometry(0.055, 12, 8), MAT.brass(), ...polar(a, 1.06, 0.85).toArray()));
+  }
+  addPart('combustor', g, { dy: -0.4, order: 1, label: { text: 'Chambre de combustion', at: [1.1, 0.85, 0] } });
+}
+
+// --- Turbines : HP, BP, puis turbine libre à deux étages ---
+{
+  const g = new THREE.Group();
+  const stage = (y, R, mat, n) => {
+    g.add(lathe([[0.001, y + 0.07], [R * 0.62, y + 0.07], [R * 0.62, y - 0.07], [0.001, y - 0.07]], mat));
+    bladeRow(g, y, n, R * 0.6, R * 0.42, 0.11, -0.6, mat, 0.03);
+  };
+  stage(-0.55, 0.66, MAT.hot(), 32);
+  stage(-0.85, 0.68, MAT.orange(), 32);
+  stage(-1.25, 0.72, MAT.brass(), 36);
+  stage(-1.6, 0.74, MAT.brass(), 36);
+  addPart('turbines', g, { dy: -1.3, order: 2, label: { text: 'Turbines HP · BP · libre', at: [0.76, -1.05, 0] } });
+}
+
+// --- Arbre de turbine libre, qui remonte jusqu'au réducteur ---
+{
+  const g = new THREE.Group();
+  g.add(rod(V3(0, -1.75, 0), V3(0, 3.9, 0), 0.07, MAT.blue(), 16));
+  for (const y of [-1.0, 0.6, 2.4, 3.6]) g.add(ring(V3(0, y, 0), V3(0, 1, 0), 0.1, 0.03, MAT.dark()));
+  addPart('shaft', g, { order: 0 });
+}
+
+// --- Conduit d'échappement : coude qui rejette les gaz vers le haut et l'arrière ---
+const EXH = [V3(0, -1.95, 0), V3(0.05, -2.45, 0), V3(0.45, -2.95, 0), V3(1.15, -3.2, 0)];
+const exhCurve = curve(EXH);
+const EXH_OUT = exhCurve.getPoint(1);
+const EXH_DIR = exhCurve.getTangent(1).normalize();
+{
+  const g = new THREE.Group();
+  g.add(lathe([[0.78, -1.88], [0.86, -1.88], [0.86, -2.02], [0.7, -2.08]], MAT.bronze()));
+  g.add(new THREE.Mesh(new THREE.TubeGeometry(exhCurve, 48, 0.6, 24), MAT.bronze()));
+  g.add(ring(EXH_OUT, EXH_DIR, 0.62, 0.06, MAT.dark()));
+  for (const t of [0.35, 0.65]) g.add(ring(exhCurve.getPoint(t), exhCurve.getTangent(t), 0.61, 0.035, MAT.dark()));
+  addPart('exhaust', g, { dy: -2.4, dx: 0.5, order: 3, label: { text: "Coude d'échappement", at: EXH_OUT.clone().add(V3(0.45, 0, 0)).toArray() } });
+}
+
+// --- Entrée d'air en S, sous le cône ---
+const INTAKE = [V3(-0.98, 5.0, 0), V3(-0.98, 4.35, 0), V3(-0.78, 3.75, 0), V3(-0.3, 3.38, 0), V3(0, 3.28, 0)];
+{
+  const g = new THREE.Group();
+  g.add(pipe(INTAKE, 0.42, MAT.teal(), 64));
+  g.add(ring(INTAKE[0], V3(0, 1, 0), 0.44, 0.08, MAT.cream()));
+  // Grille anti-oiseaux.
+  for (const a of [0, Math.PI / 3, (2 * Math.PI) / 3]) {
+    const bar = mesh(new THREE.BoxGeometry(0.84, 0.03, 0.03), MAT.dark(), INTAKE[0].x, INTAKE[0].y - 0.05, 0);
+    bar.rotation.y = a;
+    g.add(bar);
+  }
+  addPart('intake', g, { dx: -2.2, dy: 1.0, order: 2, label: { text: "Entrée d'air en S", at: [-1.42, 4.4, 0] } });
+}
+
+// --- Réducteur : boîtier rouge décalé, qui porte l'hélice au-dessus du cœur ---
+{
+  const g = new THREE.Group();
+  const red = MAT.red();
+  g.add(lathe([[0.001, 5.25], [0.5, 5.25], [0.64, 5.1], [0.92, 4.62], [1.06, 4.0], [1.06, 3.62], [0.001, 3.62]], red, 72).translateX(XP));
+  g.add(lathe([[0.001, 3.72], [0.7, 3.72], [0.66, 3.35], [0.001, 3.35]], red, 72));
+  addPart('gearbox', g, { dy: 2.0, order: 2, label: { text: 'Réducteur', at: [XP + 1.08, 4.2, 0] } });
+}
+
+// --- Engrenages du réducteur : pignon sur l'arbre de turbine, grande roue sur l'arbre d'hélice ---
+function gearGeometry(r, teeth, depth, toothH) {
+  const shape = new THREE.Shape();
+  const steps = teeth * 4;
+  for (let i = 0; i <= steps; i++) {
+    const a = (i / steps) * TAU;
+    const k = i % 4;
+    const rr = k === 1 || k === 2 ? r + toothH : r;
+    const x = Math.cos(a) * rr, y = Math.sin(a) * rr;
+    if (i === 0) shape.moveTo(x, y); else shape.lineTo(x, y);
+  }
+  const hole = new THREE.Path();
+  hole.absarc(0, 0, r * 0.3, 0, TAU, true);
+  shape.holes.push(hole);
+  const g = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 1 });
+  g.translate(0, 0, -depth / 2);
+  g.rotateX(Math.PI / 2);
+  return g;
+}
+const gears = {};
+{
+  const g = new THREE.Group();
+  gears.pinion = mesh(gearGeometry(0.24, 12, 0.22, 0.06), MAT.brass(), 0, 4.1, 0);
+  gears.wheel = mesh(gearGeometry(0.5, 24, 0.2, 0.06), MAT.yellow(), XP, 4.1, 0);
+  g.add(gears.pinion, gears.wheel);
+  g.add(rod(V3(XP, 3.8, 0), V3(XP, 5.3, 0), 0.09, MAT.blue(), 16));
+  addPart('gears', g, { dx: 2.6, dy: 2.0, order: 3, label: { text: 'Engrenages', at: [XP + 0.6, 4.1, 0] } });
+}
+
+// --- Hélice : six pales noires aux bouts jaunes, moyeu bleu ---
+const propRotor = new THREE.Group();
+propRotor.position.x = XP;
+function paddle(s0, s1, L) {
+  // Pale « palette » vue en plan : large au milieu, bout arrondi ; puis vrillée le long de l'envergure.
+  const chord = (s) => 0.2 + 0.28 * Math.sin(Math.PI * Math.min(1, (s / L) * 1.05));
+  const up = [], down = [];
+  for (let i = 0; i <= 16; i++) { const s = lerp(s0, s1, i / 16); up.push([s, chord(s) * 0.55]); down.push([s, -chord(s) * 0.45]); }
+  const pts = [...up, ...down.reverse()].map(([x, y]) => new THREE.Vector2(x, y));
+  const g = new THREE.ExtrudeGeometry(new THREE.Shape(pts), { depth: 0.05, bevelEnabled: true, bevelThickness: 0.015, bevelSize: 0.015, bevelSegments: 1, curveSegments: 4 });
+  g.translate(0, 0, -0.025);
+  const pos = g.attributes.position;
+  for (let i = 0; i < pos.count; i++) {
+    const x = pos.getX(i), y = pos.getY(i), z = pos.getZ(i);
+    const a = 0.95 - 0.55 * (x / L);
+    pos.setXYZ(i, x + 0.45, y * Math.cos(a) - z * Math.sin(a), y * Math.sin(a) + z * Math.cos(a));
+  }
+  g.computeVertexNormals();
+  // Envergure le long de X, corde le long de Y, puis l'axe de l'hélice ramené sur Y.
+  g.rotateX(Math.PI / 2);
+  return g;
+}
+{
+  const L = 2.45;
+  const body = paddle(0, L * 0.84, L), tip = paddle(L * 0.84, L, L);
+  const black = MAT.black(), yellow = MAT.yellow();
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * TAU;
+    const b = new THREE.Group();
+    b.add(new THREE.Mesh(body, black), new THREE.Mesh(tip, yellow));
+    b.position.y = Y_PROP;
+    b.rotation.y = -a;
+    propRotor.add(b);
+  }
+  propRotor.add(lathe([[0.001, 5.62], [0.5, 5.62], [0.56, 5.4], [0.52, 5.2], [0.001, 5.2]], MAT.blue(), 48));
+  crown(propRotor, new THREE.CylinderGeometry(0.1, 0.1, 0.12, 14), MAT.dark(), 6, (i) => ({ a: (i / 6) * TAU, r: 0.5, y: Y_PROP, rot: 'radial' }));
+  const g = new THREE.Group();
+  g.add(propRotor);
+  addPart('prop', g, { dy: 3.8, order: 4, label: { text: 'Hélice à six pales', at: [XP + 2.2, Y_PROP, 0] } });
+}
+
+// --- Cône d'hélice, rouge et crème ---
+const spinner = new THREE.Group();
+spinner.position.x = XP;
+{
+  spinner.add(lathe([[0.001, 5.62], [0.6, 5.62], [0.58, 5.85], [0.45, 6.2], [0.28, 6.42]], MAT.red(), 48));
+  spinner.add(lathe([[0.28, 6.42], [0.12, 6.6], [0.001, 6.66]], MAT.cream(), 48));
+  // Spirale peinte sur le cône.
+  const pts = [];
+  for (let i = 0; i <= 30; i++) { const t = i / 30; const y = lerp(5.66, 6.4, t); const r = lerp(0.6, 0.29, t ** 1.3) + 0.012; pts.push(polar(t * Math.PI * 1.6, r, y)); }
+  spinner.add(pipe(pts, 0.035, MAT.cream(), 48));
+  const g = new THREE.Group();
+  g.add(spinner);
+  addPart('spinner', g, { dy: 5.6, order: 5, label: { text: "Cône d'hélice", at: [XP + 0.5, 6.0, 0] } });
+}
+
+// --- Accessoires : boîtier, démarreur-génératrice, pompe, réservoir d'huile, FADEC ---
+{
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.BoxGeometry(0.36, 1.3, 0.92), MAT.green(), -1.0, 1.75, 0));
+  g.add(mesh(new THREE.CylinderGeometry(0.26, 0.26, 0.7, 24), MAT.blue(), -1.02, 0.8, 0.18));
+  g.add(ring(V3(-1.02, 0.6, 0.18), V3(0, 1, 0), 0.27, 0.03, MAT.dark()));
+  g.add(mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.35, 18), MAT.red(), -1.02, 2.55, -0.25));
+  const tank = mesh(new THREE.CapsuleGeometry(0.2, 0.6, 6, 16), MAT.yellow(), -0.72, 1.55, -0.72);
+  g.add(tank);
+  g.add(mesh(new THREE.BoxGeometry(0.42, 0.6, 0.16), MAT.black(), 0.05, 2.35, 0.95));
+  for (let i = 0; i < 3; i++) g.add(mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.1, 12).rotateX(Math.PI / 2), MAT.brass(), -0.1 + i * 0.15, 2.55, 1.06));
+  g.add(pipe([V3(-1.0, 2.3, 0.3), V3(-0.75, 2.4, 0.75), V3(-0.15, 2.4, 1.0)], 0.03, MAT.dark(), 24));
+  g.add(pipe([V3(-0.72, 1.2, -0.72), V3(-0.95, 1.05, -0.35), V3(-1.0, 1.2, -0.1)], 0.035, MAT.brass(), 24));
+  addPart('accessories', g, { dx: -2.6, dy: -0.4, order: 2, label: { text: 'Accessoires et FADEC', at: [-1.2, 1.75, 0] } });
+}
+
+// --- Détails du carter : brides, boulons, pattes d'accrochage ---
+{
+  const top = partById['case-top'].obj, bottom = partById['case-bottom'].obj;
+  const ivory = partById['case-top'].mats[0];
+  // La demi-coquille du haut couvre x ≥ 0, soit les angles de −90° à +90° dans le plan (x, z).
+  for (const [y, R] of [[1.95, 0.84], [1.05, 1.0], [0.0, 0.98], [-0.42, 0.86], [-1.85, 0.86]]) {
+    for (const [obj, phi, a0] of [[top, 0, -Math.PI / 2], [bottom, Math.PI, Math.PI / 2]]) {
+      obj.add(lathe([[R - 0.08, y + 0.04], [R, y + 0.04], [R, y - 0.04], [R - 0.08, y - 0.04], [R - 0.08, y + 0.04]], MAT.dark(), 64, phi, Math.PI));
+      crown(obj, boltGeo, MAT.dark(), 12, (i) => ({ a: a0 + ((i + 0.5) / 12) * Math.PI, r: R - 0.02, y: y + 0.06, rot: 'axial' }));
+    }
+  }
+  // Pattes d'accrochage sur le dessus.
+  for (const y of [1.25, -0.25]) {
+    top.add(mesh(new THREE.BoxGeometry(0.22, 0.3, 0.34), ivory, caseR(y) + 0.12, y, 0));
+    top.add(mesh(new THREE.CylinderGeometry(0.07, 0.07, 0.36, 14).rotateX(Math.PI / 2), MAT.dark(), caseR(y) + 0.2, y, 0));
+  }
+  for (const id of ['case-top', 'case-bottom']) {
+    const s = new Set();
+    partById[id].obj.traverse((o) => o.material && s.add(o.material));
+    partById[id].mats = [...s];
+  }
+}
+
+// ------------------------------------------------------------------
+// Fumée : des bouffées rondes qui naissent au coude, gonflent puis disparaissent d'un coup.
+// ------------------------------------------------------------------
+const puffs = [];
+{
+  const geo = new THREE.SphereGeometry(1, 20, 14);
+  for (let i = 0; i < 9; i++) {
+    const m = new THREE.Mesh(geo, i % 3 ? MAT.cream() : flat(0xd8ccb4)());
+    m.userData.phase = i / 9;
+    m.userData.side = (Math.random() * 2 - 1) * 0.35;
+    engine.add(m);
+    puffs.push(m);
+  }
+}
+
+// ------------------------------------------------------------------
+// Flux : air aspiré par la prise en S, comprimé, brûlé puis rejeté ; souffle hélicoïdal de l'hélice.
+// Chaque particule suit son propre trajet, et reste visible en transparence derrière les parois.
+// ------------------------------------------------------------------
+const depthRes = new THREE.Vector2(1, 1);
+const DEPTH_TEST = /* glsl */`
+  uniform sampler2D tSceneDepth;
+  uniform vec2 depthRes;
+  float hiddenBy() { return gl_FragCoord.z > texture2D(tSceneDepth, gl_FragCoord.xy / depthRes).x + 0.00002 ? 1.0 : 0.0; }
+`;
+function trailMaterial() {
+  const m = new LineMaterial({ linewidth: 3.0 * PR, vertexColors: true, transparent: true, depthWrite: false, depthTest: false });
+  m.onBeforeCompile = (shader) => {
+    shader.uniforms.tSceneDepth = { value: colorRT.depthTexture };
+    shader.uniforms.depthRes = { value: depthRes };
+    shader.vertexShader = 'attribute float instanceAlphaStart;\nattribute float instanceAlphaEnd;\nvarying float vTrail;\n' +
+      shader.vertexShader.replace(
+        'vColor.xyz = ( position.y < 0.5 ) ? instanceColorStart : instanceColorEnd;',
+        'vColor.xyz = ( position.y < 0.5 ) ? instanceColorStart : instanceColorEnd;\n\t\t\t\tvTrail = ( position.y < 0.5 ) ? instanceAlphaStart : instanceAlphaEnd;');
+    shader.fragmentShader = 'varying float vTrail;\n' + DEPTH_TEST +
+      shader.fragmentShader.replace('float alpha = opacity;', 'float alpha = opacity * vTrail * (1.0 - 0.55 * hiddenBy());');
+  };
+  m.customProgramCacheKey = () => 'trail';
+  return m;
+}
+const C = (hex) => new THREE.Color(hex);
+const COLD = C(0x3f86c4), HOT = C(0xf2a53a), FIRE = C(0xd9433b), SMOKE = C(0x8a7a6a), WIND = C(0x2f5d8a);
+const PTS = 90, TRAIL = 20;
+// Trajet d'une particule d'air : waypoints [position, couleur].
+function airRoute() {
+  const a = Math.random() * TAU, j = () => (Math.random() * 2 - 1);
+  const jx = j() * 0.25, jz = j() * 0.25;
+  const pol = (r, y) => polar(a, r, y);
+  return [
+    [V3(-1.15 + jx * 2, 8.6, jz * 3), COLD], [V3(-0.98 + jx, 5.6, jz), COLD], [V3(-0.98 + jx, 4.9, jz), COLD],
+    [V3(-0.98 + jx, 4.3, jz), COLD], [V3(-0.76 + jx * 0.8, 3.72, jz * 0.8), COLD], [V3(-0.28, 3.36, jz * 0.6), COLD],
+    [pol(0.38, 3.05), COLD], [pol(0.42, 2.2), COLD], [pol(0.6, 1.55), COLD], [pol(0.88, 1.2), COLD],
+    [pol(0.72, 0.8), HOT], [pol(0.66, 0.2), FIRE], [pol(0.6, -0.4), FIRE], [pol(0.6, -1.0), HOT], [pol(0.58, -1.7), SMOKE],
+    [EXH[1].clone().add(V3(j() * 0.25, 0, j() * 0.25)), SMOKE], [EXH[2].clone().add(V3(j() * 0.25, 0, j() * 0.25)), SMOKE],
+    [EXH_OUT.clone().add(V3(j() * 0.2, 0, j() * 0.25)), SMOKE],
+    [EXH_OUT.clone().addScaledVector(EXH_DIR, 2.2).add(V3(j() * 0.5, j() * 0.3, j() * 0.5)), SMOKE],
+  ];
+}
+// Souffle de l'hélice : une hélice de vent qui s'enroule autour du moteur.
+function windRoute() {
+  const a = Math.random() * TAU, r = 0.9 + Math.random() * 1.9;
+  const out = [];
+  for (let y = 7.0; y >= -6.5; y -= 0.5) {
+    const k = (Y_PROP - y);
+    out.push([polar(a + Math.max(0, k) * 0.42, r * (1 - 0.1 * clamp(k / 11)), y, XP), WIND]);
+  }
+  return out;
+}
+const FLOWS = [
+  { route: airRoute, particles: 26, speed: 3.4, len: 1.5 },
+  { route: windRoute, particles: 16, speed: 6.5, len: 2.2 },
+];
+const flowGroup = new THREE.Group();
+fxRoot.add(flowGroup);
+function spawn(f, p, initial) {
+  const route = f.route();
+  const c = curve(route.map(([v]) => v));
+  p.pts = c.getSpacedPoints(PTS - 1);
+  p.L = c.getLength();
+  // Couleur le long du trajet : interpolée entre waypoints, selon la place de chacun.
+  p.cols = [];
+  const n = route.length;
+  for (let i = 0; i < PTS; i++) {
+    const u = (i / (PTS - 1)) * (n - 1);
+    const k = Math.min(n - 2, Math.floor(u));
+    p.cols.push(route[k][1].clone().lerp(route[k + 1][1], u - k));
+  }
+  p.s = initial ? Math.random() * p.L : -Math.random() * 2;
+  p.rate = 0.85 + Math.random() * 0.3;
+}
+for (const f of FLOWS) {
+  f.p = [];
+  for (let i = 0; i < f.particles; i++) { const p = {}; spawn(f, p, true); f.p.push(p); }
+  const segs = f.particles * (TRAIL - 1);
+  const geo = new LineSegmentsGeometry();
+  geo.setPositions(new Float32Array(segs * 6));
+  geo.setColors(new Float32Array(segs * 6));
+  f.alpha = new THREE.InstancedInterleavedBuffer(new Float32Array(segs * 2), 2, 1);
+  geo.setAttribute('instanceAlphaStart', new THREE.InterleavedBufferAttribute(f.alpha, 1, 0));
+  geo.setAttribute('instanceAlphaEnd', new THREE.InterleavedBufferAttribute(f.alpha, 1, 1));
+  f.mat = trailMaterial();
+  f.mesh = new LineSegments2(geo, f.mat);
+  f.mesh.frustumCulled = false;
+  flowGroup.add(f.mesh);
+}
+const tmpP = new THREE.Vector3(), tmpC = new THREE.Color();
+function sampleRoute(p, s) {
+  const u = clamp(s / p.L) * (PTS - 1);
+  const i = Math.min(PTS - 2, Math.floor(u));
+  tmpP.copy(p.pts[i]).lerp(p.pts[i + 1], u - i);
+  tmpC.copy(p.cols[i]).lerp(p.cols[i + 1], u - i);
+}
+function updateFlow(dt, vis) {
+  for (const f of FLOWS) {
+    f.mat.opacity = vis;
+    f.mesh.visible = vis > 0.01;
+    if (!f.mesh.visible) continue;
+    const pos = f.mesh.geometry.attributes.instanceStart.data.array;
+    const col = f.mesh.geometry.attributes.instanceColorStart.data.array;
+    const alp = f.alpha.array;
+    let o = 0, oa = 0;
+    for (const p of f.p) {
+      p.s += dt * f.speed * p.rate;
+      if (p.s - f.len > p.L) spawn(f, p, false);
+      let px = 0, py = 0, pz = 0, pa = 0, cr = 0, cg = 0, cb = 0;
+      for (let j = 0; j < TRAIL; j++) {
+        const q = j / (TRAIL - 1);
+        const s = p.s - f.len * (1 - q);
+        sampleRoute(p, clamp(s, 0, p.L));
+        const inside = s >= 0 && s <= p.L;
+        const life = smooth(0, 0.8, s) * smooth(p.L, p.L - 1.2, s);
+        const a = inside ? q ** 1.4 * life : 0;
+        if (j > 0) {
+          pos[o] = px; pos[o + 1] = py; pos[o + 2] = pz;
+          pos[o + 3] = tmpP.x; pos[o + 4] = tmpP.y; pos[o + 5] = tmpP.z;
+          col[o] = cr; col[o + 1] = cg; col[o + 2] = cb;
+          col[o + 3] = tmpC.r; col[o + 4] = tmpC.g; col[o + 5] = tmpC.b;
+          alp[oa] = pa; alp[oa + 1] = a;
+          o += 6; oa += 2;
+        }
+        px = tmpP.x; py = tmpP.y; pz = tmpP.z; pa = a; cr = tmpC.r; cg = tmpC.g; cb = tmpC.b;
+      }
+    }
+    f.mesh.geometry.attributes.instanceStart.data.needsUpdate = true;
+    f.mesh.geometry.attributes.instanceColorStart.data.needsUpdate = true;
+    f.alpha.needsUpdate = true;
+  }
+}
+
+// ------------------------------------------------------------------
+// Récit : chapitres, caméra
+// ------------------------------------------------------------------
+const CHAPTERS = [
+  { id: 'hero', from: 0, to: 0.06 },
+  { id: 'prop', num: 'Acte 1', name: "L'hélice", from: 0.09, to: 0.22,
+    text: "Six pales en composite de 4,1 m qui tournent autour de 1 020 tours par minute. C'est elle qui fait presque tout le travail : le moteur derrière ne sert qu'à la faire tourner.",
+    specs: [['Pales', '6'], ['Diamètre', '4,1 m']] },
+  { id: 'air', num: 'Acte 2', name: 'Le grand souffle', from: 0.24, to: 0.38,
+    text: "L'air entre par la bouche sous le cône, remonte un conduit en S jusqu'au compresseur, brûle dans la chambre puis traverse les turbines avant de ressortir par le coude d'échappement." },
+  { id: 'exploded', num: 'Acte 3', name: 'Vue éclatée', from: 0.42, to: 0.6,
+    text: "Tout le monde en scène : l'hélice et son cône, le réducteur et ses engrenages, l'entrée d'air, le carter, les compresseurs, la chambre, les turbines, l'échappement et les accessoires." },
+  { id: 'gearbox', num: 'Acte 4', name: 'Le réducteur', from: 0.61, to: 0.675, focus: ['gearbox', 'gears'],
+    text: "La turbine libre tourne bien trop vite pour une hélice. Un petit pignon entraîne une grande roue, et l'arbre d'hélice, décalé vers le haut, laisse la place à l'entrée d'air en dessous.",
+    specs: [['Hélice', '≈ 1 020 tr/min']] },
+  { id: 'compressor', num: 'Acte 5', name: 'Les compresseurs', from: 0.68, to: 0.745, focus: ['lpc', 'impeller'],
+    text: "Trois étages axiaux serrent l'air une première fois, puis un rouet centrifuge le projette vers l'extérieur et finit le travail avant la chambre.",
+    specs: [['Étages', '3 axiaux + 1 centrifuge']] },
+  { id: 'hot', num: 'Acte 6', name: 'Feu et turbines', from: 0.75, to: 0.815, focus: ['combustor', 'turbines'],
+    text: "Quatorze injecteurs arrosent la chambre annulaire. Les turbines haute et basse pression entraînent les compresseurs ; la turbine libre, à deux étages, fait tourner l'hélice par son propre arbre." },
+  { id: 'acc', num: 'Acte 7', name: 'Les coulisses', from: 0.82, to: 0.885, focus: ['accessories'],
+    text: "Boîtier d'accessoires, démarreur-génératrice, pompe à carburant, réservoir d'huile, et le FADEC : un calculateur à double canal qui pilote le moteur à la place du pilote.",
+    specs: [['FADEC', 'double canal']] },
+  { id: 'outro', num: 'Rideau', name: 'Rideau !', from: 0.9, to: 1.01,
+    text: "Deux PW150A emmènent le Dash 8-400, l'un des avions de ligne à hélices les plus rapides : autour de 660 km/h en croisière." },
+];
+
+// Images-clés : point visé (x, y) dans le repère du moteur, hauteur L le long de l'axe, largeur W,
+// azimut autour de l'axe (az) et élévation le long de l'axe (el, vers l'avant si positive).
+const KEYS = [
+  { p: 0.0,   x: 0.4,  y: 1.2,  L: 14.5, W: 8,  az: 0.35,  el: 0.5 },
+  { p: 0.05,  x: 0.4,  y: 1.2,  L: 14.5, W: 8,  az: 0.35,  el: 0.5 },
+  { p: 0.15,  x: 0.8,  y: 4.4,  L: 7,   W: 7,   az: 0.3,   el: 0.72 },
+  { p: 0.21,  x: 0.8,  y: 4.4,  L: 7,   W: 7,   az: 0.4,   el: 0.66 },
+  { p: 0.31,  x: -0.2, y: 1.6,  L: 13,  W: 6,   az: -0.35, el: 0.12 },
+  { p: 0.37,  x: -0.2, y: 1.6,  L: 13,  W: 6,   az: -0.25, el: 0.1 },
+  { p: 0.5,   x: 0.0,  y: 1.6,  L: 21,  W: 10,  az: 0.22,  el: 0.12 },
+  { p: 0.59,  x: 0.0,  y: 1.6,  L: 21,  W: 10,  az: 0.26,  el: 0.12 },
+  { p: 0.625, x: 1.8,  y: 6.1,  L: 4.6, W: 5.2, az: 0.3,   el: 0.3 },
+  { p: 0.66,  x: 1.8,  y: 6.1,  L: 4.6, W: 5.2, az: 0.4,   el: 0.32 },
+  { p: 0.695, x: 0.0,  y: 2.6,  L: 4.4, W: 3.4, az: 0.35,  el: 0.28 },
+  { p: 0.73,  x: 0.0,  y: 2.6,  L: 4.4, W: 3.4, az: 0.45,  el: 0.3 },
+  { p: 0.765, x: 0.0,  y: -0.9, L: 4.8, W: 3.6, az: 0.3,   el: -0.22 },
+  { p: 0.80,  x: 0.0,  y: -0.9, L: 4.8, W: 3.6, az: 0.4,   el: -0.2 },
+  { p: 0.835, x: -3.6, y: 1.4,  L: 4.2, W: 3.6, az: -0.45, el: 0.22 },
+  { p: 0.87,  x: -3.6, y: 1.4,  L: 4.2, W: 3.6, az: -0.35, el: 0.2 },
+  { p: 0.95,  x: 0.4,  y: 1.2,  L: 14,  W: 8,   az: 0.5,   el: 0.42 },
+  { p: 1.0,   x: 0.4,  y: 1.2,  L: 14,  W: 8,   az: 0.55,  el: 0.42 },
+];
+
+let portrait = false;
+function keyPose(k, out) {
+  const halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const along = portrait ? 2 * halfTan : 2 * halfTan * camera.aspect;
+  const across = portrait ? 2 * halfTan * camera.aspect : 2 * halfTan;
+  out.dist = Math.max((k.L * 1.08) / along, (k.W * 1.12) / across) + k.W * 0.3;
+  out.target.set(k.x, k.y, 0);
+  out.dir.set(Math.sin(k.az) * Math.cos(k.el), Math.sin(k.el), Math.cos(k.az) * Math.cos(k.el));
+  return out;
+}
+const poseA = { target: new THREE.Vector3(), dir: new THREE.Vector3(), dist: 1 };
+const poseB = { target: new THREE.Vector3(), dir: new THREE.Vector3(), dist: 1 };
+const qA = new THREE.Quaternion(), qB = new THREE.Quaternion();
+const FWD = new THREE.Vector3(0, 0, 1);
+// Entre deux clés : la direction tourne sur la sphère, la distance varie en échelle logarithmique.
+function cameraPose(p, out) {
+  let i = 0;
+  while (i < KEYS.length - 2 && p > KEYS[i + 1].p) i++;
+  const a = KEYS[i], b = KEYS[i + 1];
+  const t = smoother(a.p, b.p, p);
+  keyPose(a, poseA); keyPose(b, poseB);
+  out.target.lerpVectors(poseA.target, poseB.target, t);
+  qA.setFromUnitVectors(FWD, poseA.dir.normalize());
+  qB.setFromUnitVectors(FWD, poseB.dir.normalize());
+  out.dir.copy(FWD).applyQuaternion(qA.slerp(qB, t));
+  out.logDist = lerp(Math.log(poseA.dist), Math.log(poseB.dist), t);
+  return out;
+}
+const wantPose = { target: new THREE.Vector3(), dir: new THREE.Vector3(), logDist: 0 };
+const curPose = { target: new THREE.Vector3(), dir: new THREE.Vector3(), logDist: 0 };
+
+// ------------------------------------------------------------------
+// DOM : panneaux, rail, étiquettes
+// ------------------------------------------------------------------
+const panelsEl = document.getElementById('panels');
+const railEl = document.getElementById('rail');
+const heroEl = document.getElementById('hero');
+const progressEl = document.getElementById('progress');
+const track = document.getElementById('track');
+
+for (const c of CHAPTERS) {
+  if (c.id === 'hero') { c.el = heroEl; continue; }
+  const el = document.createElement('section');
+  el.className = 'overlay panel';
+  el.innerHTML = `<span class="num">${c.num}</span><h2>${c.name}</h2><p>${c.text}</p>` +
+    (c.specs ? `<dl>${c.specs.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : '');
+  panelsEl.appendChild(el);
+  c.el = el;
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.innerHTML = `<span>${c.name}</span><i></i>`;
+  btn.setAttribute('aria-label', c.name);
+  btn.addEventListener('click', () => scrollToProgress((c.from + Math.min(c.to, 1)) / 2));
+  railEl.appendChild(btn);
+  c.btn = btn;
+}
+
+function scrollRange() {
+  const top = track.getBoundingClientRect().top + scrollY;
+  return { top, max: track.offsetHeight - innerHeight };
+}
+function scrollToProgress(p) {
+  const { top, max } = scrollRange();
+  scrollTo({ top: top + p * max, behavior: reduceMotion ? 'auto' : 'smooth' });
+}
+function scrollProgress() {
+  const { top, max } = scrollRange();
+  return clamp((scrollY - top) / max);
+}
+
+const SVG = 'http://www.w3.org/2000/svg';
+const labelsSvg = document.getElementById('labels');
+const labelled = parts.filter((p) => p.label);
+engine.updateMatrixWorld(true);
+for (const part of labelled) {
+  const g = document.createElementNS(SVG, 'g');
+  const line = document.createElementNS(SVG, 'line');
+  const dot = document.createElementNS(SVG, 'circle');
+  dot.setAttribute('r', 5);
+  const tag = document.createElementNS(SVG, 'rect');
+  tag.setAttribute('rx', 8);
+  const text = document.createElementNS(SVG, 'text');
+  text.textContent = part.label.text;
+  g.append(line, dot, tag, text);
+  labelsSvg.appendChild(g);
+  const c = new THREE.Box3().setFromObject(part.obj).getCenter(new THREE.Vector3());
+  const [ax, ay, az] = part.label.at;
+  part.label.anchor = V3(ax, ay, az);
+  part.label.center = Math.hypot(ax - c.x, az - c.z) < 0.05 ? V3(c.x - 1, ay, c.z) : V3(c.x, ay, c.z);
+  part.label.nodes = { g, line, dot, tag, text };
+}
+
+// ------------------------------------------------------------------
+// Mise à jour de la scène
+// ------------------------------------------------------------------
+let first = true;
+let baseRoll = 0;
+const baseQuat = new THREE.Quaternion();
+const camPos = new THREE.Vector3();
+const camTarget = new THREE.Vector3();
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  const rw = Math.floor(w * PR), rh = Math.floor(h * PR);
+  for (const f of FLOWS) f.mat.resolution.set(rw, rh);
+  colorRT.setSize(rw, rh);
+  normalRT.setSize(rw, rh);
+  depthRes.set(rw, rh);
+  ink.uniforms.resolution.value.set(rw, rh);
+  ink.uniforms.aspect.value = w / h;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  portrait = camera.aspect < 0.9;
+  // En paysage, le moteur se couche : hélice à gauche, échappement à droite.
+  baseRoll = portrait ? 0 : Math.PI / 2;
+  engine.rotation.z = baseRoll;
+  engine.updateMatrixWorld(true);
+  baseQuat.copy(engine.quaternion);
+  labelsSvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+}
+addEventListener('resize', resize);
+resize();
+
+function chapterWeight(c, p) {
+  const fadeIn = c.from === 0 ? 1 : smooth(c.from - 0.012, c.from + 0.008, p);
+  const fadeOut = c.to >= 1 ? 1 : 1 - smooth(c.to - 0.008, c.to + 0.012, p);
+  return fadeIn * fadeOut;
+}
+
+let propAngle = 0;
+function update(p, dt, time) {
+  // Démontage, puis remontage pour le salut final.
+  for (const part of parts) {
+    const delay = part.order * 0.016;
+    const t = smooth(0.39 + delay, 0.5 + delay, p) * (1 - smooth(0.885 + delay * 0.4, 0.94 + delay * 0.4, p));
+    part.obj.position.set(part.dx * t, part.dy * t, part.dz * t);
+  }
+  const running = 1 - smooth(0.37, 0.41, p) + smooth(0.95, 0.985, p);
+
+  // L'hélice tourne assez lentement pour qu'on voie ses pales, comme dans les dessins animés.
+  if (!reduceMotion) propAngle += dt * lerp(1.2, 9.0, running);
+  propRotor.rotation.y = -propAngle;
+  spinner.rotation.y = -propAngle;
+  gears.wheel.rotation.y = -propAngle;
+  gears.pinion.rotation.y = propAngle * (24 / 12);
+
+  // Bouffées de fumée, animées « en deux ».
+  const tt = reduceMotion ? 0 : onTwos(time);
+  const ex = partById.exhaust.obj.position;
+  for (const m of puffs) {
+    const life = (tt * 0.55 + m.userData.phase) % 1;
+    const grow = Math.sin(Math.PI * Math.min(1, life * 1.15));
+    const s = (0.18 + 0.42 * life) * grow * running;
+    m.visible = s > 0.01;
+    m.scale.setScalar(Math.max(s, 0.001));
+    m.position.copy(EXH_OUT).add(ex).addScaledVector(EXH_DIR, 0.4 + life * 2.6);
+    m.position.y -= life * 1.2;
+    m.position.z += m.userData.side * life * 1.6 + Math.sin(life * 9 + m.userData.phase * 6) * 0.08;
+  }
+
+  updateFlow(reduceMotion ? 0 : dt, running);
+
+  // Chapitres
+  let focus = null, focusWeight = 0, active = null;
+  for (const c of CHAPTERS) {
+    const w = chapterWeight(c, p);
+    c.el.style.opacity = w.toFixed(3);
+    c.el.style.transform = `translateY(${((1 - w) * 12).toFixed(2)}px)`;
+    c.el.style.visibility = w < 0.002 ? 'hidden' : 'visible';
+    if (w > 0.5) active = c;
+    if (c.focus && w > focusWeight) { focus = c.focus; focusWeight = w; }
+  }
+  for (const c of CHAPTERS) c.btn?.classList.toggle('active', c === active);
+  progressEl.style.transform = `scaleX(${p.toFixed(4)})`;
+
+  const k = 1 - Math.exp(-dt * 7);
+  for (const part of parts) {
+    const isFocus = !focus || focus.includes(part.id);
+    const target = isFocus ? 1 : lerp(1, 0.1, focusWeight);
+    part.opacity = reduceMotion ? target : lerp(part.opacity, target, k);
+    for (const m of part.mats) {
+      const transparent = part.opacity < 0.995;
+      if (m.transparent !== transparent) { m.transparent = transparent; m.needsUpdate = true; }
+      m.opacity = part.opacity;
+      m.depthWrite = part.opacity > 0.5;
+    }
+  }
+
+  // Rebond « caoutchouc » : le moteur respire et se dandine un peu, image par image.
+  if (!reduceMotion) {
+    rig.position.y = Math.sin(tt * TAU * 0.8) * 0.07;
+    rig.rotation.z = Math.sin(tt * TAU * 0.4) * 0.015;
+    const sq = 1 + Math.sin(tt * TAU * 1.6) * 0.012;
+    rig.scale.set(1 / Math.sqrt(sq), sq, 1 / Math.sqrt(sq));
+  }
+  rig.updateMatrixWorld(true);
+  fxRoot.matrix.copy(engine.matrixWorld);
+  fxRoot.matrixWorldNeedsUpdate = true;
+
+  // Caméra
+  cameraPose(p, wantPose);
+  wantPose.target.applyQuaternion(baseQuat);
+  wantPose.dir.applyQuaternion(baseQuat);
+  const kc = reduceMotion || first ? 1 : 1 - Math.exp(-dt * 4);
+  if (first) { curPose.target.copy(wantPose.target); curPose.dir.copy(wantPose.dir); curPose.logDist = wantPose.logDist; }
+  curPose.target.lerp(wantPose.target, kc);
+  curPose.dir.lerp(wantPose.dir, kc).normalize();
+  curPose.logDist = lerp(curPose.logDist, wantPose.logDist, kc);
+  camTarget.copy(curPose.target);
+  camPos.copy(curPose.target).addScaledVector(curPose.dir, Math.exp(curPose.logDist));
+  first = false;
+  if (!portrait && innerWidth > 720) {
+    const shift = lerp(0.19, 0.03, smoother(KEYS[1].p, KEYS[2].p, p));
+    camera.setViewOffset(innerWidth, innerHeight, -innerWidth * shift, 0, innerWidth, innerHeight);
+  } else if (camera.view) camera.clearViewOffset();
+  camera.position.copy(camPos);
+  camera.lookAt(camTarget);
+  camera.updateMatrixWorld();
+
+  ink.uniforms.scroll.value = p;
+  ink.uniforms.time.value = reduceMotion ? 0 : time;
+  ink.uniforms.frame.value = reduceMotion ? 0 : Math.floor(time * 12);
+
+  // Étiquettes de la vue éclatée
+  const labelAlpha = smooth(0.52, 0.56, p) * (1 - smooth(0.585, 0.605, p));
+  labelsSvg.style.opacity = labelAlpha.toFixed(3);
+  if (labelAlpha > 0.001) placeLabels();
+}
+
+function keepInView(text) {
+  const tw = text.getComputedTextLength();
+  const anchor = text.getAttribute('text-anchor');
+  const x = +text.getAttribute('x');
+  const left = anchor === 'start' ? x : anchor === 'end' ? x - tw : x - tw / 2;
+  const fixed = clamp(left, 10, innerWidth - 10 - tw);
+  if (fixed !== left) text.setAttribute('x', anchor === 'start' ? fixed : anchor === 'end' ? fixed + tw : fixed + tw / 2);
+}
+const a2 = new THREE.Vector3();
+function project(vec) {
+  vec.project(camera);
+  return [(vec.x + 1) / 2 * innerWidth, (1 - vec.y) / 2 * innerHeight];
+}
+function overlaps(a, b) {
+  return a.x < b.x + b.width + 10 && b.x < a.x + a.width + 10 && a.y < b.y + b.height + 8 && b.y < a.y + a.height + 8;
+}
+function placeLabels() {
+  const placed = [];
+  for (const part of labelled) {
+    const { anchor, center, nodes } = part.label;
+    part.obj.updateMatrixWorld();
+    const [ax, ay] = project(part.obj.localToWorld(a2.copy(center)));
+    const [tx, ty] = project(part.obj.localToWorld(a2.copy(anchor)));
+    let dx = tx - ax, dy = ty - ay;
+    const len = Math.hypot(dx, dy) || 1;
+    dx /= len; dy /= len;
+    const horizontal = Math.abs(dx) > Math.abs(dy);
+    nodes.text.setAttribute('text-anchor', horizontal ? (dx > 0 ? 'start' : 'end') : 'middle');
+    let b, ex, ey;
+    for (let k = 0; k < 7; k++) {
+      const step = Math.ceil(k / 2) * (k % 2 ? 1 : -1);
+      const reach = horizontal ? 38 : 38 + k * 26;
+      ex = tx + dx * reach; ey = ty + dy * reach + (horizontal ? step * 30 : 0);
+      nodes.text.setAttribute('x', ex + (horizontal ? dx * 12 : 0));
+      nodes.text.setAttribute('y', ey + (horizontal ? 5 : dy > 0 ? 20 : -12));
+      keepInView(nodes.text);
+      b = nodes.text.getBBox();
+      if (!placed.some((o) => overlaps(b, o))) break;
+    }
+    placed.push(b);
+    nodes.line.setAttribute('x1', tx); nodes.line.setAttribute('y1', ty);
+    nodes.line.setAttribute('x2', ex); nodes.line.setAttribute('y2', ey);
+    nodes.dot.setAttribute('cx', tx); nodes.dot.setAttribute('cy', ty);
+    nodes.tag.setAttribute('x', b.x - 10); nodes.tag.setAttribute('y', b.y - 6);
+    nodes.tag.setAttribute('width', b.width + 20); nodes.tag.setAttribute('height', b.height + 12);
+  }
+}
+
+// ------------------------------------------------------------------
+// Boucle
+// ------------------------------------------------------------------
+const clock = new THREE.Clock();
+function frame() {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  update(scrollProgress(), dt, clock.elapsedTime);
+
+  renderer.setRenderTarget(colorRT);
+  renderer.setClearColor(0x000000, 0);
+  renderer.clear();
+  renderer.render(scene, camera);
+
+  const hidden = parts.filter((part) => part.opacity < 0.5 && part.obj.visible);
+  for (const part of hidden) part.obj.visible = false;
+  scene.overrideMaterial = normalMat;
+  renderer.setRenderTarget(normalRT);
+  renderer.clear();
+  renderer.render(scene, camera);
+  scene.overrideMaterial = null;
+  for (const part of hidden) part.obj.visible = true;
+
+  renderer.setRenderTarget(null);
+  renderer.clear();
+  renderer.render(inkScene, quadCam);
+  renderer.render(fxScene, camera);
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>
