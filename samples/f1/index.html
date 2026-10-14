@@ -1,0 +1,1610 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moteur F-1 — architecture infinie</title>
+<meta name="description" content="Le moteur F-1 de Saturn V, démonté pièce par pièce au fil du défilement, dans une architecture qui se répète à l'infini.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --haze: #f3e9df;
+    --paper: #fbf8f3;
+    --ink: #2b2838;
+    --body: #4c4760;
+    --muted: #6a6480;
+    --accent: #d8613c;
+    --lox: #2f86cf;
+    --fuel: #d9861f;
+    --gas: #7a6690;
+    --rule: rgba(43, 40, 56, 0.14);
+    --sans: "Jost", "Futura", system-ui, sans-serif;
+    --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  }
+
+  * { box-sizing: border-box; }
+  html { background: var(--haze); scrollbar-color: var(--muted) var(--haze); }
+  ::selection { background: var(--accent); color: var(--paper); }
+  body {
+    margin: 0;
+    background: var(--haze);
+    color: var(--ink);
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+  .overlay { position: fixed; pointer-events: none; z-index: 2; }
+
+  .topbar {
+    top: 0; left: 0; right: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 22px 32px;
+    font-size: 14px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .topbar b { color: var(--ink); font-weight: 500; }
+
+  /* Hero : titre fin et aéré, comme gravé dans la pierre claire */
+  .hero {
+    left: 32px; right: 32px; top: 20vh;
+    max-width: 600px;
+  }
+  .hero h1 {
+    font-weight: 300;
+    font-size: clamp(54px, 7.4vw, 112px);
+    line-height: 0.92;
+    letter-spacing: -0.02em;
+    margin: 0 0 26px;
+    color: var(--ink);
+    text-wrap: balance;
+  }
+  .hero h1 em { font-style: normal; font-weight: 400; color: var(--accent); }
+  .hero p {
+    margin: 0;
+    max-width: 40ch;
+    color: var(--body);
+    font-size: 18px;
+    line-height: 1.55;
+  }
+  .scroll-hint {
+    margin-top: 28px;
+    display: inline-flex;
+    gap: 12px;
+    align-items: center;
+    font-size: 13px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .scroll-hint i {
+    display: block;
+    width: 1px; height: 32px;
+    background: var(--ink);
+    transform-origin: top;
+    animation: hint 2.4s var(--ease-out) infinite;
+  }
+  @keyframes hint {
+    0% { transform: scaleY(0); opacity: 1; }
+    70% { transform: scaleY(1); opacity: 1; }
+    100% { transform: scaleY(1); opacity: 0; }
+  }
+
+  /* Panneaux : plaques claires, filet fin */
+  .panel {
+    left: 32px; bottom: 9vh;
+    width: min(410px, calc(100vw - 64px));
+    padding: 22px 26px 24px;
+    background: rgba(251, 248, 243, 0.9);
+    -webkit-backdrop-filter: blur(8px);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--rule);
+    opacity: 0;
+    will-change: opacity, transform;
+  }
+  .panel .num {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 12px;
+    letter-spacing: 0.14em;
+    color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  .panel h2 {
+    font-weight: 300;
+    font-size: clamp(30px, 2.9vw, 40px);
+    line-height: 1.02;
+    letter-spacing: -0.01em;
+    margin: 0 0 12px;
+    color: var(--ink);
+  }
+  .panel p {
+    margin: 0;
+    color: var(--body);
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  .panel dl {
+    margin: 16px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--rule);
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: 4px 18px;
+    font-size: 15px;
+  }
+  .panel dt { color: var(--muted); }
+  .panel dd { margin: 0; color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+  /* Rail de progression */
+  .rail {
+    right: 32px; top: 50%;
+    transform: translateY(-50%);
+    pointer-events: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .rail button {
+    all: unset;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 6px 0;
+    font-size: 14px;
+    color: rgba(43, 40, 56, 0.4);
+    transition: color 200ms ease;
+  }
+  .rail button span {
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateX(6px);
+    transition: opacity 200ms ease, transform 200ms var(--ease-out);
+  }
+  .rail button i {
+    display: block;
+    width: 14px; height: 1px;
+    background: currentColor;
+    transition: width 200ms var(--ease-out);
+  }
+  .rail button.active { color: var(--ink); }
+  .rail button.active i { width: 30px; height: 2px; background: var(--accent); }
+  .rail button.active span { opacity: 1; transform: none; }
+  @media (hover: hover) and (pointer: fine) {
+    .rail button:hover { color: var(--ink); }
+    .rail button:hover span { opacity: 1; transform: none; }
+  }
+  .rail button:focus-visible { outline: 1px solid var(--accent); outline-offset: 4px; }
+
+  .legend {
+    right: 32px; bottom: 22px;
+    display: flex;
+    gap: 22px;
+    font-size: 14px;
+    color: var(--body);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .legend i { display: block; width: 22px; height: 3px; }
+  .legend .lox { background: var(--lox); }
+  .legend .fuel { background: var(--fuel); }
+  .legend .gas { background: var(--gas); }
+
+  .progress {
+    left: 0; bottom: 0;
+    height: 2px;
+    width: 100%;
+    background: var(--accent);
+    transform-origin: left;
+    transform: scaleX(0);
+  }
+
+  /* Étiquettes */
+  #labels { inset: 0; width: 100%; height: 100%; overflow: visible; }
+  #labels line { stroke: var(--ink); stroke-width: 1; opacity: 0.7; }
+  #labels circle { fill: var(--accent); }
+  #labels rect { fill: var(--paper); stroke: var(--rule); stroke-width: 1; }
+  #labels text {
+    fill: var(--ink);
+    font-family: var(--sans);
+    font-weight: 500;
+    font-size: 13px;
+    letter-spacing: 0.02em;
+  }
+
+  #track { position: relative; height: 1200vh; }
+
+  footer {
+    position: relative;
+    z-index: 3;
+    background: var(--paper);
+    border-top: 1px solid var(--rule);
+    padding: 96px 32px 64px;
+  }
+  footer .inner { max-width: 1120px; margin: 0 auto; }
+  footer h3 {
+    font-weight: 300;
+    font-size: clamp(38px, 4.6vw, 60px);
+    line-height: 1;
+    letter-spacing: -0.01em;
+    margin: 0 0 14px;
+  }
+  footer .lede { color: var(--body); max-width: 56ch; line-height: 1.6; margin: 0 0 56px; font-size: 17px; }
+  .specs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    border-top: 1px solid var(--rule);
+    margin: 0;
+  }
+  .specs div { padding: 22px 20px 22px 0; border-bottom: 1px solid var(--rule); }
+  .specs dt {
+    font-size: 13px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 10px;
+  }
+  .specs dd {
+    margin: 0;
+    font-weight: 300;
+    font-size: 42px;
+    line-height: 1;
+    color: var(--ink);
+    font-variant-numeric: tabular-nums;
+  }
+  .colophon {
+    margin-top: 64px;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 14px;
+    color: var(--muted);
+  }
+
+  .fallback {
+    display: none;
+    position: fixed;
+    inset: 0;
+    place-items: center;
+    padding: 28px;
+    text-align: center;
+    color: var(--body);
+  }
+  .no-webgl .fallback { display: grid; }
+  .no-webgl #scene { display: none; }
+
+  @media (max-width: 720px) {
+    .legend { left: 16px; right: auto; top: 46px; bottom: auto; flex-direction: column; gap: 6px; font-size: 12px; }
+    .topbar { padding: 16px; font-size: 12px; }
+    .topbar .hide-sm { display: none; }
+    .hero { left: 16px; right: 16px; top: auto; bottom: 16px; padding: 18px 18px 20px; background: rgba(251, 248, 243, 0.92); border: 1px solid var(--rule); }
+    .hero h1 { font-size: 44px; margin-bottom: 12px; }
+    .hero p { font-size: 15px; }
+    .scroll-hint { margin-top: 14px; }
+    .panel { left: 16px; right: 16px; bottom: 16px; width: auto; padding: 16px 18px 18px; }
+    .panel p { font-size: 15px; }
+    .panel dl { display: none; }
+    #labels text { font-size: 11px; }
+    .rail { right: 12px; top: 72px; transform: none; }
+    .rail button span { display: none; }
+    footer { padding: 64px 16px 48px; }
+    .specs dd { font-size: 32px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .scroll-hint i { animation: none; }
+  }
+</style>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body>
+  <canvas id="scene" aria-label="Modèle 3D du moteur F-1 qui se décompose au défilement"></canvas>
+  <div class="fallback">WebGL n'est pas disponible sur cet appareil — le modèle 3D ne peut pas s'afficher.</div>
+
+  <svg id="labels" class="overlay" aria-hidden="true"></svg>
+
+  <div class="overlay topbar">
+    <span><b>F-1</b> &nbsp;/&nbsp; Premier étage de Saturn V</span>
+    <span class="hide-sm">Maquette procédurale · non officielle</span>
+  </div>
+
+  <div class="overlay hero" id="hero">
+    <h1>Le <em>F-1</em>,<br>pièce par pièce</h1>
+    <p>Le moteur du premier étage de Saturn V : près de 690 tonnes de poussée pour une seule chambre. Faites défiler pour suivre le kérosène et l'oxygène liquide, puis pour le démonter.</p>
+    <div class="scroll-hint"><i></i>Défiler</div>
+  </div>
+
+  <div id="panels"></div>
+  <nav class="overlay rail" id="rail" aria-label="Chapitres"></nav>
+  <div class="overlay legend" aria-hidden="true">
+    <span><i class="lox"></i>Oxygène liquide</span>
+    <span><i class="fuel"></i>Kérosène RP-1</span>
+    <span><i class="gas"></i>Gaz de turbine</span>
+  </div>
+  <div class="overlay progress" id="progress"></div>
+
+  <main id="track"></main>
+
+  <footer>
+    <div class="inner">
+      <h3>Ordres de grandeur</h3>
+      <p class="lede">Valeurs indicatives pour le F-1 de Saturn V, au niveau de la mer. La maquette ci-dessus simplifie la géométrie et la tuyauterie.</p>
+      <dl class="specs">
+        <div><dt>Poussée au sol</dt><dd>6,8 MN</dd></div>
+        <div><dt>Débit d'ergols</dt><dd>≈ 2,6 t/s</dd></div>
+        <div><dt>Hauteur</dt><dd>5,6 m</dd></div>
+        <div><dt>Sortie de tuyère</dt><dd>Ø 3,7 m</dd></div>
+      </dl>
+      <div class="colophon">
+        <span>Modèle généré en code avec Three.js ; décor répété à l'infini, coloré selon l'orientation des faces.</span>
+        <span>Sample · design &amp; motion</span>
+      </div>
+    </div>
+  </footer>
+
+<script type="module">
+import * as THREE from 'three';
+import { LineSegments2 } from 'three/addons/lines/LineSegments2.js';
+import { LineSegmentsGeometry } from 'three/addons/lines/LineSegmentsGeometry.js';
+import { LineMaterial } from 'three/addons/lines/LineMaterial.js';
+
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ------------------------------------------------------------------
+// Utilitaires
+// ------------------------------------------------------------------
+const clamp = (v, a = 0, b = 1) => Math.min(b, Math.max(a, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+const TAU = Math.PI * 2;
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+
+// ------------------------------------------------------------------
+// Rendu
+// ------------------------------------------------------------------
+const canvas = document.getElementById('scene');
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+} catch (err) {
+  document.body.classList.add('no-webgl');
+  throw err;
+}
+const PR = Math.min(devicePixelRatio, 1.5);
+renderer.setPixelRatio(PR);
+renderer.autoClear = false;
+
+const scene = new THREE.Scene();      // architecture et moteur, opaques
+const fxScene = new THREE.Scene();    // flamme et flux, posés par-dessus
+const camera = new THREE.PerspectiveCamera(32, 1, 0.5, 800);
+
+// Matériaux : de simples albédos. L'éclairage vient du post-traitement, qui teinte chaque face
+// selon son orientation dans le monde, comme les six gravités de Manifold Garden.
+const flat = (color, o = {}) => () => new THREE.MeshBasicMaterial({ color, ...o });
+const MAT = {
+  tubes:   flat(0xdcd7cf),
+  inner:   flat(0xb9b2aa, { side: THREE.DoubleSide }),
+  ext:     flat(0x6a6472, { side: THREE.DoubleSide }),
+  white:   flat(0xf6f3ee),
+  pale:    flat(0xe4dfd7),
+  steel:   flat(0x9a95a3),
+  dark:    flat(0x5c5866),
+  copper:  flat(0xd88a5c),
+  lox:     flat(0xc9def0),
+  fuel:    flat(0xf0d9b8),
+  gas:     flat(0xd9d0e2),
+  accent:  flat(0xe07a52),
+  hole:    flat(0x3a3644),
+};
+
+// ------------------------------------------------------------------
+// Passes : couleur (+ profondeur), normales, puis un shader qui éclaire par orientation,
+// ajoute l'occlusion des coins, un trait fin et la brume.
+// ------------------------------------------------------------------
+const colorRT = new THREE.WebGLRenderTarget(1, 1, { samples: 4 });
+colorRT.depthTexture = new THREE.DepthTexture(1, 1);
+const normalRT = new THREE.WebGLRenderTarget(1, 1, { samples: 4 });
+// Double face : les coques vues par leur envers doivent masquer ce qui est derrière elles.
+const normalMat = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
+const ink = new THREE.ShaderMaterial({
+  depthTest: false,
+  depthWrite: false,
+  uniforms: {
+    tColor: { value: colorRT.texture },
+    tDepth: { value: colorRT.depthTexture },
+    tNormal: { value: normalRT.texture },
+    resolution: { value: new THREE.Vector2(1, 1) },
+    near: { value: camera.near },
+    far: { value: camera.far },
+    pr: { value: PR },
+    tanHalf: { value: Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) },
+    camRot: { value: new THREE.Matrix3() },
+    fogStart: { value: 40 },
+    fogScale: { value: 60 },
+    aspect: { value: 1 },
+  },
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
+  `,
+  fragmentShader: /* glsl */`
+    #include <packing>
+    uniform sampler2D tColor, tDepth, tNormal;
+    uniform vec2 resolution;
+    uniform float near, far, pr, tanHalf, fogStart, fogScale, aspect;
+    uniform mat3 camRot;
+    varying vec2 vUv;
+
+    // Une teinte par orientation : haut, bas, ±X, ±Z.
+    const vec3 C_UP = vec3(0.984, 0.965, 0.933);
+    const vec3 C_DOWN = vec3(0.64, 0.58, 0.76);
+    const vec3 C_PX = vec3(0.95, 0.66, 0.52);
+    const vec3 C_NX = vec3(0.50, 0.76, 0.75);
+    const vec3 C_PZ = vec3(0.94, 0.905, 0.85);
+    const vec3 C_NZ = vec3(0.56, 0.66, 0.85);
+    const vec3 FOG_TOP = vec3(0.965, 0.92, 0.875);
+    const vec3 FOG_LOW = vec3(0.89, 0.865, 0.93);
+    const vec3 SUN = vec3(1.0, 0.975, 0.93);
+    const vec3 LINE = vec3(0.2, 0.18, 0.27);
+
+    float rawDepth(vec2 uv) { return texture2D(tDepth, uv).x; }
+    float viewZ(vec2 uv) { return -perspectiveDepthToViewZ(rawDepth(uv), near, far); }
+    vec3 nrm(vec2 uv) { return normalize(texture2D(tNormal, uv).xyz * 2.0 - 1.0); }
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+    vec3 orient(vec3 n) {
+      vec3 w = n * n;
+      return (n.x > 0.0 ? C_PX : C_NX) * w.x + (n.y > 0.0 ? C_UP : C_DOWN) * w.y + (n.z > 0.0 ? C_PZ : C_NZ) * w.z;
+    }
+
+    vec3 haze() {
+      vec3 c = mix(FOG_LOW, FOG_TOP, smoothstep(0.0, 1.0, vUv.y));
+      vec2 q = vec2((vUv.x - 0.8) * aspect, vUv.y - 0.86);
+      c = mix(c, SUN, exp(-length(q) * 3.2) * 0.75);
+      return c;
+    }
+
+    // Occlusion des coins : les voisins plus proches de la caméra assombrissent le creux.
+    float occlusion(float z) {
+      float rad = 0.9 + z * 0.012;
+      float rpx = clamp(rad * resolution.y / (2.0 * tanHalf * z), 3.0, 70.0 * pr);
+      float rot = hash(floor(gl_FragCoord.xy)) * 6.2832;
+      float occ = 0.0;
+      for (int i = 0; i < 12; i++) {
+        float fi = float(i);
+        float ang = fi * 2.39996 + rot;
+        vec2 off = vec2(cos(ang), sin(ang)) * ((fi + 0.5) / 12.0) * rpx / resolution;
+        float dz = z - viewZ(vUv + off);
+        occ += smoothstep(0.03, 0.4, dz) * (1.0 - smoothstep(rad, rad * 2.5, dz));
+      }
+      return occ / 12.0;
+    }
+
+    void main() {
+      vec2 texel = 1.0 / resolution;
+      bool bg = rawDepth(vUv) >= 0.99999;
+      vec4 src = texture2D(tColor, vUv);
+      vec3 fogC = haze();
+      vec3 col;
+      if (bg) {
+        // Pièce estompée devant le vide : on la pose sur la brume.
+        vec3 a = pow(clamp(src.rgb / max(src.a, 0.001), 0.0, 1.0), vec3(1.0 / 2.2));
+        col = mix(fogC, a * C_PZ, src.a);
+      } else {
+        float z = viewZ(vUv);
+        vec3 nv = nrm(vUv);
+        vec3 nw = normalize(camRot * nv);
+        vec3 alb = pow(clamp(src.rgb, 0.0, 1.0), vec3(1.0 / 2.2));
+        float key = 0.9 + 0.1 * dot(nw, normalize(vec3(0.35, 0.8, 0.5)));
+        col = alb * orient(nw) * key;
+        col *= 1.0 - 0.6 * occlusion(z);
+
+        // Trait fin : ruptures de profondeur, et plis marqués tant que l'objet est proche.
+        float edgeD = 0.0, edgeN = 0.0;
+        vec2 o[4];
+        o[0] = vec2(pr, 0.0); o[1] = vec2(-pr, 0.0); o[2] = vec2(0.0, pr); o[3] = vec2(0.0, -pr);
+        for (int i = 0; i < 4; i++) {
+          vec2 q = vUv + o[i] * texel;
+          edgeD = max(edgeD, abs(viewZ(q) - z) / max(z, 0.001));
+          edgeN = max(edgeN, 1.0 - dot(nv, nrm(q)));
+        }
+        float line = max(smoothstep(0.015, 0.04, edgeD), smoothstep(0.35, 0.6, edgeN) * (1.0 - smoothstep(18.0, 40.0, z)));
+        col = mix(col, LINE, line * 0.5);
+
+        // Brume : l'architecture se dissout dans l'air clair.
+        float fog = 1.0 - exp(-max(z - fogStart, 0.0) / fogScale);
+        col = mix(col, fogC, fog);
+      }
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `,
+});
+const inkScene = new THREE.Scene();
+inkScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), ink));
+const quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+
+// ------------------------------------------------------------------
+// Géométrie
+// Moteur vertical, axe Y, tuyère vers le bas. 1 unité ≈ 0,5 m.
+// ------------------------------------------------------------------
+function lathe(points, mat, segments = 96, phiStart = 0, phiLength = TAU) {
+  const g = new THREE.LatheGeometry(points.map(([r, y]) => new THREE.Vector2(r, y)), segments, phiStart, phiLength);
+  return new THREE.Mesh(g, mat);
+}
+function mesh(geo, mat, x = 0, y = 0, z = 0) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); return m; }
+function rod(a, b, r, mat, seg = 16) {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, a.distanceTo(b), seg), mat);
+  m.position.copy(a).add(b).multiplyScalar(0.5);
+  m.quaternion.setFromUnitVectors(V3(0, 1, 0), b.clone().sub(a).normalize());
+  return m;
+}
+const curve = (points) => new THREE.CatmullRomCurve3(points, false, 'centripetal');
+function pipe(points, r, mat, seg = 96) { return new THREE.Mesh(new THREE.TubeGeometry(curve(points), seg, r, 16), mat); }
+// Anneau autour d'un axe : brides, colliers.
+function ring(center, axis, R, r, mat) {
+  const m = new THREE.Mesh(new THREE.TorusGeometry(R, r, 10, 48), mat);
+  m.position.copy(center);
+  m.quaternion.setFromUnitVectors(V3(0, 0, 1), axis.clone().normalize());
+  return m;
+}
+
+// Profil intérieur (côté gaz) : chambre cylindrique, col, divergent jusqu'au rapport 10:1,
+// puis extension de tuyère jusqu'au rapport 16:1.
+const Y_INJ = 4.2, Y_THROAT = 2.7, Y_SPLIT = -0.95, Y_EXIT = -5.6;
+const R_CH = 1.1, R_TH = 0.92, R_SPLIT = 2.9, R_EXIT = 3.68;
+function gasR(y) {
+  if (y >= 3.5) return R_CH;
+  if (y >= Y_THROAT) return lerp(R_CH, R_TH, smooth(3.5, Y_THROAT, y));
+  if (y >= Y_SPLIT) {
+    const t = clamp((Y_THROAT - y) / (Y_THROAT - Y_SPLIT));
+    return R_TH + (R_SPLIT - R_TH) * (1 - (1 - t) ** 1.5) * smooth(0, 0.12, t);
+  }
+  const t = clamp((Y_SPLIT - y) / (Y_SPLIT - Y_EXIT));
+  return R_SPLIT + (R_EXIT - R_SPLIT) * (1 - (1 - t) ** 1.4);
+}
+const WALL = 0.07;
+const outR = (y) => gasR(y) + WALL;
+
+// Coque de révolution en tubes accolés : le rayon ondule sur la circonférence, un bossage par tube.
+function tubeShell(y0, y1, steps, n, amp, mat) {
+  const outer = [], inner = [];
+  for (let i = 0; i <= steps; i++) outer.push([outR(lerp(y0, y1, i / steps)), lerp(y0, y1, i / steps)]);
+  for (let i = steps; i >= 0; i--) inner.push([gasR(lerp(y0, y1, i / steps)), lerp(y0, y1, i / steps)]);
+  const g = new THREE.LatheGeometry([...outer, ...inner, outer[0]].map(([r, y]) => new THREE.Vector2(r, y)), n * 4);
+  const pos = g.attributes.position;
+  for (let k = 0; k < pos.count; k++) {
+    const x = pos.getX(k), z = pos.getZ(k);
+    const r = Math.hypot(x, z);
+    if (r < 1e-4) continue;
+    const ph = (((Math.atan2(z, x) / TAU) * n) % 1 + 1) % 1;
+    const bump = Math.sqrt(Math.max(0, 1 - (2 * ph - 1) ** 2));
+    const r2 = r + amp * (bump - 0.5);
+    pos.setXYZ(k, (x / r) * r2, pos.getY(k), (z / r) * r2);
+  }
+  g.computeVertexNormals();
+  return new THREE.Mesh(g, mat);
+}
+// Bande en relief posée sur la paroi (cerclage, bride).
+const band = (y, h = 0.05, w = 0.05, base = outR) => {
+  const r = base(y);
+  return [[r - 0.01, y + w], [r + h, y + w], [r + h, y - w], [r - 0.01, y - w], [r - 0.01, y + w]];
+};
+
+// ------------------------------------------------------------------
+// Assemblage
+// ------------------------------------------------------------------
+const engine = new THREE.Group();
+scene.add(engine);
+
+const parts = [];
+const partById = {};
+function addPart(id, obj, opts = {}) {
+  engine.add(obj);
+  const mats = new Set();
+  obj.traverse((o) => { if (o.material) mats.add(o.material); });
+  const part = { id, obj, mats: [...mats], opacity: 1, dx: 0, dy: 0, dz: 0, order: 0, ...opts };
+  parts.push(part);
+  partById[id] = part;
+  return part;
+}
+// Chaque pièce garde ses propres matériaux, sinon atténuer l'une atténuerait ses voisines.
+function addTo(id, obj) {
+  const part = partById[id];
+  part.obj.add(obj);
+  obj.traverse((o) => { if (o.material && !part.mats.includes(o.material)) part.mats.push(o.material); });
+}
+// Couronne d'objets instanciés autour de l'axe Y (ou d'un autre centre) ; place(i) → { a, r, y, rot }.
+function crown(id, geo, mat, count, place, cx = 0, cz = 0) {
+  const d = new THREE.Object3D();
+  const inst = new THREE.InstancedMesh(geo, mat, count);
+  for (let i = 0; i < count; i++) {
+    const { a, r, y, rot = 'radial', tilt = 0 } = place(i);
+    d.position.set(cx + Math.cos(a) * r, y, cz + Math.sin(a) * r);
+    if (rot === 'radial') d.rotation.set(0, -a, Math.PI / 2);
+    else if (rot === 'surface') d.rotation.set(0, -a, tilt, 'YXZ');
+    else d.rotation.set(0, -a, 0);
+    d.updateMatrix();
+    inst.setMatrixAt(i, d.matrix);
+  }
+  addTo(id, inst);
+}
+const boltGeo = new THREE.CylinderGeometry(0.035, 0.035, 0.05, 6);
+
+// Repères de la turbopompe : son axe, la direction vers le moteur (d) et la perpendiculaire (t).
+const PUMP = V3(2.95, 0, -0.55);
+const toAxis = V3(-PUMP.x, 0, -PUMP.z).normalize();
+const side = V3(toAxis.z, 0, -toAxis.x);
+const pumpAt = (y, d = 0, t = 0) => PUMP.clone().setY(y).addScaledVector(toAxis, d).addScaledVector(side, t);
+const pumpAngle = Math.atan2(PUMP.z, PUMP.x);
+const polar = (a, r, y) => V3(Math.cos(a) * r, y, Math.sin(a) * r);
+const HX = V3(3.12, 0, -0.6);
+const GG = pumpAt(2.55, -0.95, 0.95);
+
+// --- Chambre à tubes : de l'injecteur au rapport 10:1 ---
+{
+  const g = new THREE.Group();
+  g.add(tubeShell(Y_INJ + 0.05, Y_SPLIT + 0.02, 70, 178, 0.03, MAT.tubes()));
+  addPart('chamber', g, { order: 0, label: { text: 'Chambre à 178 tubes', at: [-(outR(1.3) + 0.03), 1.3, 0] } });
+}
+
+// --- Injecteur : plaque percée, cloisons de cuivre ---
+{
+  const g = new THREE.Group();
+  const plate = MAT.pale();
+  g.add(lathe([[0.001, Y_INJ + 0.16], [1.28, Y_INJ + 0.16], [1.28, Y_INJ - 0.02], [0.001, Y_INJ - 0.02]], plate));
+  addPart('injector', g, { dy: 1.5, order: 1, label: { text: 'Injecteur', at: [-1.3, Y_INJ + 0.07, 0] } });
+}
+
+// --- Dôme d'oxygène ---
+{
+  const g = new THREE.Group();
+  const prof = [];
+  for (let i = 0; i <= 16; i++) {
+    const a = (i / 16) * (Math.PI / 2);
+    prof.push([1.2 * Math.cos(a) + 0.001, Y_INJ + 0.18 + 0.72 * Math.sin(a)]);
+  }
+  g.add(lathe(prof, MAT.white()));
+  addPart('dome', g, { dy: 2.7, order: 2, label: { text: "Dôme d'oxygène", at: [-1.08, Y_INJ + 0.55, 0] } });
+}
+
+// --- Cardan ---
+{
+  const g = new THREE.Group();
+  const s = MAT.steel();
+  g.add(lathe([[0.55, 4.98], [0.3, 5.3], [0.3, 5.42], [0.001, 5.42]], s));
+  g.add(mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.9, 20).rotateZ(Math.PI / 2), MAT.dark(), 0, 5.55, 0));
+  g.add(mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.9, 20).rotateX(Math.PI / 2), MAT.dark(), 0, 5.55, 0));
+  g.add(mesh(new THREE.SphereGeometry(0.26, 24, 16), s, 0, 5.55, 0));
+  g.add(mesh(new THREE.BoxGeometry(1.3, 0.16, 1.3), s, 0, 5.85, 0));
+  addPart('gimbal', g, { dy: 4.0, order: 3, label: { text: 'Cardan', at: [-0.65, 5.85, 0] } });
+}
+
+// --- Collecteur d'échappement de la turbine, au rapport 10:1 ---
+const MAN_R = 3.2, MAN_r = 0.32, MAN_Y = -0.95;
+{
+  const g = new THREE.Group();
+  const m = new THREE.Mesh(new THREE.TorusGeometry(MAN_R, MAN_r, 28, 160), MAT.gas());
+  m.rotation.x = Math.PI / 2;
+  m.position.y = MAN_Y;
+  g.add(m);
+  addPart('manifold', g, { dy: -1.8, order: 1, label: { text: "Collecteur d'échappement", at: [-(MAN_R + MAN_r), MAN_Y, 0] } });
+}
+
+// --- Extension de tuyère : refroidie par film de gaz de turbine ---
+{
+  const g = new THREE.Group();
+  const outer = [], inner = [];
+  for (let i = 0; i <= 40; i++) { const y = lerp(Y_SPLIT, Y_EXIT, i / 40); outer.push([gasR(y) + 0.06, y]); }
+  for (let i = 40; i >= 0; i--) { const y = lerp(Y_SPLIT, Y_EXIT, i / 40); inner.push([gasR(y), y]); }
+  g.add(lathe([...outer, ...inner, outer[0]], MAT.ext(), 160));
+  addPart('extension', g, { dy: -3.8, order: 2, label: { text: 'Extension de tuyère', at: [-(gasR(-3.6) + 0.08), -3.6, 0] } });
+}
+
+// --- Turbopompe Mark 10 : pompe à oxygène en haut, kérosène au milieu, turbine en bas ---
+{
+  const g = new THREE.Group();
+  const prof = [[0.001, 5.0], [0.42, 5.0], [0.5, 4.85], [0.78, 4.62], [0.84, 4.22], [0.6, 3.98], [0.6, 3.78], [0.84, 3.56],
+                [0.88, 3.02], [0.6, 2.82], [0.55, 2.58], [0.95, 2.38], [1.0, 1.8], [0.8, 1.5], [0.42, 1.3], [0.001, 1.3]];
+  const body = lathe(prof, MAT.white(), 64);
+  body.position.set(PUMP.x, 0, PUMP.z);
+  g.add(body);
+  addPart('turbopump', g, { dx: 4.4, dy: 0.7, order: 1, label: { text: 'Turbopompe Mk 10', at: pumpAt(3.0, -0.9).toArray() } });
+}
+
+// --- Générateur de gaz ---
+{
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.CylinderGeometry(0.24, 0.24, 0.7, 24), MAT.pale(), GG.x, GG.y, GG.z));
+  addPart('gg', g, { dx: 6.9, dy: 1.5, order: 2, label: { text: 'Générateur de gaz', at: [GG.x + 0.26, GG.y, GG.z] } });
+}
+
+// --- Conduit d'échappement de turbine et échangeur de chaleur ---
+{
+  const g = new THREE.Group();
+  g.add(mesh(new THREE.CylinderGeometry(0.48, 0.48, 0.9, 32), MAT.white(), HX.x, 0.4, HX.z));
+  addPart('exhaust', g, { dx: 4.6, dy: -2.2, order: 1, label: { text: 'Échangeur de chaleur', at: [HX.x + 0.5, 0.4, HX.z] } });
+}
+
+// --- Conduits d'ergols haute pression ---
+const LOX_IN = [pumpAngle + 1.15, pumpAngle - 1.15];
+const FUEL_IN = [pumpAngle + 0.85, pumpAngle - 0.85];
+const loxDuct = (k) => {
+  const s = k ? -1 : 1;
+  return [pumpAt(4.35, 0.62, s * 0.7), pumpAt(4.45, 0.85, s * 1.15), polar(pumpAngle + s * 0.62, 2.2, 4.75),
+          polar(LOX_IN[k], 1.75, 4.78), polar(LOX_IN[k], 1.22, 4.62)];
+};
+const fuelDuct = (k) => {
+  const s = k ? -1 : 1;
+  return [pumpAt(3.25, 0.68, s * 0.75), pumpAt(3.3, 0.95, s * 1.05), polar(pumpAngle + s * 0.6, 1.95, 3.38),
+          polar(FUEL_IN[k], 1.42, 3.38)];
+};
+{
+  const g = new THREE.Group();
+  for (const k of [0, 1]) g.add(pipe(loxDuct(k), 0.19, MAT.lox()));
+  addPart('loxducts', g, { dx: 2.2, dy: 1.9, order: 0, label: { text: "Conduits d'oxygène", at: loxDuct(0)[2].toArray() } });
+}
+{
+  const g = new THREE.Group();
+  for (const k of [0, 1]) g.add(pipe(fuelDuct(k), 0.17, MAT.fuel()));
+  addPart('fuelducts', g, { dx: 2.2, dy: 0.5, dz: 0.6, order: 0, label: { text: 'Conduits de kérosène', at: fuelDuct(1)[2].toArray() } });
+}
+
+// --- Vérins d'orientation ---
+const ACT = [Math.PI * 0.78, Math.PI * 1.22];
+const actLow = (a) => polar(a, 1.42, 3.55), actHigh = (a) => polar(a, 2.35, 6.6);
+{
+  const g = new THREE.Group();
+  for (const a of ACT) {
+    const lo = actLow(a), hi = actHigh(a);
+    const mid = lo.clone().lerp(hi, 0.42);
+    g.add(rod(hi, mid, 0.15, MAT.white(), 20));
+    g.add(rod(mid, lo, 0.065, MAT.steel(), 12));
+  }
+  addPart('actuators', g, { dx: -3.6, dy: 1.6, order: 2, label: { text: "Vérins d'orientation", at: actHigh(ACT[0]).clone().lerp(actLow(ACT[0]), 0.25).toArray() } });
+}
+
+// ------------------------------------------------------------------
+// Détails : cerclages, brides boulonnées, cloisons, orifices, vannes, harnais.
+// ------------------------------------------------------------------
+const steel = MAT.steel(), dark = MAT.dark(), hole = MAT.hole(), pale = MAT.pale(), accent = MAT.accent();
+
+// Chambre : cerclages, collecteurs de kérosène, ferrures des vérins, câblage.
+{
+  const tubes = partById.chamber.mats[0];
+  for (const y of [2.25, 1.65, 1.05, 0.45, -0.15]) addTo('chamber', lathe(band(y, 0.05, 0.045), tubes, 128));
+  // Bride supérieure, boulonnée sur l'injecteur.
+  addTo('chamber', lathe([[1.15, Y_INJ + 0.04], [1.36, Y_INJ + 0.04], [1.36, Y_INJ - 0.1], [1.15, Y_INJ - 0.1], [1.15, Y_INJ + 0.04]], steel));
+  crown('chamber', boltGeo, dark, 48, (i) => ({ a: (i / 48) * TAU, r: 1.3, y: Y_INJ + 0.07, rot: 'axial' }));
+  // Collecteur d'entrée du kérosène, sous l'injecteur, et ses deux entrées.
+  const fm = new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.15, 14, 96), MAT.fuel());
+  fm.rotation.x = Math.PI / 2; fm.position.y = 3.38;
+  addTo('chamber', fm);
+  for (const a of FUEL_IN) addTo('chamber', rod(polar(a, 1.3, 3.38), polar(a, 1.48, 3.38), 0.17, MAT.fuel()));
+  // Collecteur de retour, au pied de la chambre.
+  const rm = new THREE.Mesh(new THREE.TorusGeometry(outR(-0.75) + 0.06, 0.09, 12, 128), steel);
+  rm.rotation.x = Math.PI / 2; rm.position.y = -0.75;
+  addTo('chamber', rm);
+  // Ferrures des vérins.
+  for (const a of ACT) {
+    const p = actLow(a);
+    addTo('chamber', rod(polar(a, outR(3.55) - 0.05, 3.55), p, 0.07, steel));
+    addTo('chamber', mesh(new THREE.BoxGeometry(0.26, 0.3, 0.26), dark, p.x, p.y, p.z));
+  }
+  // Lignes d'instrumentation qui descendent le long de la chambre.
+  for (const a of [pumpAngle + Math.PI * 0.55, pumpAngle + Math.PI, pumpAngle - Math.PI * 0.55]) {
+    const pts = [];
+    for (let y = 3.9; y >= -0.4; y -= 0.5) pts.push(polar(a + (3.9 - y) * 0.03, outR(y) + 0.07, y));
+    addTo('chamber', pipe(pts, 0.022, dark, 80));
+    for (const y of [3.0, 1.6, 0.2]) addTo('chamber', mesh(new THREE.BoxGeometry(0.1, 0.12, 0.1), steel, ...polar(a + (3.9 - y) * 0.03, outR(y) + 0.09, y).toArray()));
+  }
+}
+
+// Injecteur : orifices sur la face, cloisons de cuivre dessous, bride boulonnée.
+{
+  const face = Y_INJ - 0.025;
+  for (let k = 0; k < 9; k++) {
+    const r = 0.14 + k * 0.11, n = Math.round(14 + k * 9);
+    crown('injector', new THREE.CylinderGeometry(0.018, 0.018, 0.01, 6), hole, n, (i) => ({ a: (i / n) * TAU + k * 0.2, r, y: face, rot: 'axial' }));
+  }
+  const cu = MAT.copper();
+  addTo('injector', lathe([[0.5, face], [0.54, face], [0.54, face - 0.36], [0.5, face - 0.36], [0.5, face]], cu));
+  for (let i = 0; i < 13; i++) {
+    const a = (i / 13) * TAU;
+    const b = mesh(new THREE.BoxGeometry(0.54, 0.36, 0.035), cu, ...polar(a, 0.81, face - 0.18).toArray());
+    b.rotation.y = -a;
+    addTo('injector', b);
+  }
+  crown('injector', boltGeo, dark, 48, (i) => ({ a: (i / 48) * TAU + 0.03, r: 1.2, y: Y_INJ + 0.18, rot: 'axial' }));
+  addTo('injector', lathe(band(Y_INJ + 0.07, 0.02, 0.012, () => 1.28), steel));
+}
+
+// Dôme : entrées d'oxygène, vannes principales, bride, bossage du cardan.
+{
+  const white = partById.dome.mats[0];
+  addTo('dome', lathe([[1.15, Y_INJ + 0.18], [1.3, Y_INJ + 0.18], [1.3, Y_INJ + 0.28], [1.1, Y_INJ + 0.3]], steel));
+  crown('dome', boltGeo, dark, 40, (i) => ({ a: (i / 40) * TAU, r: 1.24, y: Y_INJ + 0.31, rot: 'axial' }));
+  addTo('dome', lathe([[0.62, Y_INJ + 0.76], [0.58, Y_INJ + 0.82], [0.001, Y_INJ + 0.82]], steel));
+  for (const a of LOX_IN) {
+    // Coude d'entrée et vanne d'oxygène principale.
+    addTo('dome', rod(polar(a, 0.8, 4.66), polar(a, 1.25, 4.62), 0.2, white));
+    addTo('dome', ring(polar(a, 1.25, 4.62), polar(a, 1, 0).setY(0), 0.22, 0.04, steel));
+    const v = polar(a, 1.02, 4.95);
+    addTo('dome', mesh(new THREE.BoxGeometry(0.34, 0.3, 0.34), accent, v.x, v.y, v.z));
+    addTo('dome', mesh(new THREE.CylinderGeometry(0.09, 0.09, 0.32, 16), steel, v.x, v.y + 0.3, v.z));
+  }
+  // Rangée de goujons sur le dôme.
+  for (const [r, y, n] of [[1.02, Y_INJ + 0.55, 36], [0.72, Y_INJ + 0.77, 24]]) {
+    crown('dome', new THREE.SphereGeometry(0.035, 8, 6), dark, n, (i) => ({ a: (i / n) * TAU, r, y, rot: 'axial' }));
+  }
+}
+
+// Cardan : boulons de la plaque de poussée.
+crown('gimbal', boltGeo, dark, 8, (i) => ({ a: (i / 8) * TAU + Math.PI / 8, r: 0.52, y: 5.95, rot: 'axial' }));
+
+// Collecteur d'échappement : colliers, entrée du conduit, raccord sur la tuyère.
+{
+  const gas = partById.manifold.mats[0];
+  for (let i = 0; i < 32; i++) {
+    const a = (i / 32) * TAU;
+    const c = new THREE.Mesh(new THREE.TorusGeometry(MAN_r + 0.02, 0.022, 8, 28), steel);
+    c.position.copy(polar(a, MAN_R, MAN_Y));
+    c.rotation.y = -a;
+    addTo('manifold', c);
+  }
+  const hxA = Math.atan2(HX.z, HX.x);
+  addTo('manifold', rod(polar(hxA, MAN_R, MAN_Y), polar(hxA, MAN_R, MAN_Y + 0.5), 0.36, gas));
+  addTo('manifold', ring(polar(hxA, MAN_R, MAN_Y + 0.5), V3(0, 1, 0), 0.4, 0.05, steel));
+  // Jupe qui relie le collecteur à la paroi de la tuyère.
+  addTo('manifold', lathe([[outR(MAN_Y) + 0.02, MAN_Y + 0.2], [MAN_R - 0.15, MAN_Y + 0.05], [MAN_R - 0.15, MAN_Y - 0.15], [outR(MAN_Y) + 0.02, MAN_Y - 0.2]], gas, 160));
+}
+
+// Extension : cerclages, lisses, lèvre de sortie, rangée de fentes de film.
+{
+  const ext = partById.extension.mats[0];
+  const eR = (y) => gasR(y) + 0.06;
+  const hoops = [-1.05, -2.0, -3.0, -4.0, -4.9, -5.52];
+  for (const y of hoops) addTo('extension', lathe(band(y, 0.06, 0.05, eR), steel, 160));
+  // Lisses verticales entre deux cerclages.
+  const stringer = new THREE.BoxGeometry(0.05, 1, 0.08);
+  for (let h = 0; h < hoops.length - 1; h++) {
+    const yA = hoops[h], yB = hoops[h + 1];
+    const n = 40;
+    const inst = new THREE.InstancedMesh(stringer, ext, n);
+    const d = new THREE.Object3D();
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * TAU + h * 0.04;
+      const A = polar(a, eR(yA) + 0.03, yA), B = polar(a, eR(yB) + 0.03, yB);
+      d.position.copy(A).add(B).multiplyScalar(0.5);
+      d.scale.set(1, A.distanceTo(B), 1);
+      d.quaternion.setFromUnitVectors(V3(0, 1, 0), B.clone().sub(A).normalize());
+      d.rotateY(-a);
+      d.updateMatrix();
+      inst.setMatrixAt(i, d.matrix);
+    }
+    addTo('extension', inst);
+  }
+  addTo('extension', lathe([[gasR(Y_EXIT) - 0.01, Y_EXIT + 0.05], [gasR(Y_EXIT) + 0.16, Y_EXIT + 0.05], [gasR(Y_EXIT) + 0.16, Y_EXIT - 0.05], [gasR(Y_EXIT) - 0.01, Y_EXIT - 0.05]], dark, 160));
+  crown('extension', new THREE.BoxGeometry(0.02, 0.05, 0.16), hole, 96, (i) => ({ a: (i / 96) * TAU, r: gasR(Y_SPLIT - 0.12) - 0.005, y: Y_SPLIT - 0.12, rot: 'surface' }));
+}
+
+// Turbopompe : volutes, entrées, brides, collecteur de turbine, nervures.
+{
+  const white = partById.turbopump.mats[0];
+  const vol = (y, R, r, mat) => { const m = new THREE.Mesh(new THREE.TorusGeometry(R, r, 18, 64), mat); m.rotation.x = Math.PI / 2; m.position.copy(PUMP).setY(y); return m; };
+  addTo('turbopump', vol(4.35, 0.82, 0.22, MAT.lox()));
+  addTo('turbopump', vol(3.25, 0.88, 0.22, MAT.fuel()));
+  addTo('turbopump', vol(2.1, 1.0, 0.2, MAT.gas()));
+  // Sorties de volute vers les conduits.
+  for (const k of [0, 1]) {
+    const s = k ? -1 : 1;
+    addTo('turbopump', rod(pumpAt(4.35, 0.2, s * 0.62), loxDuct(k)[0], 0.19, MAT.lox()));
+    addTo('turbopump', ring(loxDuct(k)[0], loxDuct(k)[1].clone().sub(loxDuct(k)[0]), 0.22, 0.04, steel));
+    addTo('turbopump', rod(pumpAt(3.25, 0.2, s * 0.66), fuelDuct(k)[0], 0.17, MAT.fuel()));
+    addTo('turbopump', ring(fuelDuct(k)[0], fuelDuct(k)[1].clone().sub(fuelDuct(k)[0]), 0.2, 0.04, steel));
+  }
+  // Deux entrées d'oxygène sur le dessus, deux entrées de kérosène sur les flancs.
+  for (const s of [1, -1]) {
+    addTo('turbopump', pipe([pumpAt(4.9, 0, s * 0.25), pumpAt(5.25, -0.1, s * 0.5), pumpAt(5.7, -0.15, s * 0.62)], 0.2, MAT.lox(), 32));
+    addTo('turbopump', ring(pumpAt(5.72, -0.15, s * 0.62), V3(0, 1, 0), 0.25, 0.05, steel));
+    addTo('turbopump', pipe([pumpAt(3.05, 0, s * 0.8), pumpAt(3.05, -0.2, s * 1.2), pumpAt(3.4, -0.35, s * 1.45)], 0.17, MAT.fuel(), 32));
+    addTo('turbopump', ring(pumpAt(3.42, -0.35, s * 1.45), pumpAt(3.6, -0.35, s * 1.47).sub(pumpAt(3.4, -0.35, s * 1.45)), 0.21, 0.045, steel));
+  }
+  // Brides entre les étages, boulonnées.
+  for (const [y, r] of [[3.88, 0.66], [2.7, 0.64], [1.55, 0.86]]) {
+    const f = lathe([[r - 0.05, y + 0.05], [r + 0.12, y + 0.05], [r + 0.12, y - 0.05], [r - 0.05, y - 0.05]], steel, 64);
+    f.position.set(PUMP.x, 0, PUMP.z);
+    addTo('turbopump', f);
+    crown('turbopump', boltGeo, dark, 24, (i) => ({ a: (i / 24) * TAU, r: r + 0.07, y: y + 0.06, rot: 'axial' }), PUMP.x, PUMP.z);
+  }
+  // Nervures du carter de turbine.
+  crown('turbopump', new THREE.BoxGeometry(0.04, 0.5, 0.12), white, 18, (i) => ({ a: (i / 18) * TAU, r: 1.02, y: 1.9, rot: 'surface' }), PUMP.x, PUMP.z);
+  // Sortie de turbine vers le bas.
+  addTo('turbopump', rod(pumpAt(1.35), pumpAt(1.0), 0.36, white));
+  addTo('turbopump', ring(pumpAt(1.02), V3(0, 1, 0), 0.4, 0.05, steel));
+}
+
+// Générateur de gaz : tête d'injection, vannes, conduit vers la turbine.
+{
+  const pale0 = partById.gg.mats[0];
+  addTo('gg', lathe([[0.24, GG.y + 0.35], [0.2, GG.y + 0.5], [0.001, GG.y + 0.55]], pale0).translateX(GG.x).translateZ(GG.z));
+  addTo('gg', lathe([[0.24, GG.y - 0.35], [0.12, GG.y - 0.5], [0.001, GG.y - 0.52]], pale0).translateX(GG.x).translateZ(GG.z));
+  for (const s of [1, -1]) {
+    const v = GG.clone().add(V3(0, 0.62, 0)).addScaledVector(side, s * 0.22);
+    addTo('gg', mesh(new THREE.BoxGeometry(0.2, 0.22, 0.2), accent, v.x, v.y, v.z));
+    addTo('gg', mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.22, 12), steel, v.x, v.y + 0.2, v.z));
+  }
+  const tm = pumpAt(2.1).addScaledVector(GG.clone().setY(0).sub(PUMP.clone().setY(0)).normalize(), 1.0);
+  addTo('gg', pipe([GG.clone().setY(GG.y - 0.45), GG.clone().setY(GG.y - 0.65).lerp(tm, 0.3), tm], 0.11, MAT.gas(), 32));
+  // Lignes d'ergols piquées sur les conduits.
+  addTo('gg', pipe([GG.clone().setY(GG.y + 0.75), GG.clone().setY(3.4).lerp(PUMP.clone().setY(3.4), 0.3), pumpAt(3.25, -0.4, 0.5)], 0.04, MAT.fuel(), 32));
+  addTo('gg', pipe([GG.clone().setY(GG.y + 0.75).addScaledVector(side, -0.2), GG.clone().setY(4.2).lerp(PUMP.clone().setY(4.2), 0.3), pumpAt(4.35, -0.4, 0.4)], 0.04, MAT.lox(), 32));
+}
+
+// Échappement : conduit, échangeur, serpentins, sorties d'hélium et d'oxygène réchauffés.
+{
+  const white = partById.exhaust.mats[0];
+  addTo('exhaust', pipe([pumpAt(1.0), pumpAt(0.95).lerp(HX, 0.5).setY(0.95), HX.clone().setY(0.85)], 0.36, MAT.gas(), 24));
+  for (const y of [0.85, -0.05]) addTo('exhaust', ring(HX.clone().setY(y), V3(0, 1, 0), 0.5, 0.05, steel));
+  for (let k = 0; k < 6; k++) addTo('exhaust', ring(HX.clone().setY(0.0 + k * 0.14), V3(0, 1, 0), 0.49, 0.022, white));
+  addTo('exhaust', rod(HX.clone().setY(-0.05), HX.clone().setY(MAN_Y + 0.5), 0.36, MAT.gas()));
+  for (const [dy, mat] of [[0.6, MAT.lox()], [0.2, steel]]) {
+    const o = HX.clone().setY(dy).add(V3(0.5, 0, 0.05));
+    addTo('exhaust', pipe([o, o.clone().add(V3(0.35, 0.1, 0.1)), o.clone().add(V3(0.45, 1.6, 0.2)), o.clone().add(V3(0.4, 3.0, 0.15))], 0.05, mat, 48));
+  }
+}
+
+// Conduits : brides aux deux bouts, vannes principales de kérosène.
+{
+  for (const k of [0, 1]) {
+    const lp = loxDuct(k), fp = fuelDuct(k);
+    addTo('loxducts', ring(lp[4], lp[3].clone().sub(lp[4]), 0.23, 0.045, steel));
+    addTo('loxducts', ring(lp[1], lp[2].clone().sub(lp[1]), 0.22, 0.03, steel));
+    addTo('fuelducts', ring(fp[3], fp[2].clone().sub(fp[3]), 0.21, 0.045, steel));
+    const v = fp[2].clone().lerp(fp[3], 0.45);
+    addTo('fuelducts', mesh(new THREE.BoxGeometry(0.3, 0.32, 0.3), accent, v.x, v.y + 0.04, v.z));
+    addTo('fuelducts', mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.3, 14), steel, v.x, v.y + 0.34, v.z));
+  }
+}
+
+// Vérins : chapes, flexibles hydrauliques.
+{
+  for (const a of ACT) {
+    const lo = actLow(a), hi = actHigh(a);
+    const dir = hi.clone().sub(lo).normalize();
+    addTo('actuators', ring(hi, V3(-Math.sin(a), 0, Math.cos(a)), 0.13, 0.05, steel));
+    addTo('actuators', ring(lo, V3(-Math.sin(a), 0, Math.cos(a)), 0.1, 0.04, steel));
+    const c = lo.clone().lerp(hi, 0.7);
+    addTo('actuators', mesh(new THREE.BoxGeometry(0.24, 0.3, 0.24), accent, c.x, c.y, c.z));
+    const n = V3(Math.cos(a), 0, Math.sin(a));
+    addTo('actuators', pipe([c.clone().addScaledVector(n, 0.12), c.clone().addScaledVector(n, 0.45).addScaledVector(dir, 0.3), hi.clone().addScaledVector(n, 0.5).add(V3(0, 0.4, 0))], 0.03, dark, 32));
+    for (const t of [0.5, 0.6]) addTo('actuators', ring(lo.clone().lerp(hi, t), dir, 0.16, 0.018, steel));
+  }
+}
+
+// ------------------------------------------------------------------
+// Décor : un module d'architecture répété sur un réseau 3D, sans fin dans toutes les directions.
+// Piliers et tours font exactement la hauteur d'une cellule : ils se raccordent en colonnes infinies.
+// ------------------------------------------------------------------
+const P = 90;          // période du réseau
+const N = 2;           // cellules de part et d'autre
+const BOXES = { stone: [], warm: [], hole: [], leaf: [], leaf2: [], trunk: [], water: [], pool: [] };
+const box = (cat, x, y, z, sx, sy, sz) => BOXES[cat].push([x, y, z, sx, sy, sz]);
+{
+  // Plancher en cadre, troué sous le moteur : la flamme plonge vers la cellule du dessous.
+  const fy = -27;
+  box('stone', 0, fy, -13.5, 34, 2, 13); box('stone', 0, fy, 13.5, 34, 2, 13);
+  box('stone', -12, fy, 0, 10, 2, 14); box('stone', 12, fy, 0, 10, 2, 14);
+  // Margelle du puits.
+  for (const [x, z, sx, sz] of [[0, -7.4, 15.6, 0.8], [0, 7.4, 15.6, 0.8], [-7.4, 0, 0.8, 14], [7.4, 0, 0.8, 14]]) box('warm', x, fy + 1.3, z, sx, 0.6, sz);
+  box('pool', 10, fy + 1.02, -12, 8, 0.06, 7);
+  box('stone', 10, fy + 1.15, -15.8, 8.8, 0.4, 0.6); box('stone', 10, fy + 1.15, -8.2, 8.8, 0.4, 0.6);
+  // Escalier qui descend du plancher dans le vide.
+  for (let i = 0; i < 12; i++) box('stone', -17.6 - 1.2 * i, fy + 0.6 - 0.8 * i, -3.5, 1.2, 0.8 + 0.8 * i * 0.15, 6);
+  // Portique.
+  box('warm', -5, fy + 5, -18.5, 1.6, 8, 1.6); box('warm', 5, fy + 5, -18.5, 1.6, 8, 1.6); box('warm', 0, fy + 9.6, -18.5, 12, 1.4, 1.8);
+  // Colonnade infinie derrière le moteur, et sa poutre haute.
+  for (const x of [-22, 22]) box('stone', x, 0, -22, 2.4, P, 2.4);
+  box('stone', 0, 27, -22, 46.4, 2.2, 2.2);
+  box('warm', 0, -10, -22, 46.4, 1.2, 1.2);
+  // Tours aux coins des cellules, avec leurs corniches.
+  box('stone', P / 2, 0, P / 2, 12, P, 12);
+  for (const y of [-30, -2, 26]) box('warm', P / 2, y, P / 2, 13.2, 1.2, 13.2);
+  for (const y of [-16, 12]) for (const s of [-1, 1]) box('hole', P / 2 + s * 6.05, y, P / 2, 0.2, 5, 3);
+  // Longues poutres qui traversent tout le réseau.
+  box('stone', 0, 14, -P / 2, P, 3, 3);
+  box('warm', P / 2, -14, 0, 3, 3, P);
+  // Cascade infinie, à l'écart du plancher.
+  box('water', -34, 0, -26, 3, P, 0.6);
+  box('stone', -34, fy + 0.4, -26, 4.4, 1.2, 2.4);
+  // Arbres cubiques.
+  const tree = (x, z, cat, seed) => {
+    box('trunk', x, fy + 4, z, 0.9, 6, 0.9);
+    let s = seed;
+    const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < 26; i++) {
+      const u = rnd() * TAU, v = Math.acos(2 * rnd() - 1), r = 2.4 * Math.cbrt(rnd());
+      const c = 0.9 + rnd() * 0.7;
+      box(cat, x + r * Math.sin(v) * Math.cos(u), fy + 8.5 + r * Math.cos(v) * 0.8, z + r * Math.sin(v) * Math.sin(u), c, c, c);
+    }
+  };
+  tree(13, -13, 'leaf', 7);
+  tree(-13, 13, 'leaf2', 19);
+  // Cubes en suspension.
+  for (const [x, y, z, s] of [[-11, 9, -14, 2.2], [13, -9, -9, 1.6], [-15, -15, 9, 1.3], [10, 16, -6, 1.1], [-8, 20, 8, 1.8], [24, 4, -30, 3]]) box('stone', x, y, z, s, s, s);
+}
+const ALBEDO = { stone: 0xffffff, warm: 0xf2e6d8, leaf: 0xf06a5a, leaf2: 0x8fcf7a, trunk: 0xd8cec0, pool: 0x9ad3e8 };
+// Eau : stries qui défilent vers le bas.
+const waterTex = (() => {
+  const c = document.createElement('canvas');
+  c.width = 64; c.height = 256;
+  const x = c.getContext('2d');
+  x.fillStyle = '#a9dcef';
+  x.fillRect(0, 0, 64, 256);
+  for (let i = 0; i < 40; i++) {
+    x.fillStyle = i % 3 ? 'rgba(255,255,255,0.55)' : 'rgba(120,180,215,0.45)';
+    x.fillRect(Math.random() * 64, Math.random() * 256, 1 + Math.random() * 3, 20 + Math.random() * 70);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(1, 6);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+})();
+const cells = [];
+for (let i = -N; i <= N; i++) for (let j = -N; j <= N; j++) for (let k = -N; k <= N; k++) cells.push([i * P, j * P, k * P]);
+const world = new THREE.Group();
+scene.add(world);
+{
+  const unit = new THREE.BoxGeometry(1, 1, 1);
+  const d = new THREE.Object3D();
+  for (const [cat, list] of Object.entries(BOXES)) {
+    if (!list.length) continue;
+    const mat = cat === 'water' ? new THREE.MeshBasicMaterial({ map: waterTex }) : new THREE.MeshBasicMaterial({ color: cat === 'hole' ? 0x8a8496 : ALBEDO[cat] });
+    const inst = new THREE.InstancedMesh(unit, mat, list.length * cells.length);
+    let n = 0;
+    for (const [cx, cy, cz] of cells) {
+      for (const [x, y, z, sx, sy, sz] of list) {
+        d.position.set(cx + x, cy + y, cz + z);
+        d.scale.set(sx, sy, sz);
+        d.updateMatrix();
+        inst.setMatrixAt(n++, d.matrix);
+      }
+    }
+    world.add(inst);
+  }
+}
+// Copies du moteur dans les autres cellules : la même silhouette, perdue dans la brume.
+{
+  const prof = [];
+  for (let i = 0; i <= 40; i++) { const y = lerp(Y_INJ, Y_EXIT, i / 40); prof.push([outR(y), y]); }
+  prof.unshift([0.001, 5.9], [0.6, 5.8], [1.2, 4.9]);
+  prof.push([0.001, Y_EXIT]);
+  const copies = cells.filter(([x, y, z]) => x || y || z);
+  const parts3 = [
+    [new THREE.LatheGeometry(prof.map(([r, y]) => new THREE.Vector2(r, y)), 64), 0xe4dfd7, [0, 0, 0]],
+    [new THREE.CylinderGeometry(0.9, 0.9, 3.7, 32), 0xf6f3ee, [PUMP.x, 3.15, PUMP.z]],
+    [new THREE.TorusGeometry(MAN_R, MAN_r, 16, 96).rotateX(Math.PI / 2), 0xd9d0e2, [0, MAN_Y, 0]],
+  ];
+  const d = new THREE.Object3D();
+  for (const [geo, color, off] of parts3) {
+    const inst = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide }), copies.length);
+    copies.forEach(([x, y, z], i) => { d.position.set(x + off[0], y + off[1], z + off[2]); d.updateMatrix(); inst.setMatrixAt(i, d.matrix); });
+    world.add(inst);
+  }
+}
+
+// ------------------------------------------------------------------
+// Flamme : cœur clair, gaine sombre de gaz de turbine à la sortie de tuyère.
+// Les effets testent eux-mêmes la profondeur de la scène, pour rester derrière les parois.
+// ------------------------------------------------------------------
+const depthRes = new THREE.Vector2(1, 1);
+const DEPTH_TEST = /* glsl */`
+  uniform sampler2D tSceneDepth;
+  uniform vec2 depthRes;
+  float hiddenBy() { return gl_FragCoord.z > texture2D(tSceneDepth, gl_FragCoord.xy / depthRes).x + 0.00002 ? 1.0 : 0.0; }
+`;
+function plumeMaterial(core) {
+  return new THREE.ShaderMaterial({
+    transparent: true,
+    depthTest: false,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    uniforms: {
+      tSceneDepth: { value: colorRT.depthTexture },
+      depthRes: { value: depthRes },
+      time: { value: 0 },
+      vis: { value: 1 },
+    },
+    vertexShader: /* glsl */`
+      varying float vY;
+      varying vec3 vN, vV;
+      void main() {
+        vY = position.y;
+        vec4 mv = modelViewMatrix * vec4(position, 1.0);
+        vN = normalize(normalMatrix * normal);
+        vV = normalize(-mv.xyz);
+        gl_Position = projectionMatrix * mv;
+      }
+    `,
+    fragmentShader: DEPTH_TEST + /* glsl */`
+      uniform float time, vis;
+      varying float vY;
+      varying vec3 vN, vV;
+      void main() {
+        float rim = abs(dot(normalize(vN), normalize(vV)));
+        ${core ? `
+        float t = clamp((-5.4 - vY) / 20.0, 0.0, 1.0);
+        vec3 col = mix(vec3(1.0, 0.93, 0.72), vec3(0.98, 0.55, 0.26), smoothstep(0.0, 0.7, t));
+        float bands = 0.82 + 0.18 * sin(vY * 2.6 + time * 16.0);
+        float a = (0.25 + 0.75 * rim) * pow(1.0 - t, 1.3) * bands * smoothstep(-5.3, -6.2, vY);
+        ` : `
+        float t = clamp((-5.5 - vY) / 6.0, 0.0, 1.0);
+        vec3 col = vec3(0.24, 0.21, 0.27);
+        float a = 0.55 * (0.4 + 0.6 * rim) * (1.0 - smoothstep(0.2, 1.0, t)) * smoothstep(-5.45, -5.9, vY);
+        `}
+        a *= vis * (1.0 - hiddenBy());
+        gl_FragColor = vec4(col, a);
+      }
+    `,
+  });
+}
+const plumeCore = plumeMaterial(true);
+const plumeSleeve = plumeMaterial(false);
+const plume = new THREE.Group();
+{
+  const core = lathe([[0.001, -5.3], [3.3, -5.4], [3.0, -8], [2.6, -11], [2.8, -15], [3.5, -20], [4.3, -25.6], [0.001, -25.6]], plumeCore, 64);
+  core.renderOrder = 1;
+  const sleeve = lathe([[3.62, -5.5], [3.55, -7.0], [3.3, -9.0], [3.05, -11.5]], plumeSleeve, 64);
+  sleeve.renderOrder = 2;
+  plume.add(core, sleeve);
+  fxScene.add(plume);
+}
+
+// ------------------------------------------------------------------
+// Flux : particules qui suivent le trajet des ergols et des gaz chauds, en traînées qui s'effacent.
+// Cachées par une paroi, elles restent visibles en fantôme, comme sur une radiographie.
+// ------------------------------------------------------------------
+const SAMPLES = 320, TRAIL = 22;
+function trailMaterial() {
+  const m = new LineMaterial({ linewidth: 2.4 * PR, vertexColors: true, transparent: true, depthWrite: false, depthTest: false });
+  m.onBeforeCompile = (shader) => {
+    shader.uniforms.tSceneDepth = { value: colorRT.depthTexture };
+    shader.uniforms.depthRes = { value: depthRes };
+    shader.vertexShader = 'attribute float instanceAlphaStart;\nattribute float instanceAlphaEnd;\nvarying float vTrail;\n' +
+      shader.vertexShader.replace(
+        'vColor.xyz = ( position.y < 0.5 ) ? instanceColorStart : instanceColorEnd;',
+        'vColor.xyz = ( position.y < 0.5 ) ? instanceColorStart : instanceColorEnd;\n\t\t\t\tvTrail = ( position.y < 0.5 ) ? instanceAlphaStart : instanceAlphaEnd;');
+    shader.fragmentShader = 'varying float vTrail;\n' + DEPTH_TEST +
+      shader.fragmentShader.replace('float alpha = opacity;', 'float alpha = opacity * vTrail * (1.0 - 0.7 * hiddenBy());');
+  };
+  m.customProgramCacheKey = () => 'trail';
+  return m;
+}
+const loxPath = (k) => {
+  const s = k ? -1 : 1;
+  return [pumpAt(6.6, -0.15, s * 0.62), pumpAt(5.72, -0.15, s * 0.62), pumpAt(5.2, -0.1, s * 0.48), pumpAt(4.75, 0, s * 0.15),
+          pumpAt(4.4, 0.3, s * 0.4), ...loxDuct(k), polar(LOX_IN[k], 0.5, 4.7), V3(0, 4.3, 0)];
+};
+const fuelPath = (k) => {
+  const s = k ? -1 : 1;
+  return [pumpAt(4.2, -0.35, s * 1.5), pumpAt(3.42, -0.35, s * 1.45), pumpAt(3.05, -0.2, s * 1.2), pumpAt(3.1, 0, s * 0.55),
+          pumpAt(3.25, 0.35, s * 0.55), ...fuelDuct(k), polar(FUEL_IN[k] + s * 0.4, 1.25, 3.38), polar(FUEL_IN[k] + s * 1.1, 1.25, 3.38)];
+};
+const gasPath = () => {
+  const tm = pumpAt(2.1).addScaledVector(GG.clone().setY(0).sub(PUMP.clone().setY(0)).normalize(), 1.0);
+  const hxA = Math.atan2(HX.z, HX.x);
+  const around = [];
+  for (let i = 1; i <= 10; i++) around.push(polar(hxA + i * 0.28, MAN_R, MAN_Y));
+  return [GG.clone().setY(GG.y + 0.3), GG.clone().setY(GG.y - 0.5), tm, pumpAt(1.9, 0.3, 0.3), pumpAt(1.4), pumpAt(1.0),
+          HX.clone().setY(0.85), HX.clone().setY(-0.1), polar(hxA, MAN_R, MAN_Y + 0.3), polar(hxA + 0.1, MAN_R, MAN_Y), ...around];
+};
+const C = (hex) => new THREE.Color(hex);
+const FLOWS = [
+  { path: loxPath(0), color: C(0x2f86cf), particles: 16, speed: 2.4, len: 1.6, jitter: 0.09 },
+  { path: loxPath(1), color: C(0x2f86cf), particles: 16, speed: 2.4, len: 1.6, jitter: 0.09 },
+  { path: fuelPath(0), color: C(0xd9861f), particles: 13, speed: 2.1, len: 1.4, jitter: 0.08 },
+  { path: fuelPath(1), color: C(0xd9861f), particles: 13, speed: 2.1, len: 1.4, jitter: 0.08 },
+  { path: gasPath(), color: C(0x7a6690), particles: 22, speed: 2.8, len: 1.8, jitter: 0.12 },
+];
+const flowGroup = new THREE.Group();
+fxScene.add(flowGroup);
+function spawn(f, p) {
+  p.s = -Math.random() * f.L * 0.6;
+  p.rate = 0.8 + Math.random() * 0.4;
+  p.off = new THREE.Vector3().randomDirection().multiplyScalar(Math.random() * f.jitter);
+}
+for (const f of FLOWS) {
+  const c = curve(f.path);
+  f.L = c.getLength();
+  f.pts = c.getSpacedPoints(SAMPLES - 1);
+  f.p = [];
+  for (let i = 0; i < f.particles; i++) { const p = {}; spawn(f, p); p.s = Math.random() * (f.L + f.len); f.p.push(p); }
+  const segs = f.particles * (TRAIL - 1);
+  const geo = new LineSegmentsGeometry();
+  geo.setPositions(new Float32Array(segs * 6));
+  geo.setColors(new Float32Array(segs * 6));
+  f.alpha = new THREE.InstancedInterleavedBuffer(new Float32Array(segs * 2), 2, 1);
+  geo.setAttribute('instanceAlphaStart', new THREE.InterleavedBufferAttribute(f.alpha, 1, 0));
+  geo.setAttribute('instanceAlphaEnd', new THREE.InterleavedBufferAttribute(f.alpha, 1, 1));
+  f.mat = trailMaterial();
+  f.mesh = new LineSegments2(geo, f.mat);
+  f.mesh.frustumCulled = false;
+  flowGroup.add(f.mesh);
+}
+const tmpP = new THREE.Vector3();
+function pointAt(f, s, out) {
+  const u = clamp(s / f.L) * (SAMPLES - 1);
+  const i = Math.min(SAMPLES - 2, Math.floor(u));
+  return out.copy(f.pts[i]).lerp(f.pts[i + 1], u - i);
+}
+function updateFlow(dt, vis) {
+  for (const f of FLOWS) {
+    f.mat.opacity = vis;
+    f.mesh.visible = vis > 0.01;
+    if (!f.mesh.visible) continue;
+    const pos = f.mesh.geometry.attributes.instanceStart.data.array;
+    const col = f.mesh.geometry.attributes.instanceColorStart.data.array;
+    const alp = f.alpha.array;
+    let o = 0, oa = 0;
+    for (const p of f.p) {
+      p.s += dt * f.speed * p.rate;
+      if (p.s - p.len > f.L) spawn(f, p);
+      p.len = f.len;
+      let px = 0, py = 0, pz = 0, pa = 0;
+      for (let j = 0; j < TRAIL; j++) {
+        const q = j / (TRAIL - 1);
+        const s = p.s - f.len * (1 - q);
+        pointAt(f, s, tmpP).add(p.off);
+        const inside = s >= 0 && s <= f.L;
+        const life = smooth(0, 0.6, s) * smooth(f.L, f.L - 0.6, s);
+        const a = inside ? q ** 1.5 * life : 0;
+        if (j > 0) {
+          pos[o] = px; pos[o + 1] = py; pos[o + 2] = pz;
+          pos[o + 3] = tmpP.x; pos[o + 4] = tmpP.y; pos[o + 5] = tmpP.z;
+          col[o] = col[o + 3] = f.color.r; col[o + 1] = col[o + 4] = f.color.g; col[o + 2] = col[o + 5] = f.color.b;
+          alp[oa] = pa; alp[oa + 1] = a;
+          o += 6; oa += 2;
+        }
+        px = tmpP.x; py = tmpP.y; pz = tmpP.z; pa = a;
+      }
+    }
+    f.mesh.geometry.attributes.instanceStart.data.needsUpdate = true;
+    f.mesh.geometry.attributes.instanceColorStart.data.needsUpdate = true;
+    f.alpha.needsUpdate = true;
+  }
+}
+
+// ------------------------------------------------------------------
+// Récit : chapitres, caméra
+// ------------------------------------------------------------------
+const CHAPTERS = [
+  { id: 'hero', from: 0, to: 0.06 },
+  { id: 'flow', num: '01', name: 'Deux ergols', from: 0.09, to: 0.24,
+    text: "Du kérosène RP-1 et de l'oxygène liquide à −183 °C. Une seule turbopompe les aspire et les pousse vers la chambre : environ 2,6 tonnes par seconde, dont plus des deux tiers d'oxygène.",
+    specs: [['Rapport O/F', '≈ 2,27'], ['Débit', '≈ 2,6 t/s']] },
+  { id: 'fire', num: '02', name: 'Combustion', from: 0.26, to: 0.4,
+    text: "Le mélange brûle à plus de 3 000 °C sous environ 70 bar, puis la tuyère détend les gaz jusqu'à seize fois la section du col. La gaine sombre autour de la flamme, à la sortie, c'est l'échappement de la turbine, trop riche en kérosène pour brûler tout de suite.",
+    specs: [['Pression chambre', '≈ 70 bar'], ['Rapport de section', '16:1']] },
+  { id: 'exploded', num: '03', name: 'Vue éclatée', from: 0.42, to: 0.6,
+    text: "Douze ensembles : le cardan, le dôme d'oxygène, l'injecteur, la chambre à tubes, le collecteur, l'extension de tuyère, la turbopompe, le générateur de gaz, l'échangeur, les conduits d'oxygène et de kérosène, et les vérins." },
+  { id: 'pump', num: '04', name: 'Turbopompe', from: 0.61, to: 0.675, focus: ['turbopump'],
+    text: "Une seule turbine entraîne, sur le même arbre, la pompe à oxygène en haut et la pompe à kérosène au milieu. Environ 55 000 chevaux pour un seul moteur.",
+    specs: [['Puissance', '≈ 41 MW'], ['Régime', '≈ 5 500 tr/min']] },
+  { id: 'gg', num: '05', name: 'Générateur de gaz', from: 0.68, to: 0.745, focus: ['gg', 'exhaust'],
+    text: "Un petit brûleur prélève des ergols et les brûle avec un excès de kérosène, pour que ses gaz restent supportables par la turbine. À la sortie, l'échangeur s'en sert pour réchauffer l'oxygène et l'hélium qui pressurisent les réservoirs.",
+    specs: [['Gaz turbine', '≈ 800 °C']] },
+  { id: 'injector', num: '06', name: 'Injecteur', from: 0.75, to: 0.815, focus: ['injector', 'dome'],
+    text: "Une plaque percée de milliers d'orifices où les jets d'oxygène et de kérosène se croisent. Il a fallu des années d'essais, avec de petites charges explosives déclenchées dans la chambre, pour dompter l'instabilité de combustion : cloisons en cuivre, motif d'orifices revu.",
+    specs: [['Cloisons', 'cuivre']] },
+  { id: 'nozzle', num: '07', name: 'Chambre et tuyère', from: 0.82, to: 0.885, focus: ['chamber', 'manifold', 'extension'],
+    text: "La chambre est faite de 178 tubes brasés où circule le kérosène avant d'être brûlé : il la refroidit au passage. Plus bas, l'extension n'a pas de tubes ; c'est l'échappement de la turbine, injecté le long de sa paroi, qui la protège.",
+    specs: [['Tubes', '178'], ['Sortie', 'Ø 3,7 m']] },
+  { id: 'outro', num: '08', name: 'Cinq en grappe', from: 0.9, to: 1.01,
+    text: "Sur le premier étage de Saturn V, cinq F-1 brûlaient ensemble pendant environ deux minutes et demie, pour près de 34 MN au décollage. Aucun moteur à chambre unique et à ergols liquides n'a volé avec plus de poussée depuis." },
+];
+
+// Images-clés caméra : point visé (x, y), hauteur L et largeur W à cadrer, azimut et élévation.
+const KEYS = [
+  { p: 0.0,   x: 0.8,  y: -3.6, L: 22,  W: 9,   az: 0.32,  el: 0.1 },
+  { p: 0.05,  x: 0.8,  y: -3.6, L: 22,  W: 9,   az: 0.32,  el: 0.1 },
+  { p: 0.17,  x: 1.5,  y: 3.4,  L: 8,   W: 7,   az: 0.55,  el: 0.3 },
+  { p: 0.23,  x: 1.5,  y: 3.4,  L: 8,   W: 7,   az: 0.7,   el: 0.34 },
+  { p: 0.33,  x: 0.2,  y: -7.5, L: 20,  W: 10,  az: -0.3,  el: -0.12 },
+  { p: 0.39,  x: 0.2,  y: -7.5, L: 20,  W: 10,  az: -0.4,  el: -0.1 },
+  { p: 0.5,   x: 2.0,  y: 0.4,  L: 20,  W: 16,  az: 0.14,  el: 0.12 },
+  { p: 0.59,  x: 2.0,  y: 0.4,  L: 20,  W: 16,  az: 0.18,  el: 0.12 },
+  { p: 0.625, x: 7.2,  y: 4.0,  L: 6.6, W: 4.5, az: 0.42,  el: 0.16 },
+  { p: 0.66,  x: 7.2,  y: 4.0,  L: 6.6, W: 4.5, az: 0.55,  el: 0.2 },
+  { p: 0.695, x: 9.3,  y: 1.2,  L: 10,  W: 6,   az: 0.3,   el: 0.12 },
+  { p: 0.73,  x: 9.3,  y: 1.2,  L: 10,  W: 6,   az: 0.42,  el: 0.15 },
+  { p: 0.765, x: 0.0,  y: 6.3,  L: 4.6, W: 4,   az: 0.2,   el: -0.55 },
+  { p: 0.80,  x: 0.0,  y: 6.3,  L: 4.6, W: 4,   az: 0.32,  el: -0.5 },
+  { p: 0.835, x: 0.0,  y: -2.5, L: 18,  W: 9,   az: -0.3,  el: 0.1 },
+  { p: 0.87,  x: 0.0,  y: -2.5, L: 18,  W: 9,   az: -0.4,  el: 0.12 },
+  { p: 0.95,  x: 0.8,  y: -4.0, L: 23,  W: 12,  az: 0.25,  el: 0.12 },
+  { p: 1.0,   x: 0.8,  y: -4.0, L: 24,  W: 12,  az: 0.3,   el: 0.14 },
+];
+
+function cameraKey(p) {
+  let i = 0;
+  while (i < KEYS.length - 2 && p > KEYS[i + 1].p) i++;
+  const a = KEYS[i], b = KEYS[i + 1];
+  const t = smooth(a.p, b.p, p);
+  const out = {};
+  for (const k of ['x', 'y', 'L', 'W', 'az', 'el']) out[k] = lerp(a[k], b[k], t);
+  return out;
+}
+
+// ------------------------------------------------------------------
+// DOM : panneaux, rail, étiquettes
+// ------------------------------------------------------------------
+const panelsEl = document.getElementById('panels');
+const railEl = document.getElementById('rail');
+const heroEl = document.getElementById('hero');
+const progressEl = document.getElementById('progress');
+const track = document.getElementById('track');
+
+for (const c of CHAPTERS) {
+  if (c.id === 'hero') { c.el = heroEl; continue; }
+  const el = document.createElement('section');
+  el.className = 'overlay panel';
+  el.innerHTML = `<span class="num">${c.num} / 08</span><h2>${c.name}</h2><p>${c.text}</p>` +
+    (c.specs ? `<dl>${c.specs.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : '');
+  panelsEl.appendChild(el);
+  c.el = el;
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.innerHTML = `<span>${c.name}</span><i></i>`;
+  btn.setAttribute('aria-label', c.name);
+  btn.addEventListener('click', () => scrollToProgress((c.from + Math.min(c.to, 1)) / 2));
+  railEl.appendChild(btn);
+  c.btn = btn;
+}
+
+function scrollRange() {
+  const top = track.getBoundingClientRect().top + scrollY;
+  return { top, max: track.offsetHeight - innerHeight };
+}
+function scrollToProgress(p) {
+  const { top, max } = scrollRange();
+  scrollTo({ top: top + p * max, behavior: reduceMotion ? 'auto' : 'smooth' });
+}
+function scrollProgress() {
+  const { top, max } = scrollRange();
+  return clamp((scrollY - top) / max);
+}
+
+const SVG = 'http://www.w3.org/2000/svg';
+const labelsSvg = document.getElementById('labels');
+const labelled = parts.filter((p) => p.label);
+engine.updateMatrixWorld(true);
+for (const part of labelled) {
+  const g = document.createElementNS(SVG, 'g');
+  const line = document.createElementNS(SVG, 'line');
+  const dot = document.createElementNS(SVG, 'circle');
+  dot.setAttribute('r', 3);
+  const tag = document.createElementNS(SVG, 'rect');
+  const text = document.createElementNS(SVG, 'text');
+  text.textContent = part.label.text;
+  g.append(line, dot, tag, text);
+  labelsSvg.appendChild(g);
+  // Le filet part du centre de la pièce, à la hauteur du point repéré, et file vers l'extérieur.
+  const c = new THREE.Box3().setFromObject(part.obj).getCenter(new THREE.Vector3());
+  const [ax, ay, az] = part.label.at;
+  part.label.anchor = V3(ax, ay, az);
+  part.label.center = Math.hypot(ax - c.x, az - c.z) < 0.05 ? V3(c.x - 1, ay, c.z) : V3(c.x, ay, c.z);
+  part.label.nodes = { g, line, dot, tag, text };
+}
+
+// ------------------------------------------------------------------
+// Mise à jour de la scène
+// ------------------------------------------------------------------
+let portrait = false;
+const v = new THREE.Vector3();
+const camPos = new THREE.Vector3();
+const camTarget = new THREE.Vector3();
+const wantPos = new THREE.Vector3();
+const wantTarget = new THREE.Vector3();
+let first = true;
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  const rw = Math.floor(w * PR), rh = Math.floor(h * PR);
+  for (const f of FLOWS) f.mat.resolution.set(rw, rh);
+  colorRT.setSize(rw, rh);
+  normalRT.setSize(rw, rh);
+  depthRes.set(rw, rh);
+  ink.uniforms.resolution.value.set(rw, rh);
+  ink.uniforms.aspect.value = w / h;
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+  portrait = camera.aspect < 0.9;
+  labelsSvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+}
+addEventListener('resize', resize);
+resize();
+
+function chapterWeight(c, p) {
+  const fadeIn = c.from === 0 ? 1 : smooth(c.from - 0.012, c.from + 0.008, p);
+  const fadeOut = c.to >= 1 ? 1 : 1 - smooth(c.to - 0.008, c.to + 0.012, p);
+  return fadeIn * fadeOut;
+}
+
+let flowTime = 0;
+function update(p, dt, time) {
+  // Démontage, puis remontage pour l'allumage final.
+  for (const part of parts) {
+    const delay = part.order * 0.018;
+    const t = smooth(0.39 + delay, 0.5 + delay, p) * (1 - smooth(0.885 + delay * 0.4, 0.94 + delay * 0.4, p));
+    part.obj.position.set(part.dx * t, part.dy * t, part.dz * t);
+  }
+
+  // Le moteur ne tourne qu'assemblé.
+  const fire = 1 - smooth(0.37, 0.41, p) + smooth(0.95, 0.985, p);
+  plumeCore.uniforms.vis.value = fire;
+  plumeSleeve.uniforms.vis.value = fire;
+  plume.visible = fire > 0.01;
+  plumeCore.uniforms.time.value = plumeSleeve.uniforms.time.value = reduceMotion ? 0 : time;
+  updateFlow(reduceMotion ? 0 : dt, fire);
+
+  // Chapitres : opacité des panneaux, pièce mise en avant
+  let focus = null, focusWeight = 0, active = null;
+  for (const c of CHAPTERS) {
+    const w = chapterWeight(c, p);
+    c.el.style.opacity = w.toFixed(3);
+    c.el.style.transform = `translateY(${((1 - w) * 12).toFixed(2)}px)`;
+    c.el.style.visibility = w < 0.002 ? 'hidden' : 'visible';
+    if (w > 0.5) active = c;
+    if (c.focus && w > focusWeight) { focus = c.focus; focusWeight = w; }
+  }
+  for (const c of CHAPTERS) c.btn?.classList.toggle('active', c === active);
+  progressEl.style.transform = `scaleX(${p.toFixed(4)})`;
+
+  const k = 1 - Math.exp(-dt * 7);
+  for (const part of parts) {
+    const isFocus = !focus || focus.includes(part.id);
+    const target = isFocus ? 1 : lerp(1, 0.1, focusWeight);
+    part.opacity = reduceMotion ? target : lerp(part.opacity, target, k);
+    for (const m of part.mats) {
+      const transparent = part.opacity < 0.995;
+      if (m.transparent !== transparent) { m.transparent = transparent; m.needsUpdate = true; }
+      m.opacity = part.opacity;
+      m.depthWrite = part.opacity > 0.5;
+    }
+  }
+
+  // L'eau des cascades tombe sans fin.
+  if (!reduceMotion) waterTex.offset.y = (time * 0.12) % 1;
+
+  // Caméra
+  const ck = cameraKey(p);
+  const halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const dist = Math.max((ck.L * 1.08) / (2 * halfTan), (ck.W * 1.12) / (2 * halfTan * camera.aspect)) + ck.W * 0.3;
+  wantTarget.set(ck.x, ck.y, 0);
+  v.set(Math.sin(ck.az) * Math.cos(ck.el), Math.sin(ck.el), Math.cos(ck.az) * Math.cos(ck.el));
+  wantPos.copy(wantTarget).addScaledVector(v, dist);
+
+  const kc = reduceMotion || first ? 1 : 1 - Math.exp(-dt * 5);
+  camPos.lerp(wantPos, kc);
+  camTarget.lerp(wantTarget, kc);
+  first = false;
+  // Décentrage optique : en paysage, le sujet glisse vers la droite pour libérer la colonne de texte.
+  if (!portrait && innerWidth > 720) {
+    const shift = lerp(0.16, 0.08, smooth(0.04, 0.14, p));
+    camera.setViewOffset(innerWidth, innerHeight, -innerWidth * shift, 0, innerWidth, innerHeight);
+  } else if (camera.view) camera.clearViewOffset();
+  camera.position.copy(camPos);
+  camera.lookAt(camTarget);
+  camera.updateMatrixWorld();
+  ink.uniforms.camRot.value.setFromMatrix4(camera.matrixWorld);
+  const camDist = camPos.distanceTo(camTarget);
+  ink.uniforms.fogStart.value = camDist + 4;
+  ink.uniforms.fogScale.value = 26 + camDist * 0.45;
+
+  // Étiquettes de la vue éclatée
+  const labelAlpha = smooth(0.52, 0.56, p) * (1 - smooth(0.585, 0.605, p));
+  labelsSvg.style.opacity = labelAlpha.toFixed(3);
+  if (labelAlpha > 0.001) placeLabels();
+}
+
+// Garde chaque étiquette entièrement à l'écran.
+function keepInView(text) {
+  const tw = text.getComputedTextLength();
+  const anchor = text.getAttribute('text-anchor');
+  const x = +text.getAttribute('x');
+  const left = anchor === 'start' ? x : anchor === 'end' ? x - tw : x - tw / 2;
+  const fixed = clamp(left, 8, innerWidth - 8 - tw);
+  if (fixed !== left) text.setAttribute('x', anchor === 'start' ? fixed : anchor === 'end' ? fixed + tw : fixed + tw / 2);
+}
+const a2 = new THREE.Vector3();
+function project(vec) {
+  vec.project(camera);
+  return [(vec.x + 1) / 2 * innerWidth, (1 - vec.y) / 2 * innerHeight];
+}
+function overlaps(a, b) {
+  return a.x < b.x + b.width + 6 && b.x < a.x + a.width + 6 && a.y < b.y + b.height + 4 && b.y < a.y + a.height + 4;
+}
+function placeLabels() {
+  const placed = [];
+  for (const part of labelled) {
+    const { anchor, center, nodes } = part.label;
+    part.obj.updateMatrixWorld();
+    const [ax, ay] = project(part.obj.localToWorld(a2.copy(center)));
+    const [tx, ty] = project(part.obj.localToWorld(a2.copy(anchor)));
+    let dx = tx - ax, dy = ty - ay;
+    const len = Math.hypot(dx, dy) || 1;
+    dx /= len; dy /= len;
+    const horizontal = Math.abs(dx) > Math.abs(dy);
+    nodes.text.setAttribute('text-anchor', horizontal ? (dx > 0 ? 'start' : 'end') : 'middle');
+    // Décale l'étiquette tant qu'elle en chevauche une autre déjà posée.
+    let b, ex, ey;
+    for (let k = 0; k < 7; k++) {
+      const step = Math.ceil(k / 2) * (k % 2 ? 1 : -1);
+      const reach = horizontal ? 36 : 36 + k * 24;
+      ex = tx + dx * reach; ey = ty + dy * reach + (horizontal ? step * 26 : 0);
+      nodes.text.setAttribute('x', ex + (horizontal ? dx * 8 : 0));
+      nodes.text.setAttribute('y', ey + (horizontal ? 4 : dy > 0 ? 16 : -8));
+      keepInView(nodes.text);
+      b = nodes.text.getBBox();
+      if (!placed.some((o) => overlaps(b, o))) break;
+    }
+    placed.push(b);
+    nodes.line.setAttribute('x1', tx); nodes.line.setAttribute('y1', ty);
+    nodes.line.setAttribute('x2', ex); nodes.line.setAttribute('y2', ey);
+    nodes.dot.setAttribute('cx', tx); nodes.dot.setAttribute('cy', ty);
+    nodes.tag.setAttribute('x', b.x - 7); nodes.tag.setAttribute('y', b.y - 4);
+    nodes.tag.setAttribute('width', b.width + 14); nodes.tag.setAttribute('height', b.height + 8);
+  }
+}
+
+// ------------------------------------------------------------------
+// Boucle
+// ------------------------------------------------------------------
+const clock = new THREE.Clock();
+function frame() {
+  const dt = Math.min(clock.getDelta(), 0.05);
+  update(scrollProgress(), dt, clock.elapsedTime);
+
+  renderer.setRenderTarget(colorRT);
+  renderer.setClearColor(0x000000, 0);
+  renderer.clear();
+  renderer.render(scene, camera);
+
+  // Passe des normales : les pièces presque effacées ne doivent pas laisser de traits.
+  const hidden = parts.filter((part) => part.opacity < 0.5 && part.obj.visible);
+  for (const part of hidden) part.obj.visible = false;
+  scene.overrideMaterial = normalMat;
+  renderer.setRenderTarget(normalRT);
+  renderer.clear();
+  renderer.render(scene, camera);
+  scene.overrideMaterial = null;
+  for (const part of hidden) part.obj.visible = true;
+
+  renderer.setRenderTarget(null);
+  renderer.clear();
+  renderer.render(inkScene, quadCam);
+  renderer.render(fxScene, camera);
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
+</body>
+</html>
