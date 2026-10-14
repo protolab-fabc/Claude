@@ -3,32 +3,30 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Statoréacteur — planche dessinée</title>
+<title>Statoréacteur — pixel</title>
 <meta name="description" content="Un statoréacteur qui se décompose pièce par pièce au fil du défilement, avec ses ondes de choc et le trajet de l'air.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700&family=Pixelify+Sans:wght@500;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #e8caa0;
-    --paper: #f6efdf;
-    --paper-edge: #d9ccb0;
-    --ink: #231d18;
-    --umber: #4a3d31;
-    --muted: #6b5a49;
-    --rust: #8f3d1c;
-    --haze: #e9dcc0;
-    --display: "Jost", "Futura", system-ui, sans-serif;
-    --sans: "Jost", "Futura", system-ui, sans-serif;
+    --sky: #9fd0e8;
+    --paper: #fffaf0;
+    --ink: #2b2540;
+    --umber: #4a4466;
+    --muted: #6b6488;
+    --accent: #d8603a;
+    --display: "Pixelify Sans", ui-monospace, monospace;
+    --sans: "Nunito", system-ui, sans-serif;
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   }
 
   * { box-sizing: border-box; }
-  html { background: var(--bg); scrollbar-color: var(--umber) var(--paper-edge); }
-  ::selection { background: var(--rust); color: var(--paper); }
+  html { background: var(--sky); scrollbar-color: var(--ink) var(--sky); }
+  ::selection { background: var(--accent); color: var(--paper); }
   body {
     margin: 0;
-    background: var(--bg);
+    background: var(--sky);
     color: var(--ink);
     font-family: var(--sans);
     -webkit-font-smoothing: antialiased;
@@ -40,6 +38,8 @@
     width: 100%;
     height: 100%;
     display: block;
+    /* La scène est calculée en basse définition : on l'agrandit sans lisser les pixels. */
+    image-rendering: pixelated;
   }
 
   .overlay { position: fixed; pointer-events: none; z-index: 2; }
@@ -49,105 +49,99 @@
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    padding: 22px 32px;
-    font-size: 12px;
-    font-weight: 500;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
+    padding: 20px 28px;
+    font-family: var(--display);
+    font-size: 15px;
     color: var(--umber);
   }
-  .topbar b { color: var(--ink); font-weight: 600; }
+  .topbar b { color: var(--ink); font-weight: 700; }
 
-  /* Hero : titrage de planche de production, capitales espacées */
+  /* Hero */
   .hero {
-    /* Au-dessus de l'horizon dessiné, sur le ciel uni */
-    left: 32px; right: 32px; bottom: calc(28vh + 24px);
-    max-width: 680px;
+    left: 28px; right: 28px; bottom: calc(30vh + 24px);
+    max-width: 620px;
   }
   .hero h1 {
     font-family: var(--display);
-    font-weight: 500;
-    font-size: clamp(40px, 5.6vw, 84px);
-    line-height: 1.02;
-    letter-spacing: 0.06em;
-    text-transform: uppercase;
-    margin: 0 0 22px;
+    font-weight: 700;
+    font-size: clamp(48px, 7vw, 96px);
+    line-height: 0.95;
+    margin: 0 0 20px;
     color: var(--ink);
     text-wrap: balance;
   }
-  .hero h1 em { font-style: normal; color: var(--rust); }
+  .hero h1 em { font-style: normal; color: var(--accent); }
   .hero p {
     margin: 0;
-    max-width: 42ch;
+    max-width: 40ch;
     color: var(--umber);
     font-size: 17px;
-    line-height: 1.55;
+    font-weight: 600;
+    line-height: 1.5;
   }
   .scroll-hint {
-    margin-top: 28px;
+    margin-top: 24px;
     display: inline-flex;
-    gap: 12px;
+    gap: 10px;
     align-items: center;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.26em;
-    text-transform: uppercase;
+    font-family: var(--display);
+    font-size: 15px;
     color: var(--umber);
   }
   .scroll-hint i {
     display: block;
-    width: 1px; height: 30px;
-    background: linear-gradient(var(--ink), transparent);
+    width: 4px; height: 24px;
+    background: var(--ink);
     transform-origin: top;
-    animation: hint 2.2s var(--ease-out) infinite;
+    animation: hint 1.6s steps(6) infinite;
   }
   @keyframes hint {
-    0% { transform: scaleY(0); opacity: 1; }
-    70% { transform: scaleY(1); opacity: 1; }
-    100% { transform: scaleY(1); opacity: 0; }
+    0% { transform: scaleY(0.2); }
+    100% { transform: scaleY(1); }
   }
 
-  /* Panneaux : cartel de musée posé sur la peinture */
+  /* Panneaux : bulles de dialogue */
   .panel {
-    left: 32px; bottom: 9vh;
-    width: min(380px, calc(100vw - 64px));
-    padding: 22px 24px 24px;
+    left: 28px; bottom: 9vh;
+    width: min(400px, calc(100vw - 56px));
+    padding: 18px 22px 20px;
     background: var(--paper);
-    border: 1.5px solid var(--ink);
+    border: 3px solid var(--ink);
+    border-radius: 12px;
+    box-shadow: 0 5px 0 var(--ink);
     opacity: 0;
     will-change: opacity, transform;
   }
   .panel h2 {
     font-family: var(--display);
-    font-weight: 500;
-    font-size: clamp(24px, 2.4vw, 32px);
-    line-height: 1.1;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    margin: 0 0 12px;
+    font-weight: 700;
+    font-size: clamp(26px, 2.6vw, 34px);
+    line-height: 1.05;
+    margin: 0 0 10px;
     color: var(--ink);
   }
   .panel p {
     margin: 0;
     color: var(--umber);
     font-size: 15px;
-    line-height: 1.6;
+    font-weight: 600;
+    line-height: 1.55;
   }
   .panel dl {
-    margin: 16px 0 0;
-    padding-top: 12px;
-    border-top: 1px solid var(--paper-edge);
+    margin: 14px 0 0;
+    padding-top: 10px;
+    border-top: 2px dashed rgba(43, 37, 64, 0.25);
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 4px 18px;
-    font-size: 13px;
+    font-size: 14px;
   }
-  .panel dt { color: var(--muted); letter-spacing: 0.04em; }
-  .panel dd { margin: 0; color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .panel dt { color: var(--muted); font-weight: 600; }
+  .panel dd { margin: 0; color: var(--ink); font-family: var(--display); font-variant-numeric: tabular-nums; }
 
   /* Rail de progression */
   .rail {
-    right: 32px; top: 50%;
+    right: 28px; top: 50%;
     transform: translateY(-50%);
     pointer-events: auto;
     display: flex;
@@ -162,11 +156,9 @@
     justify-content: flex-end;
     gap: 10px;
     padding: 6px 0;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: rgba(35, 29, 24, 0.35);
+    font-family: var(--display);
+    font-size: 14px;
+    color: rgba(43, 37, 64, 0.4);
     transition: color 200ms ease;
   }
   .rail button span {
@@ -177,56 +169,52 @@
   }
   .rail button i {
     display: block;
-    width: 14px; height: 1px;
+    width: 12px; height: 4px;
     background: currentColor;
-    transition: width 200ms var(--ease-out);
+    transition: width 200ms steps(4);
   }
   .rail button.active { color: var(--ink); }
-  .rail button.active i { width: 30px; background: var(--rust); height: 2px; }
+  .rail button.active i { width: 28px; background: var(--accent); }
   .rail button.active span { opacity: 1; transform: none; }
   @media (hover: hover) and (pointer: fine) {
     .rail button:hover { color: var(--ink); }
     .rail button:hover span { opacity: 1; transform: none; }
   }
-  .rail button:focus-visible { outline: 1px solid var(--rust); outline-offset: 4px; }
+  .rail button:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
 
   .legend {
-    right: 32px; bottom: 22px;
+    right: 28px; bottom: 22px;
     display: flex;
-    gap: 22px;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--umber);
+    gap: 20px;
+    font-family: var(--display);
+    font-size: 13px;
+    color: var(--paper);
+    text-shadow: 0 2px 0 var(--ink);
   }
   .legend span { display: inline-flex; align-items: center; gap: 8px; }
-  .legend i { display: block; width: 22px; height: 4px; border: 1px solid var(--ink); }
-  .legend .cold { background: #8fb5bf; }
-  .legend .hot { background: linear-gradient(90deg, #6fa8c4, #d9b77a, #f2b13a, #e0662e, #c4452a); }
-  .legend .shock { background: rgba(111, 168, 196, 0.35); }
+  .legend i { display: block; width: 20px; height: 6px; border: 2px solid var(--ink); }
+  .legend .cold { background: #c4e4f2; }
+  .legend .hot { background: linear-gradient(90deg, #9fd0e8, #f4d58a, #f2a53a, #e0662e, #c4452a); }
+  .legend .shock { background: #7fc1e6; }
 
   .progress {
     left: 0; bottom: 0;
-    height: 2px;
+    height: 5px;
     width: 100%;
-    background: var(--rust);
+    background: var(--accent);
     transform-origin: left;
     transform: scaleX(0);
   }
 
-  /* Étiquettes : annotations au crayon sur la planche */
+  /* Étiquettes : petites pancartes */
   #labels { inset: 0; width: 100%; height: 100%; overflow: visible; }
-  #labels line { stroke: var(--ink); stroke-width: 1; }
-  #labels circle { fill: var(--rust); }
-  #labels rect { fill: var(--paper); stroke: var(--ink); stroke-width: 1.2; }
+  #labels line { stroke: var(--ink); stroke-width: 2; }
+  #labels circle { fill: var(--accent); stroke: var(--ink); stroke-width: 2; }
+  #labels rect { fill: var(--paper); stroke: var(--ink); stroke-width: 2; rx: 4; }
   #labels text {
     fill: var(--ink);
-    font-family: var(--sans);
-    font-weight: 500;
-    font-size: 11px;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
+    font-family: var(--display);
+    font-size: 14px;
   }
 
   #track { position: relative; height: 1100vh; }
@@ -235,51 +223,54 @@
     position: relative;
     z-index: 3;
     background: var(--paper);
-    border-top: 1px solid var(--paper-edge);
-    padding: 96px 32px 64px;
+    border-top: 4px solid var(--ink);
+    padding: 88px 28px 64px;
   }
   footer .inner { max-width: 1120px; margin: 0 auto; }
   footer h3 {
     font-family: var(--display);
-    font-weight: 500;
-    font-size: clamp(30px, 4vw, 52px);
-    line-height: 1.05;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    font-weight: 700;
+    font-size: clamp(34px, 4.4vw, 56px);
+    line-height: 1;
     margin: 0 0 14px;
   }
-  footer .lede { color: var(--umber); max-width: 56ch; line-height: 1.6; margin: 0 0 56px; font-size: 17px; }
+  footer .lede { color: var(--umber); max-width: 56ch; line-height: 1.6; margin: 0 0 48px; font-size: 17px; font-weight: 600; }
   .specs {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    border-top: 1px solid var(--ink);
+    gap: 16px;
     margin: 0;
   }
-  .specs div { padding: 22px 20px 22px 0; border-bottom: 1px solid var(--paper-edge); }
+  .specs div {
+    padding: 18px 20px;
+    background: #fff;
+    border: 3px solid var(--ink);
+    border-radius: 12px;
+    box-shadow: 0 5px 0 var(--ink);
+  }
   .specs dt {
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
+    font-size: 14px;
+    font-weight: 700;
     color: var(--muted);
-    margin-bottom: 10px;
+    margin-bottom: 8px;
   }
   .specs dd {
     margin: 0;
     font-family: var(--display);
-    font-weight: 400;
-    font-size: 40px;
+    font-weight: 700;
+    font-size: 36px;
     line-height: 1;
     color: var(--ink);
     font-variant-numeric: tabular-nums;
   }
   .colophon {
-    margin-top: 64px;
+    margin-top: 56px;
     display: flex;
     flex-wrap: wrap;
     justify-content: space-between;
     gap: 12px;
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 600;
     color: var(--muted);
   }
 
@@ -296,21 +287,21 @@
   .no-webgl #scene { display: none; }
 
   @media (max-width: 720px) {
-    .legend { left: 16px; right: auto; top: 44px; bottom: auto; flex-direction: column; gap: 6px; font-size: 9px; }
-    .topbar { padding: 16px; letter-spacing: 0.16em; font-size: 11px; }
+    .legend { left: 16px; right: auto; top: 46px; bottom: auto; flex-direction: column; gap: 6px; font-size: 11px; }
+    .topbar { padding: 16px; font-size: 13px; }
     .topbar .hide-sm { display: none; }
-    .hero { left: 16px; right: 16px; bottom: 16px; padding: 18px 18px 20px; background: var(--paper); border: 1.5px solid var(--ink); }
-    .hero h1 { font-size: 34px; margin-bottom: 12px; }
+    .hero { left: 16px; right: 16px; bottom: 16px; padding: 16px 18px 18px; background: var(--paper); border: 3px solid var(--ink); border-radius: 12px; box-shadow: 0 5px 0 var(--ink); }
+    .hero h1 { font-size: 40px; margin-bottom: 10px; }
     .hero p { font-size: 15px; }
-    .scroll-hint { margin-top: 16px; }
-    .panel { left: 16px; right: 16px; bottom: 16px; width: auto; padding: 18px 18px 20px; }
+    .scroll-hint { margin-top: 12px; }
+    .panel { left: 16px; right: 16px; bottom: 18px; width: auto; padding: 16px 18px 18px; }
     .panel p { font-size: 14px; }
     .panel dl { display: none; }
-    #labels text { font-size: 9px; letter-spacing: 0.1em; }
+    #labels text { font-size: 11px; }
     .rail { right: 12px; top: 72px; transform: none; }
     .rail button span { display: none; }
     footer { padding: 64px 16px 48px; }
-    .specs dd { font-size: 32px; }
+    .specs dd { font-size: 30px; }
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -365,7 +356,7 @@
         <div><dt>Au-delà de Mach 5</dt><dd>Superstato</dd></div>
       </dl>
       <div class="colophon">
-        <span>Modèle généré en code avec Three.js, dessiné en temps réel : aplats et traits d'encre.</span>
+        <span>Modèle généré en code avec Three.js, rendu en temps réel en basse définition, façon jeu en pixels.</span>
         <span>Sample · design &amp; motion</span>
       </div>
     </div>
@@ -397,16 +388,19 @@ try {
   document.body.classList.add('no-webgl');
   throw err;
 }
-const PR = Math.min(devicePixelRatio, 2);
+// Taille d'un pixel de l'image, en pixels CSS : toute la scène est calculée en basse définition
+// puis agrandie sans lissage (image-rendering: pixelated).
+const PIX = innerWidth < 720 ? 2.5 : 3.5;
+const PR = 1 / PIX;
 renderer.setPixelRatio(PR);
 renderer.autoClear = false;
 
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 300);
 
-// Une seule lumière franche : chaque surface est soit éclairée, soit dans l'ombre.
-scene.add(new THREE.AmbientLight(0xffffff, 1.6));
-const key = new THREE.DirectionalLight(0xffffff, 1.6);
+// Soleil chaud, ciel froid : les ombres virent au lavande, comme dans un après-midi d'été.
+scene.add(new THREE.HemisphereLight(0xd6ebff, 0xa48fc8, 1.5));
+const key = new THREE.DirectionalLight(0xfff1d6, 1.9);
 key.position.set(7, 10, 8);
 scene.add(key);
 const fireLight = new THREE.PointLight(0xff7a2a, 0, 6, 1.6);
@@ -416,29 +410,28 @@ scene.add(fireLight);
 // Matériaux : aplats à deux tons (lumière / ombre), palette de désert pâle.
 // Une instance par pièce pour pouvoir atténuer chacune.
 // ------------------------------------------------------------------
-const ramp = new THREE.DataTexture(new Uint8Array([150, 255]), 2, 1, THREE.RedFormat);
+const ramp = new THREE.DataTexture(new Uint8Array([110, 185, 255]), 3, 1, THREE.RedFormat);
 ramp.minFilter = ramp.magFilter = THREE.NearestFilter;
 ramp.needsUpdate = true;
 const flat = (o) => () => new THREE.MeshToonMaterial({ gradientMap: ramp, ...o });
 const MAT = {
-  paint:  flat({ color: 0xf1e8d4, side: THREE.DoubleSide }),
-  ti:     flat({ color: 0xc9d4d2 }),
-  steel:  flat({ color: 0x9fb2b4, side: THREE.DoubleSide }),
-  dark:   flat({ color: 0x6f7c7c }),
-  hot:    flat({ color: 0xcf7546 }),
-  bronze: flat({ color: 0xdba564, side: THREE.DoubleSide }),
-  glow:   flat({ color: 0xffb14a, emissive: 0xff8a2a, emissiveIntensity: 0.8 }),
-  hole:   flat({ color: 0x4a3d34 }),
-  scorch: flat({ color: 0xa85a3a, side: THREE.DoubleSide }),
-  ceramic: flat({ color: 0xf7f3ea }),
+  paint:  flat({ color: 0xfff1dc, side: THREE.DoubleSide }),
+  ti:     flat({ color: 0xcfe2ea }),
+  steel:  flat({ color: 0x9cbbd0, side: THREE.DoubleSide }),
+  dark:   flat({ color: 0x55618a }),
+  hot:    flat({ color: 0xe8794a }),
+  bronze: flat({ color: 0xf0b75a, side: THREE.DoubleSide }),
+  glow:   flat({ color: 0xffd36b, emissive: 0xff9a3a, emissiveIntensity: 0.9 }),
+  hole:   flat({ color: 0x3b3552 }),
+  scorch: flat({ color: 0xc0583c, side: THREE.DoubleSide }),
+  ceramic: flat({ color: 0xffffff }),
 };
 
 // ------------------------------------------------------------------
 // Dessin : passe couleur (+ profondeur), passe normales, puis un shader qui trace
-// les contours à l'encre et dessine le décor au trait sur un ciel uni.
+// un contour d'un pixel et peint le décor en pixel art.
 // ------------------------------------------------------------------
-// MSAA : les courbes fines restent lisses.
-const colorRT = new THREE.WebGLRenderTarget(1, 1, { samples: 4 });
+const colorRT = new THREE.WebGLRenderTarget(1, 1);
 colorRT.depthTexture = new THREE.DepthTexture(1, 1);
 const normalRT = new THREE.WebGLRenderTarget(1, 1);
 const normalMat = new THREE.MeshNormalMaterial();
@@ -452,7 +445,8 @@ const ink = new THREE.ShaderMaterial({
     resolution: { value: new THREE.Vector2(1, 1) },
     near: { value: camera.near },
     far: { value: camera.far },
-    pr: { value: PR },
+    pr: { value: 1 },
+    time: { value: 0 },
     aspect: { value: 1 },
     scroll: { value: 0 },
   },
@@ -464,54 +458,109 @@ const ink = new THREE.ShaderMaterial({
     #include <packing>
     uniform sampler2D tColor, tDepth, tNormal;
     uniform vec2 resolution;
-    uniform float near, far, pr, aspect, scroll;
+    uniform float near, far, pr, aspect, scroll, time;
     varying vec2 vUv;
 
-    const vec3 INK = vec3(0.17, 0.13, 0.11);
-    const vec3 SKY = vec3(0.96, 0.92, 0.82);
-    const vec3 SAND = vec3(0.91, 0.79, 0.60);
-    const vec3 SAND_SHADE = vec3(0.84, 0.69, 0.49);
-    const vec3 SUN = vec3(0.99, 0.97, 0.90);
+    const vec3 OUTLINE = vec3(0.17, 0.145, 0.25);
 
     bool isBg(vec2 uv) { return texture2D(tDepth, uv).x >= 0.99999; }
     float viewZ(vec2 uv) { return -perspectiveDepthToViewZ(texture2D(tDepth, uv).x, near, far); }
     vec3 nrm(vec2 uv) { return texture2D(tNormal, uv).xyz * 2.0 - 1.0; }
-    // Trait d'épaisseur constante en pixels autour d'une distance signée exprimée en UV.
-    float stroke(float d, float px) { return 1.0 - smoothstep(px * 0.5, px * 0.5 + 1.0, abs(d) * resolution.y); }
+    vec3 hex(float h) { return vec3(floor(h / 65536.0), mod(floor(h / 256.0), 256.0), mod(h, 256.0)) / 255.0; }
 
-    // Décor dessiné : ciel uni, soleil cerné, horizon, lignes de dunes.
+    // Tramage ordonné 4×4 (Bayer) : transitions de couleur en pixels, sans dégradé lisse.
+    float bayer(vec2 p) {
+      vec2 q = mod(floor(p), 4.0);
+      float i = q.x + q.y * 4.0;
+      float m[16];
+      m[0] = 0.0;  m[1] = 8.0;  m[2] = 2.0;  m[3] = 10.0;
+      m[4] = 12.0; m[5] = 4.0;  m[6] = 14.0; m[7] = 6.0;
+      m[8] = 3.0;  m[9] = 11.0; m[10] = 1.0; m[11] = 9.0;
+      m[12] = 15.0; m[13] = 7.0; m[14] = 13.0; m[15] = 5.0;
+      for (int k = 0; k < 16; k++) if (float(k) == i) return m[k] / 16.0;
+      return 0.0;
+    }
+    float band(float t, float n, vec2 p) { return floor(t * n + bayer(p)) / n; }
+    float circle(vec2 p, vec2 c, float r) { return step(length(p - c), r); }
+
+    // Décor : ciel en bandes, soleil, nuages, montagnes enneigées, île de sapins, océan.
     vec3 backdrop() {
-      vec2 p = vec2(vUv.x * aspect, vUv.y);
-      float horizon = 0.26 + 0.04 * scroll;
-      float lw = 1.4 * pr;
-      vec3 col = SKY;
-      vec2 sunPos = vec2(0.78 * aspect, horizon + 0.38);
-      float d = length(p - sunPos) - 0.085;
-      if (d < 0.0) col = SUN;
-      col = mix(col, INK, stroke(d, lw));
-      if (vUv.y < horizon) {
-        col = SAND;
-        // Faces de dunes à l'ombre, en aplats
-        float dune1 = horizon - 0.06 + 0.025 * sin(p.x * 3.1 + 1.0) + 0.012 * sin(p.x * 7.3);
-        float dune2 = horizon - 0.15 + 0.035 * sin(p.x * 2.2 + 4.0) + 0.015 * sin(p.x * 5.1);
-        if (vUv.y < dune1 && vUv.y > dune1 - 0.03 - 0.02 * sin(p.x * 4.0)) col = SAND_SHADE;
-        if (vUv.y < dune2 && vUv.y > dune2 - 0.05 - 0.03 * sin(p.x * 3.0 + 2.0)) col = SAND_SHADE;
-        col = mix(col, INK, stroke(vUv.y - dune1, lw * 0.8));
-        col = mix(col, INK, stroke(vUv.y - dune2, lw * 0.8));
+      vec2 px = floor(gl_FragCoord.xy);
+      float H = resolution.y, W = resolution.x;
+      float y = px.y / H;
+      float horizon = 0.3 + 0.04 * scroll;
+
+      // Ciel
+      float t = band(clamp((y - horizon) / (1.0 - horizon), 0.0, 1.0), 7.0, px);
+      vec3 col = mix(hex(16508100.0), hex(10473704.0), smoothstep(0.0, 0.45, t));   // #fbe4c4 → #9fd0e8
+      col = mix(col, hex(5940184.0), smoothstep(0.45, 1.0, t));                     // → #5aa3d8
+
+      // Soleil et son halo en anneaux
+      vec2 sun = vec2(W * 0.8, H * (horizon + 0.42));
+      float ds = length(px - sun) / H;
+      if (ds < 0.11) col = mix(col, hex(16774876.0), 0.35);
+      if (ds < 0.075) col = mix(col, hex(16774876.0), 0.55);
+      if (ds < 0.05) col = hex(16774876.0);
+
+      // Nuages : trois boules par nuage, qui dérivent lentement
+      for (int k = 0; k < 4; k++) {
+        float fk = float(k);
+        float cy = H * (horizon + 0.2 + 0.11 * mod(fk * 1.7, 3.0));
+        float cx = mod(W * (0.15 + fk * 0.31) + time * (3.0 + fk), W + 140.0) - 70.0;
+        float s = H * (0.028 + 0.008 * mod(fk, 2.0));
+        float cloud = max(max(circle(px, vec2(cx, cy), s), circle(px, vec2(cx + s * 1.1, cy - s * 0.25), s * 0.8)),
+                          circle(px, vec2(cx - s * 1.1, cy - s * 0.3), s * 0.7));
+        if (px.y < cy - s * 0.35) cloud *= 0.0;
+        if (cloud > 0.5) col = px.y < cy - s * 0.1 ? hex(14477554.0) : hex(16777215.0);  // ombre #dce8f2
       }
-      col = mix(col, INK, stroke(vUv.y - horizon, lw));
+
+      // Montagnes lointaines, sommets enneigés
+      float xs = px.x / H;
+      float ridge = horizon + 0.07 + 0.06 * abs(sin(xs * 2.1 + 0.6)) + 0.025 * sin(xs * 5.3) + 0.012 * sin(xs * 11.0);
+      if (y < ridge && y > horizon) {
+        col = hex(11122142.0);                                   // #a9b5de
+        if (y > ridge - 0.018 && ridge > horizon + 0.12) col = hex(16053503.0);   // neige
+      }
+
+      // Île : colline verte, crête de sapins, liseré de sable
+      // Les îles naissent et finissent en pente douce.
+      float f = fract(xs * 0.22 + 0.1);
+      float env = smoothstep(0.12, 0.3, f) * (1.0 - smoothstep(0.72, 0.9, f));
+      float hill = horizon + env * (0.035 + 0.03 * sin(xs * 3.4 + 2.0) + 0.012 * sin(xs * 8.1));
+      if (env > 0.02 && y < hill && y > horizon) {
+        col = y > hill - 0.012 ? hex(7779962.0) : hex(5937769.0);   // #76b67a / #5a9a69
+        if (y < horizon + 0.006) col = hex(15914913.0);              // sable #f2d7a1
+      }
+      if (env > 0.35) {
+        float cell = 9.0;
+        float cx = (floor(px.x / cell) + 0.5) * cell;
+        float fc = fract(cx / H * 0.22 + 0.1);
+        float envc = smoothstep(0.12, 0.3, fc) * (1.0 - smoothstep(0.72, 0.9, fc));
+        float base = (horizon + envc * (0.035 + 0.03 * sin(cx / H * 3.4 + 2.0) + 0.012 * sin(cx / H * 8.1))) * H;
+        float h = 10.0 + 7.0 * fract(sin(cx * 12.9898) * 43758.5);
+        float yy = px.y - base;
+        if (yy > -2.0 && yy < h && abs(px.x - cx) < (h - yy) * 0.36 + 0.5) col = yy < h * 0.4 ? hex(3046994.0) : hex(4160090.0);
+      }
+
+      // Océan en bandes, avec des reflets qui glissent
+      if (y <= horizon) {
+        float d = band(1.0 - y / horizon, 4.0, px);
+        col = mix(hex(6596048.0), hex(3833524.0), d);              // #64a5d0 → #3a7fb4
+        float row = floor(px.y / 7.0);
+        float wave = fract((px.x + time * (6.0 + mod(row, 3.0) * 2.0) + row * 37.0) / (34.0 + mod(row, 4.0) * 9.0));
+        if (mod(px.y, 7.0) < 1.0 && wave < 0.18) col = hex(13626103.0);   // écume #cfeaf7
+      }
       return col;
     }
 
     void main() {
       vec2 texel = 1.0 / resolution;
-      float w = 1.0 * pr;
       bool bg = isBg(vUv);
       float z = bg ? 0.0 : viewZ(vUv);
       vec3 n = nrm(vUv);
       float edgeD = 0.0, edgeN = 0.0, bgN = 0.0;
       vec2 o[4];
-      o[0] = vec2(w, 0.0); o[1] = vec2(-w, 0.0); o[2] = vec2(0.0, w); o[3] = vec2(0.0, -w);
+      o[0] = vec2(1.0, 0.0); o[1] = vec2(-1.0, 0.0); o[2] = vec2(0.0, 1.0); o[3] = vec2(0.0, -1.0);
       for (int i = 0; i < 4; i++) {
         vec2 q = vUv + o[i] * texel;
         if (isBg(q)) { bgN += 1.0; continue; }
@@ -519,12 +568,19 @@ const ink = new THREE.ShaderMaterial({
         edgeD = max(edgeD, abs(viewZ(q) - z) / max(z, 0.001));
         edgeN = max(edgeN, 1.0 - dot(n, nrm(q)));
       }
-      bool line = (bg && bgN < 4.0) || (!bg && (bgN > 0.0 || edgeD > 0.02 || edgeN > 0.3));
 
       vec4 src = texture2D(tColor, vUv);
       vec3 c = pow(clamp(src.rgb, 0.0, 1.0), vec3(1.0 / 2.2));
-      vec3 col = bg ? backdrop() * (1.0 - sqrt(src.a)) + c : c;
-      if (line) col = INK;
+      vec3 col;
+      if (bg) {
+        col = backdrop() * (1.0 - sqrt(src.a)) + c;
+      } else {
+        col = c;
+        // Arêtes intérieures : le même ton, assombri, plutôt qu'un trait noir.
+        if (edgeD > 0.02 || edgeN > 0.3) col *= vec3(0.62, 0.6, 0.72);
+      }
+      // Silhouette : un pixel de contour, à l'extérieur seulement.
+      if (bg && bgN < 4.0 && src.a < 0.5) col = OUTLINE;
       gl_FragColor = vec4(col, 1.0);
     }
   `,
@@ -958,7 +1014,7 @@ const TRAIL = 36;      // points par traînée
 
 // LineMaterial n'a pas d'opacité par sommet : on lui ajoute un attribut qui efface la traînée vers sa queue.
 function trailMaterial() {
-  const m = new LineMaterial({ linewidth: 2.6 * PR, vertexColors: true, transparent: true, depthWrite: false });
+  const m = new LineMaterial({ linewidth: 1.0, vertexColors: true, transparent: true, depthWrite: false });
   m.onBeforeCompile = (shader) => {
     shader.vertexShader = 'attribute float instanceAlphaStart;\nattribute float instanceAlphaEnd;\nvarying float vTrail;\n' +
       shader.vertexShader.replace(
@@ -1225,10 +1281,11 @@ let first = true;
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h, false);
-  for (const f of FLOWS) f.mat.resolution.set(w * PR, h * PR);
-  colorRT.setSize(w * PR, h * PR);
-  normalRT.setSize(w * PR, h * PR);
-  ink.uniforms.resolution.value.set(w * PR, h * PR);
+  const rw = Math.floor(w * PR), rh = Math.floor(h * PR);
+  for (const f of FLOWS) f.mat.resolution.set(rw, rh);
+  colorRT.setSize(rw, rh);
+  normalRT.setSize(rw, rh);
+  ink.uniforms.resolution.value.set(rw, rh);
   ink.uniforms.aspect.value = w / h;
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
@@ -1414,6 +1471,7 @@ function frame() {
 
   renderer.setRenderTarget(null);
   renderer.clear();
+  ink.uniforms.time.value = reduceMotion ? 0 : clock.elapsedTime;
   renderer.render(inkScene, quadCam);
   requestAnimationFrame(frame);
 }
