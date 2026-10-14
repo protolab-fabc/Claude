@@ -66,8 +66,9 @@
 
   /* Carton de titre crème, comme au générique */
   .hero {
-    left: 32px; top: 14vh;
-    width: min(500px, calc(100vw - 64px));
+    left: clamp(24px, 3vw, 64px); top: 50%;
+    margin-top: -170px;
+    width: min(500px, 33vw);
     padding: 26px 28px 26px;
     background: var(--cream);
     border: 3px solid var(--ink);
@@ -77,7 +78,7 @@
   .hero h1 {
     font-family: var(--display);
     font-weight: 400;
-    font-size: clamp(44px, 5.2vw, 80px);
+    font-size: clamp(40px, 3.6vw, 64px);
     line-height: 0.98;
     margin: 0 0 22px;
     color: var(--ink);
@@ -297,7 +298,7 @@
     .legend { left: 16px; right: auto; top: 46px; bottom: auto; flex-direction: column; gap: 6px; font-size: 12px; }
     .topbar { padding: 16px; font-size: 12px; }
     .topbar .hide-sm { display: none; }
-    .hero { left: 16px; right: 16px; top: auto; bottom: 16px; width: auto; padding: 18px 18px 20px; box-shadow: 5px 5px 0 var(--ink); }
+    .hero { left: 16px; right: 16px; top: auto; bottom: 16px; margin-top: 0; width: auto; padding: 18px 18px 20px; box-shadow: 5px 5px 0 var(--ink); }
     .hero h1 { font-size: 40px; margin-bottom: 12px; }
     .hero p { font-size: 14px; }
     .scroll-hint { margin-top: 14px; }
@@ -1155,8 +1156,8 @@ const CHAPTERS = [
 // Images-clés : point visé (x, y) dans le repère du moteur, hauteur L le long de l'axe, largeur W,
 // azimut autour de l'axe (az) et élévation le long de l'axe (el, vers l'avant si positive).
 const KEYS = [
-  { p: 0.0,   x: 0.3,  y: 1.7,  L: 15,  W: 8,   az: 0.32,  el: 0.42 },
-  { p: 0.05,  x: 0.3,  y: 1.7,  L: 15,  W: 8,   az: 0.32,  el: 0.42 },
+  { p: 0.0,   x: 0.3,  y: 1.5,  L: 13.2, W: 7, az: 0.32,  el: 0.42, hero: true },
+  { p: 0.05,  x: 0.3,  y: 1.5,  L: 13.2, W: 7, az: 0.32,  el: 0.42, hero: true },
   { p: 0.15,  x: 0.3,  y: 5.3,  L: 7,   W: 7,   az: 0.3,   el: 0.66 },
   { p: 0.21,  x: 0.3,  y: 5.3,  L: 7,   W: 7,   az: 0.4,   el: 0.6 },
   { p: 0.31,  x: 0.0,  y: 1.0,  L: 13,  W: 6,   az: 0.12,  el: 0.08 },
@@ -1176,11 +1177,23 @@ const KEYS = [
 ];
 
 let portrait = false;
+// Sur le hero, le moteur se cale dans l'espace laissé libre à droite du carton de titre :
+// centré dans cet espace, et un peu plus petit si l'écran est étroit.
+const HERO_SPAN = 0.68;   // part de la largeur occupée par le moteur au cadrage nominal
+const heroFit = { scale: 1, shift: 0.15 };
+function fitHero() {
+  if (portrait || innerWidth <= 720) { heroFit.scale = 1; heroFit.shift = 0; return; }
+  const left = heroEl.getBoundingClientRect().right / innerWidth + 0.06;
+  const avail = 1 - left - 0.05;
+  heroFit.scale = Math.max(1, HERO_SPAN / avail);
+  heroFit.shift = left + avail / 2 - 0.5;
+}
 function keyPose(k, out) {
   const halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
   const along = portrait ? 2 * halfTan : 2 * halfTan * camera.aspect;
   const across = portrait ? 2 * halfTan * camera.aspect : 2 * halfTan;
-  out.dist = Math.max((k.L * 1.08) / along, (k.W * 1.12) / across) + k.W * 0.3;
+  const L = k.hero ? k.L * heroFit.scale : k.L;
+  out.dist = Math.max((L * 1.08) / along, (k.W * 1.12) / across) + k.W * 0.3;
   out.target.set(k.x, k.y, 0);
   out.dir.set(Math.sin(k.az) * Math.cos(k.el), Math.sin(k.el), Math.cos(k.az) * Math.cos(k.el));
   return out;
@@ -1294,6 +1307,7 @@ function resize() {
   engine.rotation.z = baseRoll;
   engine.updateMatrixWorld(true);
   baseQuat.copy(engine.quaternion);
+  fitHero();
   labelsSvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
 }
 addEventListener('resize', resize);
@@ -1388,7 +1402,7 @@ function update(p, dt, time) {
   camPos.copy(curPose.target).addScaledVector(curPose.dir, Math.exp(curPose.logDist));
   first = false;
   if (!portrait && innerWidth > 720) {
-    const shift = lerp(0.19, 0.03, smoother(KEYS[1].p, KEYS[2].p, p));
+    const shift = lerp(heroFit.shift, 0.03, smoother(KEYS[1].p, KEYS[2].p, p));
     camera.setViewOffset(innerWidth, innerHeight, -innerWidth * shift, 0, innerWidth, innerHeight);
   } else if (camera.view) camera.clearViewOffset();
   camera.position.copy(camPos);
