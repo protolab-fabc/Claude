@@ -428,6 +428,9 @@ const MAT = {
   hot:    flat({ color: 0xcf7546 }),
   bronze: flat({ color: 0xdba564, side: THREE.DoubleSide }),
   glow:   flat({ color: 0xffb14a, emissive: 0xff8a2a, emissiveIntensity: 0.8 }),
+  hole:   flat({ color: 0x4a3d34 }),
+  scorch: flat({ color: 0xa85a3a, side: THREE.DoubleSide }),
+  ceramic: flat({ color: 0xf7f3ea }),
 };
 
 // ------------------------------------------------------------------
@@ -620,12 +623,14 @@ function addPart(id, obj, opts = {}) {
 {
   const g = new THREE.Group();
   g.add(lathe([[0.001, SPIKE_TIP], [0.55, 3.8], [0.55, 2.5], [0.12, 1.2], [0.001, 1.15]], MAT.ti()));
-  const strut = new THREE.BoxGeometry(0.62, 0.45, 0.05);
+  // Bras profilés : section en lentille, corde dans l'axe, de la carène au carénage.
+  const foil = new THREE.Shape().absellipse(0, 0, 0.035, 0.24, 0, Math.PI * 2);
+  const strut = new THREE.ExtrudeGeometry(foil, { depth: 0.62, bevelEnabled: false, curveSegments: 24 });
   for (let i = 0; i < 3; i++) {
     const a = (i / 3) * Math.PI * 2 + Math.PI / 2;
     const b = new THREE.Mesh(strut, MAT.dark());
-    b.position.set(Math.cos(a) * 0.72, 2.0, Math.sin(a) * 0.72);
-    b.rotation.y = -a;
+    b.position.set(Math.cos(a) * 0.4, 2.0, Math.sin(a) * 0.4);
+    b.rotation.y = Math.PI / 2 - a;
     g.add(b);
   }
   addPart('spike', g, { dy: 4.2, order: 3, label: { text: "Cône d'entrée", r: 0.55, y: 3.4 } });
@@ -688,6 +693,195 @@ let glowMat;
   const g = new THREE.Group();
   g.add(lathe(wall(-2.6, -5.2), MAT.hot()));
   addPart('nozzle', g, { dy: -3.2, order: 3, label: { text: 'Tuyère', r: 1.12, y: -4.6 } });
+}
+
+
+// ------------------------------------------------------------------
+// Détails : brides boulonnées, joints rivetés, raidisseurs, perçages, tuyauteries.
+// Avec le rendu à l'encre, chaque relief devient un trait : c'est ce qui donne la densité du dessin.
+// ------------------------------------------------------------------
+// Ajoute un objet à une pièce existante. Chaque pièce garde ses propres matériaux,
+// sinon atténuer une pièce hors du gros plan atténuerait aussi ses voisines.
+const matOwner = new Map();
+const matCopies = new Map();
+function addDetail(id, obj) {
+  const part = partById[id];
+  part.obj.add(obj);
+  obj.traverse((o) => {
+    if (!o.material) return;
+    const owner = matOwner.get(o.material);
+    if (owner && owner !== id) {
+      const key = id + o.material.uuid;
+      if (!matCopies.has(key)) matCopies.set(key, o.material.clone());
+      o.material = matCopies.get(key);
+    }
+    matOwner.set(o.material, id);
+    if (!part.mats.includes(o.material)) part.mats.push(o.material);
+  });
+}
+// Les demi-coques couvrent x ≥ 0 (haut) et x < 0 (bas) : un détail va dans la moitié qui le porte.
+const HALVES = { inlet: ['inlet-top', 'inlet-bottom'], chamber: ['chamber-top', 'chamber-bottom'] };
+function addRevolved(half, points, mat) {
+  addDetail(HALVES[half][0], lathe(points, mat, 0, Math.PI));
+  addDetail(HALVES[half][1], lathe(points, mat, Math.PI, Math.PI));
+}
+// Couronne d'objets instanciés autour de l'axe ; place(i) renvoie { a, r, y, rot }.
+function crown(half, id, geo, mat, count, place) {
+  const d = new THREE.Object3D();
+  const buckets = half ? [[], []] : [[]];
+  for (let i = 0; i < count; i++) {
+    const { a, r, y, rot = 'radial' } = place(i);
+    d.position.set(Math.cos(a) * r, y, Math.sin(a) * r);
+    if (rot === 'radial') d.rotation.set(0, -a, Math.PI / 2);   // axe du cylindre selon le rayon
+    else if (rot === 'surface') d.rotation.set(0, -a, 0);       // boîte posée sur la paroi
+    else d.rotation.set(0, 0, 0);                               // axe parallèle au moteur
+    d.updateMatrix();
+    buckets[half && d.position.x < 0 ? 1 : 0].push(d.matrix.clone());
+  }
+  buckets.forEach((list, k) => {
+    if (!list.length) return;
+    const inst = new THREE.InstancedMesh(geo, mat, list.length);
+    list.forEach((m, i) => inst.setMatrixAt(i, m));
+    addDetail(half ? HALVES[half][k] : id, inst);
+  });
+}
+const TAU = Math.PI * 2;
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+function mesh(geo, mat, x = 0, y = 0, z = 0) { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); return m; }
+// Anneau en relief posé sur la paroi extérieure (joint, raidisseur, lèvre).
+const band = (y, h = 0.025, w = 0.03) => {
+  const r = cowlOutR(y);
+  return [[r - 0.005, y + w], [r + h, y + w], [r + h, y - w], [r - 0.005, y - w], [r - 0.005, y + w]];
+};
+// Bride : collerette qui dépasse franchement, percée d'une couronne de boulons.
+const flangeProfile = (y, t, rOut) => {
+  const r = cowlOutR(y) - 0.01;
+  return [[r, y + t / 2], [rOut, y + t / 2], [rOut, y - t / 2], [r, y - t / 2], [r, y + t / 2]];
+};
+const boltGeo = new THREE.CylinderGeometry(0.032, 0.032, 0.035, 6);
+const rivetGeo = new THREE.CylinderGeometry(0.012, 0.012, 0.02, 6);
+for (const part of parts) for (const m of part.mats) if (!matOwner.has(m)) matOwner.set(m, part.id);
+const steel = MAT.steel(), dark = MAT.dark(), hole = MAT.hole(), ceramic = MAT.ceramic();
+
+// --- Entrée d'air ---
+{
+  const paint = partById['inlet-top'].mats[0];
+  // Lèvre d'attaque usinée, plus sombre que la peinture.
+  addRevolved('inlet', [[1.07, 4.03], [1.12, 4.03], [1.14, 3.9], [1.06, 3.9], [1.07, 4.03]], steel);
+  // Joints de panneaux et leurs rangées de rivets.
+  for (const y of [3.45, 2.5, 1.6]) {
+    addRevolved('inlet', band(y, 0.012, 0.012), paint);
+    crown('inlet', null, rivetGeo, steel, 64, (i) => ({ a: (i / 64) * TAU, r: cowlOutR(y) + 0.008, y: y + 0.05 }));
+    crown('inlet', null, rivetGeo, steel, 64, (i) => ({ a: (i / 64) * TAU, r: cowlOutR(y) + 0.008, y: y - 0.05 }));
+  }
+  // Fentes de prélèvement de couche limite, juste derrière le col d'entrée.
+  crown('inlet', null, new THREE.BoxGeometry(0.03, 0.16, 0.07), hole, 28, (i) => ({ a: (i / 28) * TAU, r: cowlOutR(2.95), y: 2.95, rot: 'surface' }));
+  // Bride arrière boulonnée sur la chambre.
+  addRevolved('inlet', flangeProfile(0.86, 0.1, 1.52), steel);
+  crown('inlet', null, boltGeo, steel, 32, (i) => ({ a: (i / 32) * TAU + 0.05, r: 1.44, y: 0.93, rot: 'axial' }));
+  // Ferrure d'accrochage sur le dessus.
+  const lug = new THREE.Group();
+  lug.add(mesh(new THREE.BoxGeometry(0.22, 0.5, 0.18), dark, 1.43, 2.1, 0));
+  lug.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.2, 16).rotateX(Math.PI / 2), hole, 1.48, 2.1, 0));
+  addDetail('inlet-top', lug);
+}
+
+// --- Cône d'entrée ---
+{
+  // Sonde de pitot à la pointe.
+  addDetail('spike', mesh(new THREE.CylinderGeometry(0.012, 0.025, 0.55, 12), steel, 0, SPIKE_TIP + 0.25, 0));
+  // Joints du cône et du corps central.
+  for (const y of [3.8, 2.5]) addDetail('spike', lathe([[spikeR(y) - 0.005, y + 0.02], [spikeR(y) + 0.012, y + 0.02], [spikeR(y) + 0.012, y - 0.02], [spikeR(y) - 0.005, y - 0.02], [spikeR(y) - 0.005, y + 0.02]], steel));
+  // Bande poreuse : aspiration de la couche limite sur le cône.
+  for (const [y, n] of [[4.5, 40], [4.35, 44], [4.2, 48]]) {
+    crown(null, 'spike', new THREE.CylinderGeometry(0.018, 0.018, 0.01, 8), hole, n, (i) => ({ a: (i / n) * TAU + y, r: spikeR(y) + 0.002, y }));
+  }
+  // Petite carène arrière.
+  addDetail('spike', mesh(new THREE.SphereGeometry(0.06, 16, 12), steel, 0, 1.17, 0));
+}
+
+// --- Injecteurs ---
+{
+  const bronze = partById.injectors.mats[0];
+  // Buses de pulvérisation : deux par rampe, orientées vers l'aval.
+  crown(null, 'injectors', new THREE.ConeGeometry(0.03, 0.07, 10).rotateX(Math.PI), bronze, 32, (i) => ({
+    a: (Math.floor(i / 2) / 16) * TAU, r: i % 2 ? 0.5 : 0.7, y: 0.56, rot: 'axial',
+  }));
+  // Tuyau d'alimentation : traverse la paroi puis remonte le long du carénage.
+  const path = new THREE.CatmullRomCurve3([V3(0.86, 0.6, 0), V3(1.3, 0.6, 0), V3(1.52, 0.75, 0), V3(1.55, 1.2, 0.05), V3(1.5, 2.6, 0.12)]);
+  addDetail('injectors', new THREE.Mesh(new THREE.TubeGeometry(path, 64, 0.045, 12), bronze));
+  addDetail('injectors', mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.1, 6).rotateZ(Math.PI / 2), steel, 1.38, 0.6, 0));
+  for (const t of [0.55, 0.75, 0.92]) {
+    const p = path.getPointAt(t);
+    const clamp = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.016, 8, 24), steel);
+    clamp.position.copy(p);
+    clamp.lookAt(p.clone().add(path.getTangentAt(t)));
+    addDetail('injectors', clamp);
+  }
+}
+
+// --- Accroche-flammes ---
+{
+  const m = partById.flameholders.mats[0];
+  // Gouttières radiales en V qui relient les deux anneaux.
+  const chevron = new THREE.Shape([new THREE.Vector2(-0.07, -0.08), new THREE.Vector2(0, 0.06), new THREE.Vector2(0.07, -0.08),
+                                   new THREE.Vector2(0.05, -0.08), new THREE.Vector2(0, 0.03), new THREE.Vector2(-0.05, -0.08)]);
+  const gutter = new THREE.ExtrudeGeometry(chevron, { depth: 0.36, bevelEnabled: false });
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * TAU;
+    const b = new THREE.Mesh(gutter, m);
+    b.position.set(Math.cos(a) * 0.5, 0.06, Math.sin(a) * 0.5);
+    b.rotation.y = Math.PI / 2 - a;
+    addDetail('flameholders', b);
+  }
+  // Anneau pilote au centre.
+  addDetail('flameholders', lathe([[0.16, -0.02], [0.22, 0.1], [0.28, -0.02]], m));
+}
+
+// --- Chambre ---
+{
+  const shell = partById['chamber-top'].mats[0];
+  // Raidisseurs circonférentiels.
+  for (const y of [0.35, -0.25, -0.85, -1.45, -2.05]) addRevolved('chamber', band(y, 0.04, 0.035), shell);
+  // Brides avant et arrière, boulonnées.
+  addRevolved('chamber', flangeProfile(0.74, 0.1, 1.52), steel);
+  crown('chamber', null, boltGeo, steel, 32, (i) => ({ a: (i / 32) * TAU + 0.05, r: 1.44, y: 0.67, rot: 'axial' }));
+  addRevolved('chamber', flangeProfile(-2.54, 0.1, 1.5), steel);
+  crown('chamber', null, boltGeo, steel, 32, (i) => ({ a: (i / 32) * TAU, r: 1.43, y: -2.47, rot: 'axial' }));
+  // Trous de refroidissement de la chemise, visibles une fois la chambre ouverte.
+  for (let row = 0; row < 7; row++) {
+    const y = 0.2 - row * 0.38;
+    crown('chamber', null, new THREE.CylinderGeometry(0.022, 0.022, 0.01, 8), hole, 44, (i) => ({ a: (i / 44) * TAU + row * 0.07, r: 1.195, y }));
+  }
+  // Bougie d'allumage sur le dessus : écrou, isolant céramique, électrode.
+  const plug = new THREE.Group();
+  plug.add(mesh(new THREE.CylinderGeometry(0.1, 0.1, 0.08, 6).rotateZ(Math.PI / 2), steel, 1.4, -0.35, 0));
+  plug.add(mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.28, 16).rotateZ(Math.PI / 2), ceramic, 1.58, -0.35, 0));
+  plug.add(mesh(new THREE.CylinderGeometry(0.015, 0.015, 0.12, 8).rotateZ(Math.PI / 2), steel, 1.76, -0.35, 0));
+  addDetail('chamber-top', plug);
+  // Ferrure d'accrochage arrière.
+  const lug = new THREE.Group();
+  lug.add(mesh(new THREE.BoxGeometry(0.22, 0.5, 0.18), dark, 1.43, -1.6, 0));
+  lug.add(mesh(new THREE.CylinderGeometry(0.05, 0.05, 0.2, 16).rotateX(Math.PI / 2), hole, 1.48, -1.6, 0));
+  addDetail('chamber-top', lug);
+  // Thermocouples et leur câble, dessous.
+  const tc = new THREE.Group();
+  for (const y of [0.1, -0.9, -1.9]) tc.add(mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.12, 10).rotateZ(Math.PI / 2), steel, -1.4, y, 0.2));
+  tc.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([V3(-1.45, 0.1, 0.2), V3(-1.5, -0.9, 0.24), V3(-1.45, -1.9, 0.2)]), 48, 0.018, 8), dark));
+  addDetail('chamber-bottom', tc);
+}
+
+// --- Tuyère ---
+{
+  const hot = partById.nozzle.mats[0];
+  addDetail('nozzle', lathe(flangeProfile(-2.66, 0.1, 1.5), steel));
+  crown(null, 'nozzle', boltGeo, steel, 32, (i) => ({ a: (i / 32) * TAU, r: 1.43, y: -2.73, rot: 'axial' }));
+  for (const y of [-3.05, -4.1, -4.7]) addDetail('nozzle', lathe(band(y, 0.03, 0.03), hot));
+  // Lèvre de sortie et zone plus chaude du divergent.
+  addDetail('nozzle', lathe([[1.04, -5.17], [1.15, -5.17], [1.15, -5.25], [1.04, -5.25], [1.04, -5.17]], steel));
+  const scorch = [];
+  for (let y = -3.75; y >= -5.15; y -= 0.1) scorch.push([cowlOutR(y) + 0.004, y]);
+  addDetail('nozzle', lathe(scorch, MAT.scorch()));
 }
 
 // ------------------------------------------------------------------
