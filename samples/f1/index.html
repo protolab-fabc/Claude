@@ -392,6 +392,8 @@ renderer.autoClear = false;
 
 const scene = new THREE.Scene();      // architecture et moteur, opaques
 const fxScene = new THREE.Scene();    // flamme et flux, posés par-dessus
+const fxRoot = new THREE.Group();     // repère du moteur, pour la flamme et les flux
+fxScene.add(fxRoot);
 const camera = new THREE.PerspectiveCamera(32, 1, 0.5, 800);
 
 // Matériaux : de simples albédos. L'éclairage vient du post-traitement, qui teinte chaque face
@@ -1098,6 +1100,7 @@ scene.add(world);
   }
 }
 // Copies du moteur dans les autres cellules : la même silhouette, perdue dans la brume.
+let layoutCopies = () => {};
 {
   const prof = [];
   for (let i = 0; i <= 40; i++) { const y = lerp(Y_INJ, Y_EXIT, i / 40); prof.push([outR(y), y]); }
@@ -1109,12 +1112,24 @@ scene.add(world);
     [new THREE.CylinderGeometry(0.9, 0.9, 3.7, 32), 0xf6f3ee, [PUMP.x, 3.15, PUMP.z]],
     [new THREE.TorusGeometry(MAN_R, MAN_r, 16, 96).rotateX(Math.PI / 2), 0xffffff, [0, MAN_Y, 0]],
   ];
-  const d = new THREE.Object3D();
-  for (const [geo, color, off] of parts3) {
+  const ghosts = parts3.map(([geo, color, off]) => {
     const inst = new THREE.InstancedMesh(geo, new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide }), copies.length);
-    copies.forEach(([x, y, z], i) => { d.position.set(x + off[0], y + off[1], z + off[2]); d.updateMatrix(); inst.setMatrixAt(i, d.matrix); });
     world.add(inst);
-  }
+    return { inst, off: V3(...off) };
+  });
+  // Les copies prennent la même pose que le moteur, debout ou couché.
+  const d = new THREE.Object3D();
+  layoutCopies = (q) => {
+    for (const { inst, off } of ghosts) {
+      copies.forEach(([x, y, z], i) => {
+        d.quaternion.copy(q);
+        d.position.copy(off).applyQuaternion(q).add(V3(x, y, z));
+        d.updateMatrix();
+        inst.setMatrixAt(i, d.matrix);
+      });
+      inst.instanceMatrix.needsUpdate = true;
+    }
+  };
 }
 
 // ------------------------------------------------------------------
@@ -1181,7 +1196,7 @@ const plume = new THREE.Group();
   const sleeve = lathe([[3.62, -5.5], [3.55, -7.0], [3.3, -9.0], [3.05, -11.5]], plumeSleeve, 64);
   sleeve.renderOrder = 2;
   plume.add(core, sleeve);
-  fxScene.add(plume);
+  fxRoot.add(plume);
 }
 
 // ------------------------------------------------------------------
@@ -1237,7 +1252,7 @@ const FLOWS = [
 ];
 const flowGroup = new THREE.Group();
 flowGroup.renderOrder = 3;
-fxScene.add(flowGroup);
+fxRoot.add(flowGroup);
 // Distance parcourue après l'alimentation → descente, qui accélère avec la détente des gaz.
 const descent = (d, k) => d + k * d * d;
 const solveDescent = (h, k) => (-1 + Math.sqrt(1 + 4 * k * h)) / (2 * k);
@@ -1373,8 +1388,8 @@ const CHAPTERS = [
 
 // Images-clés caméra : point visé (x, y), hauteur L et largeur W à cadrer, azimut et élévation.
 const KEYS = [
-  { p: 0.0,   x: 0.8,  y: -4.2, L: 24.5, W: 9,  az: 0.32,  el: 0.1 },
-  { p: 0.05,  x: 0.8,  y: -4.2, L: 24.5, W: 9,  az: 0.32,  el: 0.1 },
+  { p: 0.0,   x: 0.8,  y: -7.5, L: 34,  W: 9,   az: 0.32,  el: 0.1 },
+  { p: 0.05,  x: 0.8,  y: -7.5, L: 34,  W: 9,   az: 0.32,  el: 0.1 },
   { p: 0.17,  x: 1.5,  y: 3.4,  L: 8,   W: 7,   az: 0.55,  el: 0.3 },
   { p: 0.23,  x: 1.5,  y: 3.4,  L: 8,   W: 7,   az: 0.7,   el: 0.34 },
   { p: 0.33,  x: 0.2,  y: -7.5, L: 20,  W: 10,  az: -0.3,  el: -0.12 },
@@ -1389,8 +1404,8 @@ const KEYS = [
   { p: 0.80,  x: 0.0,  y: 6.3,  L: 4.6, W: 4,   az: 0.32,  el: -0.5 },
   { p: 0.835, x: 0.0,  y: -2.4, L: 19.5, W: 9,  az: -0.3,  el: 0.1 },
   { p: 0.87,  x: 0.0,  y: -2.4, L: 19.5, W: 9,  az: -0.4,  el: 0.12 },
-  { p: 0.95,  x: 0.8,  y: -4.0, L: 23,  W: 12,  az: 0.25,  el: 0.12 },
-  { p: 1.0,   x: 0.8,  y: -4.0, L: 24,  W: 12,  az: 0.3,   el: 0.14 },
+  { p: 0.95,  x: 0.8,  y: -5.0, L: 32,  W: 12,  az: 0.25,  el: 0.12 },
+  { p: 1.0,   x: 0.8,  y: -5.0, L: 33,  W: 12,  az: 0.3,   el: 0.14 },
 ];
 
 function cameraKey(p) {
@@ -1489,6 +1504,12 @@ function resize() {
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   portrait = camera.aspect < 0.9;
+  // En paysage, le moteur se couche comme les réacteurs : injecteur à gauche, flamme vers la droite.
+  engine.rotation.z = portrait ? 0 : Math.PI / 2;
+  fxRoot.rotation.copy(engine.rotation);
+  engine.updateMatrixWorld(true);
+  fxRoot.updateMatrixWorld(true);
+  layoutCopies(engine.quaternion);
   labelsSvg.setAttribute('viewBox', `0 0 ${w} ${h}`);
 }
 addEventListener('resize', resize);
@@ -1550,9 +1571,13 @@ function update(p, dt, time) {
   const ck = cameraKey(p);
   const halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
   // Cadrage un peu serré : le moteur occupe davantage l'écran.
-  const dist = (Math.max((ck.L * 1.08) / (2 * halfTan), (ck.W * 1.12) / (2 * halfTan * camera.aspect)) + ck.W * 0.3) * 0.86;
-  wantTarget.set(ck.x, ck.y, 0);
-  v.set(Math.sin(ck.az) * Math.cos(ck.el), Math.sin(ck.el), Math.cos(ck.az) * Math.cos(ck.el));
+  // L se cadre le long de l'axe du moteur : en hauteur debout, en largeur couché.
+  const along = portrait ? 2 * halfTan : 2 * halfTan * camera.aspect;
+  const across = portrait ? 2 * halfTan * camera.aspect : 2 * halfTan;
+  const dist = (Math.max((ck.L * 1.08) / along, (ck.W * 1.12) / across) + ck.W * 0.3) * 0.86;
+  // Point visé et direction de vue sont exprimés dans le repère du moteur, puis suivent sa pose.
+  wantTarget.set(ck.x, ck.y, 0).applyQuaternion(engine.quaternion);
+  v.set(Math.sin(ck.az) * Math.cos(ck.el), Math.sin(ck.el), Math.cos(ck.az) * Math.cos(ck.el)).applyQuaternion(engine.quaternion);
   wantPos.copy(wantTarget).addScaledVector(v, dist);
 
   const kc = reduceMotion || first ? 1 : 1 - Math.exp(-dt * 5);
@@ -1561,7 +1586,7 @@ function update(p, dt, time) {
   first = false;
   // Décentrage optique : en paysage, le sujet glisse vers la droite pour libérer la colonne de texte.
   if (!portrait && innerWidth > 720) {
-    const shift = lerp(0.04, 0.015, smooth(0.04, 0.14, p));
+    const shift = lerp(0.16, 0.02, smooth(0.04, 0.14, p));
     camera.setViewOffset(innerWidth, innerHeight, -innerWidth * shift, 0, innerWidth, innerHeight);
   } else if (camera.view) camera.clearViewOffset();
   camera.position.copy(camPos);
