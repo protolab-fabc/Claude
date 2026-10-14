@@ -410,7 +410,7 @@ const MAT = {
   // Cellule
   skin:   flat({ color: 0x95a3a3, side: THREE.DoubleSide }),
   skinDk: flat({ color: 0x5d6b6c, side: THREE.DoubleSide }),
-  glass:  flat({ color: 0x1f3a3f, emissive: 0x2c5a5a, emissiveIntensity: 0.25 }),
+  glass:  flat({ color: 0x4d6f72, emissive: 0x3c6a68, emissiveIntensity: 0.3 }),
   store:  flat({ color: 0xd2ccb4 }),
 };
 
@@ -1036,11 +1036,13 @@ const ZC = -0.875;   // axe de symétrie de l'avion, entre les deux moteurs
 const airframe = new THREE.Group();
 engine.add(airframe);
 
-// Fuselage : sections en super-ellipse interpolées le long de l'axe. [y, centre x, demi-hauteur, demi-largeur]
-const HULL = [[-4.9, 0.15, 0.98, 1.85], [-1.0, 0.2, 1.1, 1.9], [3.0, 0.25, 1.12, 1.85], [4.6, 0.6, 0.95, 1.2],
-              [6.0, 1.0, 0.8, 0.82], [9.0, 1.05, 0.82, 0.82], [12.5, 1.0, 0.82, 0.78], [16.0, 0.85, 0.68, 0.64],
-              [19.5, 0.62, 0.48, 0.46], [22.5, 0.42, 0.26, 0.25], [24.2, 0.32, 0.06, 0.06], [24.6, 0.3, 0.004, 0.004]];
-function hullGeometry(rows, scale = 1, segY = 180, segA = 56) {
+// Fuselage : sections en super-ellipse interpolées le long de l'axe.
+// [y, centre x, demi-hauteur, demi-largeur, centre z (par défaut l'axe de l'avion)]
+// Proportions calées sur l'avion réel : nez court, entrées d'air vers 40 % de la longueur.
+const HULL = [[-4.9, 0.15, 0.95, 1.8], [-1.0, 0.2, 1.05, 1.88], [3.0, 0.3, 1.1, 1.8], [4.8, 0.5, 1.0, 1.4],
+              [6.5, 0.75, 0.9, 0.95], [8.5, 0.85, 0.85, 0.82], [10.5, 0.8, 0.75, 0.72], [12.5, 0.65, 0.58, 0.56],
+              [14.2, 0.5, 0.36, 0.35], [15.3, 0.42, 0.1, 0.1], [15.7, 0.4, 0.004, 0.004]];
+function hullGeometry(rows, scale = 1, segY = 160, segA = 56) {
   const pos = [], idx = [];
   const y0 = rows[0][0], y1 = rows[rows.length - 1][0];
   for (let i = 0; i <= segY; i++) {
@@ -1051,10 +1053,11 @@ function hullGeometry(rows, scale = 1, segY = 180, segA = 56) {
     const lin = (y - A[0]) / (B[0] - A[0]);
     const t = lin * 0.4 + smooth(A[0], B[0], y) * 0.6;
     const cx = lerp(A[1], B[1], t), rx = lerp(A[2], B[2], t) * scale, rz = lerp(A[3], B[3], t) * scale;
+    const cz = lerp(A[4] ?? ZC, B[4] ?? ZC, t);
     for (let j = 0; j < segA; j++) {
       const a = (j / segA) * TAU;
       const c = Math.cos(a), s = Math.sin(a);
-      pos.push(cx + rx * Math.sign(c) * Math.abs(c) ** 0.8, y, ZC + rz * Math.sign(s) * Math.abs(s) ** 0.8);
+      pos.push(cx + rx * Math.sign(c) * Math.abs(c) ** 0.8, y, cz + rz * Math.sign(s) * Math.abs(s) ** 0.8);
     }
   }
   for (let i = 0; i < segY; i++) {
@@ -1082,49 +1085,65 @@ function planform(points, thick, mat, side, x, zRoot) {
 {
   const skin = MAT.skin(), dk = MAT.skinDk(), glass = MAT.glass(), store = MAT.store();
   airframe.add(new THREE.Mesh(hullGeometry(HULL), skin));
-  // Radôme, un ton plus sombre.
-  airframe.add(new THREE.Mesh(hullGeometry(HULL.filter(([y]) => y >= 19.5), 1.012), dk));
-  // Verrière et son arceau.
-  const canopy = mesh(new THREE.SphereGeometry(1, 40, 20), glass, 1.62, 15.4, ZC);
-  canopy.scale.set(0.52, 2.5, 0.5);
+  // Radôme conique, un ton plus sombre.
+  airframe.add(new THREE.Mesh(hullGeometry(HULL.filter(([y]) => y >= 12.5), 1.012), dk));
+  // Épine dorsale : de la verrière jusqu'au pied de la dérive.
+  airframe.add(new THREE.Mesh(hullGeometry([[-3.6, 1.12, 0.22, 0.36], [-1.0, 1.15, 0.3, 0.42], [3.0, 1.28, 0.32, 0.44],
+                                            [6.5, 1.5, 0.3, 0.4], [8.6, 1.62, 0.2, 0.3], [9.2, 1.62, 0.02, 0.05]], 1, 90, 40), skin));
+  // Verrière en bulle, haute, avec son arceau.
+  const canopy = mesh(new THREE.SphereGeometry(1, 48, 24), glass, 1.72, 9.9, ZC);
+  canopy.scale.set(0.55, 2.0, 0.48);
   airframe.add(canopy);
   const bow = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.035, 8, 40, Math.PI), dk);
-  bow.position.set(1.62, 14.6, ZC);
+  bow.position.set(1.72, 9.4, ZC);
+  bow.scale.set(1.22, 1, 1);
   bow.rotation.set(Math.PI / 2, Math.PI / 2, 0);
   airframe.add(bow);
-  // Perche de ravitaillement fixe et sonde de nez.
-  airframe.add(rod(V3(1.05, 17.5, ZC + 0.42), V3(1.2, 21.6, ZC + 0.5), 0.05, dk));
-  airframe.add(rod(V3(0.3, 24.5, ZC), V3(0.3, 25.6, ZC), 0.014, dk));
+  // Joues d'entrées d'air : elles habillent les conduits et les fondent dans le fuselage.
+  for (const [mirror, axisZ] of [[1, 0], [-1, -1.75]]) {
+    const rows = [3.7, 4.6, 5.4, 6.2, 7.05].map((y) => {
+      const c = ductCenter(y);
+      const r = y > 6.9 ? 0.68 : 0.74;
+      return [y, c.x, r, r, axisZ + mirror * c.z];
+    });
+    airframe.add(new THREE.Mesh(hullGeometry(rows, 1, 60, 40), skin));
+  }
+  // Perche de ravitaillement fixe, devant la verrière, et sonde de nez.
+  airframe.add(rod(V3(1.0, 11.0, ZC + 0.45), V3(1.45, 13.3, ZC + 0.55), 0.05, dk));
+  airframe.add(rod(V3(1.45, 13.3, ZC + 0.55), V3(1.42, 13.7, ZC + 0.55), 0.07, dk));
+  airframe.add(rod(V3(0.4, 15.6, ZC), V3(0.4, 16.4, ZC), 0.014, dk));
 
   for (const side of [1, -1]) {
-    // Aile delta, élevons au bord de fuite.
-    airframe.add(planform([[0, 5.0], [10.3, -3.0], [10.6, -4.3], [0, -4.4]], 0.16, skin, side, -0.08, 1.4));
-    for (const [s0, s1] of [[1.6, 5.5], [5.8, 9.8]]) {
-      airframe.add(planform([[s0, -4.42], [s1, -4.36], [s1, -3.75], [s0, -3.8]], 0.2, dk, side, -0.08, 1.4));
+    // Aile delta à faible envergure, élevons au bord de fuite.
+    airframe.add(planform([[0, 5.0], [5.6, -1.6], [5.8, -3.6], [0, -4.3]], 0.16, skin, side, -0.08, 1.4));
+    for (const pts of [[[0.9, -4.25], [2.9, -4.0], [2.9, -3.5], [0.9, -3.75]], [[3.2, -3.97], [5.6, -3.65], [5.6, -3.15], [3.2, -3.45]]]) {
+      airframe.add(planform(pts, 0.2, dk, side, -0.08, 1.4));
     }
-    // Canard au-dessus de l'entrée d'air.
-    airframe.add(planform([[0, 11.4], [3.0, 9.4], [3.1, 8.9], [0, 9.0]], 0.08, skin, side, 0.75, 0.7));
+    // Canard, haut sur l'épaule de l'entrée d'air, juste devant l'aile.
+    airframe.add(planform([[0, 8.2], [2.4, 6.6], [2.5, 6.1], [0, 6.2]], 0.08, skin, side, 0.95, 0.85));
     // Missile en bout d'aile : corps, ogive, empennage.
-    const tipZ = ZC + side * (1.4 + 10.45);
-    airframe.add(rod(V3(-0.12, -3.4, tipZ), V3(-0.12, 0.2, tipZ), 0.09, store));
-    airframe.add(mesh(new THREE.ConeGeometry(0.09, 0.35, 16), dk, -0.12, 0.37, tipZ));
+    const tipZ = ZC + side * (1.4 + 5.85);
+    airframe.add(rod(V3(-0.12, -3.4, tipZ), V3(-0.12, 0.0, tipZ), 0.09, store));
+    airframe.add(mesh(new THREE.ConeGeometry(0.09, 0.35, 16), dk, -0.12, 0.17, tipZ));
     for (let k = 0; k < 4; k++) {
       const fin = mesh(new THREE.BoxGeometry(0.02, 0.4, 0.26), dk, -0.12, -3.1, tipZ);
       fin.rotation.y = (k * Math.PI) / 2;
       airframe.add(fin);
     }
     // Bidon sous l'aile, sur son pylône.
-    const tank = mesh(new THREE.SphereGeometry(1, 28, 14), store, -0.75, -0.6, ZC + side * 6.2);
-    tank.scale.set(0.32, 1.6, 0.32);
+    const tank = mesh(new THREE.SphereGeometry(1, 28, 14), store, -0.78, -0.4, ZC + side * 4.4);
+    tank.scale.set(0.3, 1.5, 0.3);
     airframe.add(tank);
-    airframe.add(mesh(new THREE.BoxGeometry(0.5, 1.2, 0.08), dk, -0.35, -0.5, ZC + side * 6.2));
+    airframe.add(mesh(new THREE.BoxGeometry(0.46, 1.1, 0.08), dk, -0.36, -0.3, ZC + side * 4.4));
   }
-  // Dérive.
-  const finShape = new THREE.Shape([[1.2, 1.0], [4.4, 6.2], [5.6, 6.2], [5.4, 1.0]].map(([a, b]) => new THREE.Vector2(a, b)));
+  // Dérive, son carénage de tête et le carénage arrière à sa base.
+  const finShape = new THREE.Shape([[-0.8, 1.1], [2.8, 4.5], [3.9, 4.6], [4.3, 1.1]].map(([a, b]) => new THREE.Vector2(a, b)));
   const finGeo = new THREE.ExtrudeGeometry(finShape, { depth: 0.14, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 1 });
   finGeo.translate(0, 0, -0.07);
   finGeo.rotateZ(-Math.PI / 2);   // (−y, x) → (x, y)
   airframe.add(mesh(finGeo, skin, 0, 0, ZC));
+  airframe.add(rod(V3(4.55, -2.5, ZC), V3(4.6, -4.3, ZC), 0.11, dk));
+  airframe.add(rod(V3(1.3, -3.2, ZC), V3(1.25, -5.1, ZC), 0.2, skin));
 }
 const airMats = [];
 airframe.traverse((o) => { if (o.material && !airMats.includes(o.material)) airMats.push(o.material); });
@@ -1400,8 +1419,8 @@ const KEYS = [
 ];
 
 const INTRO_KEYS = [
-  { p: 0.0,  y: 9.0, L: 28, W: 20, fa: 0.5, el: 0.4 },
-  { p: 0.05, y: 9.0, L: 28, W: 20, fa: 0.5, el: 0.4 },
+  { p: 0.0,  y: 5.0, L: 24, W: 15, fa: 0.55, el: 0.5 },
+  { p: 0.05, y: 5.0, L: 24, W: 15, fa: 0.55, el: 0.5 },
   { p: 0.13, y: 0.5, L: 14, W: 7,  fa: 0.25, el: 0.5 },
 ];
 function introKey(pAll) {
