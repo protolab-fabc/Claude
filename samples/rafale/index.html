@@ -936,11 +936,17 @@ addHalves(['ab-top', 'ab-bottom'], shellProfile(AB, 0.03), MAT.silver(),
 }
 
 // --- Flamme de post-combustion ---
-let abGlowMat;
+let abGlowMat, abCoreMat, abCore;
 {
   const g = new THREE.Group();
   abGlowMat = MAT.abglow();
   g.add(lathe([[0.001, -1.55], [0.3, -1.7], [0.6, -2.3], [0.66, -3.4], [0.6, -4.2], [0.001, -4.4]], abGlowMat));
+  // Cœur blanc-jaune, plus étroit, qui respire au rythme de la combustion.
+  abCoreMat = MAT.abglow();
+  abCoreMat.color.set(0xfff2c8);
+  abCoreMat.emissive.set(0xffd27a);
+  abCore = lathe([[0.001, -1.7], [0.2, -1.9], [0.38, -2.5], [0.42, -3.4], [0.32, -4.1], [0.001, -4.5]], abCoreMat, 0, TAU, 48);
+  g.add(abCore);
   addPart('abflame', g, { dy: -2.6, order: 2, label: { text: 'Flamme de PC', r: 0.66, y: -3.0 } });
 }
 
@@ -1096,13 +1102,54 @@ const FLOWS = [
 ];
 
 // Diamants de choc : le jet supersonique se recomprime en losanges lumineux derrière la tuyère.
-const diamondMat = new THREE.MeshBasicMaterial({ color: 0xfff0c8, transparent: true, opacity: 0.75, depthWrite: false });
+const diamondMat = new THREE.MeshBasicMaterial({ color: 0xfff6d8, transparent: true, opacity: 0.9, depthWrite: false });
 const diamonds = new THREE.Group();
-[[-6.0, 0.26], [-6.62, 0.22], [-7.18, 0.18], [-7.68, 0.14], [-8.1, 0.1]].forEach(([y, r]) => {
-  const d = lathe([[0.001, 0.26], [r, 0], [0.001, -0.26]], diamondMat, 0, TAU, 32);
+[[-6.05, 0.34], [-6.8, 0.3], [-7.5, 0.25], [-8.15, 0.2], [-8.75, 0.15], [-9.3, 0.1]].forEach(([y, r], k) => {
+  const d = lathe([[0.001, 0.3], [r, 0], [0.001, -0.3]], diamondMat, 0, TAU, 32);
   d.position.y = y;
+  d.renderOrder = 2;
+  d.userData.phase = k * 1.2;
   diamonds.add(d);
 });
+// Panache de post-combustion : bleu-violet au col, puis jaune et orange, avec une turbulence qui file vers l'aval.
+const plumeMat = new THREE.ShaderMaterial({
+  transparent: true,
+  depthWrite: false,
+  side: THREE.DoubleSide,
+  uniforms: { time: { value: 0 }, vis: { value: 1 } },
+  vertexShader: /* glsl */`
+    varying vec3 vP;
+    varying float vRim;
+    void main() {
+      vP = position;
+      vec4 mv = modelViewMatrix * vec4(position, 1.0);
+      vRim = abs(dot(normalize(normalMatrix * normal), normalize(-mv.xyz)));
+      gl_Position = projectionMatrix * mv;
+    }
+  `,
+  fragmentShader: /* glsl */`
+    uniform float time, vis;
+    varying vec3 vP;
+    varying float vRim;
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float noise(vec2 p) {
+      vec2 i = floor(p), f = fract(p);
+      vec2 u = f * f * (3.0 - 2.0 * f);
+      return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
+    }
+    void main() {
+      float t = clamp((-5.55 - vP.y) / 5.0, 0.0, 1.0);
+      float ang = atan(vP.z, vP.x);
+      float n = noise(vec2(ang * 2.0, vP.y * 2.2 + time * 11.0)) * 0.6 + noise(vec2(ang * 5.0, vP.y * 5.0 + time * 21.0)) * 0.4;
+      vec3 col = mix(vec3(1.0, 0.92, 0.7), vec3(1.0, 0.62, 0.25), smoothstep(0.0, 0.45, t));
+      col = mix(col, vec3(0.95, 0.35, 0.2), smoothstep(0.45, 1.0, t));
+      float a = (1.0 - 0.9 * t) * (0.55 + 0.45 * vRim) * (0.7 + 0.5 * n) * vis;
+      gl_FragColor = vec4(col, clamp(a, 0.0, 1.0));
+    }
+  `,
+});
+const plume = lathe([[0.54, -5.55], [0.58, -6.3], [0.55, -7.3], [0.47, -8.4], [0.33, -9.6], [0.001, -10.6]], plumeMat, 0, TAU, 48);
+diamonds.add(plume);
 
 const flowGroup = new THREE.Group();
 engine.add(flowGroup);
@@ -1486,7 +1533,23 @@ function update(p, dt, time) {
   const combustor = partById.combustor;
   glowMat.emissiveIntensity = (0.8 + flicker * 0.5) * combustor.opacity;
   abGlowMat.emissiveIntensity = (0.8 + flicker * 0.6) * partById.abflame.opacity;
-  diamondMat.opacity = 0.75 * (1 + flicker * 0.4) * partById.nozzle.opacity;
+  abCoreMat.emissiveIntensity = (1.0 + flicker) * partById.abflame.opacity;
+  abCoreMat.opacity = 0.95 * partById.abflame.opacity;
+  if (!reduceMotion) {
+    const w = 1 + Math.sin(time * 12) * 0.06 + Math.sin(time * 29) * 0.03;
+    abCore.scale.set(w, 1 + Math.sin(time * 8) * 0.07 + Math.sin(time * 21) * 0.04, w);
+  }
+  // Jet : panache turbulent et diamants qui pulsent, chacun à son rythme.
+  diamondMat.opacity = 0.9 * (1 + flicker * 0.4) * partById.nozzle.opacity;
+  plumeMat.uniforms.vis.value = partById.nozzle.opacity;
+  plumeMat.uniforms.time.value = reduceMotion ? 0 : time;
+  if (!reduceMotion) {
+    for (const d of diamonds.children) {
+      if (d === plume) continue;
+      const sc = 1 + 0.1 * Math.sin(time * 13 + d.userData.phase) + 0.05 * Math.sin(time * 31 + d.userData.phase);
+      d.scale.set(sc, 1 + 0.06 * Math.sin(time * 9 + d.userData.phase), sc);
+    }
+  }
   diamonds.position.y = partById.nozzle.obj.position.y;
   axisPoint(0.75 + combustor.obj.position.y, fireLight.position);
   fireLight.intensity = (tCasing * 2 + 0.5) * combustor.opacity;
@@ -1520,7 +1583,7 @@ function update(p, dt, time) {
   // Décentrage optique : en paysage, le sujet glisse vers la droite pour libérer la colonne de texte,
   // davantage sur le hero où le titre est large.
   if (!portrait && innerWidth > 720) {
-    const shift = lerp(0.14, 0.05, smooth(0.04, 0.14, p));
+    const shift = lerp(0.09, 0.03, smooth(0.04, 0.14, p));
     camera.setViewOffset(innerWidth, innerHeight, -innerWidth * shift, 0, innerWidth, innerHeight);
   } else if (camera.view) camera.clearViewOffset();
   camera.position.copy(camPos);
