@@ -1419,15 +1419,39 @@ const KEYS = [
   { p: 1.0,   x: 0.8,  y: -5.0, L: 33,  W: 12,  az: 0.3,   el: 0.14 },
 ];
 
-function cameraKey(p) {
+// Accélération et freinage plus doux qu'un smoothstep : pas d'à-coup au départ ni à l'arrivée d'une image-clé.
+const smoother = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * t * (t * (t * 6 - 15) + 10); };
+// Pour chaque image-clé : point visé, direction de vue (repère du moteur) et distance.
+// Entre deux clés, la direction tourne sur la sphère et la distance varie en échelle logarithmique,
+// pour un zoom à vitesse régulière plutôt qu'un plongeon en ligne droite.
+function keyPose(k, out) {
+  const halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
+  const along = portrait ? 2 * halfTan : 2 * halfTan * camera.aspect;
+  const across = portrait ? 2 * halfTan * camera.aspect : 2 * halfTan;
+  out.dist = (Math.max((k.L * 1.08) / along, (k.W * 1.12) / across) + k.W * 0.3) * 0.86;
+  out.target.set(k.x, k.y, 0);
+  out.dir.set(Math.sin(k.az) * Math.cos(k.el), Math.sin(k.el), Math.cos(k.az) * Math.cos(k.el));
+  return out;
+}
+const poseA = { target: new THREE.Vector3(), dir: new THREE.Vector3(), dist: 1 };
+const poseB = { target: new THREE.Vector3(), dir: new THREE.Vector3(), dist: 1 };
+const qA = new THREE.Quaternion(), qB = new THREE.Quaternion();
+const FWD = new THREE.Vector3(0, 0, 1);
+function cameraPose(p, out) {
   let i = 0;
   while (i < KEYS.length - 2 && p > KEYS[i + 1].p) i++;
   const a = KEYS[i], b = KEYS[i + 1];
-  const t = smooth(a.p, b.p, p);
-  const out = {};
-  for (const k of ['x', 'y', 'L', 'W', 'az', 'el']) out[k] = lerp(a[k], b[k], t);
+  const t = smoother(a.p, b.p, p);
+  keyPose(a, poseA); keyPose(b, poseB);
+  out.target.lerpVectors(poseA.target, poseB.target, t);
+  qA.setFromUnitVectors(FWD, poseA.dir.normalize());
+  qB.setFromUnitVectors(FWD, poseB.dir.normalize());
+  out.dir.copy(FWD).applyQuaternion(qA.slerp(qB, t));
+  out.logDist = lerp(Math.log(poseA.dist), Math.log(poseB.dist), t);
   return out;
 }
+const wantPose = { target: new THREE.Vector3(), dir: new THREE.Vector3(), logDist: 0 };
+const curPose = { target: new THREE.Vector3(), dir: new THREE.Vector3(), logDist: 0 };
 
 // ------------------------------------------------------------------
 // DOM : panneaux, rail, étiquettes
@@ -1501,8 +1525,6 @@ const baseQuat = new THREE.Quaternion();
 const v = new THREE.Vector3();
 const camPos = new THREE.Vector3();
 const camTarget = new THREE.Vector3();
-const wantPos = new THREE.Vector3();
-const wantTarget = new THREE.Vector3();
 let first = true;
 
 function resize() {
@@ -1584,25 +1606,21 @@ function update(p, dt, time) {
   if (!reduceMotion) waterTex.offset.y = (time * 0.12) % 1;
 
   // Caméra
-  const ck = cameraKey(p);
-  const halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
-  // Cadrage un peu serré : le moteur occupe davantage l'écran.
-  // L se cadre le long de l'axe du moteur : en hauteur debout, en largeur couché.
-  const along = portrait ? 2 * halfTan : 2 * halfTan * camera.aspect;
-  const across = portrait ? 2 * halfTan * camera.aspect : 2 * halfTan;
-  const dist = (Math.max((ck.L * 1.08) / along, (ck.W * 1.12) / across) + ck.W * 0.3) * 0.86;
   // Point visé et direction de vue sont exprimés dans le repère du moteur, puis suivent sa pose.
-  wantTarget.set(ck.x, ck.y, 0).applyQuaternion(baseQuat);
-  v.set(Math.sin(ck.az) * Math.cos(ck.el), Math.sin(ck.el), Math.cos(ck.az) * Math.cos(ck.el)).applyQuaternion(baseQuat);
-  wantPos.copy(wantTarget).addScaledVector(v, dist);
-
-  const kc = reduceMotion || first ? 1 : 1 - Math.exp(-dt * 5);
-  camPos.lerp(wantPos, kc);
-  camTarget.lerp(wantTarget, kc);
+  cameraPose(p, wantPose);
+  wantPose.target.applyQuaternion(baseQuat);
+  wantPose.dir.applyQuaternion(baseQuat);
+  // Amortissement : on lisse la pose (cible, direction, distance), pas la position, pour garder l'arc.
+  const kc = reduceMotion || first ? 1 : 1 - Math.exp(-dt * 4);
+  curPose.target.lerp(wantPose.target, kc);
+  curPose.dir.lerp(wantPose.dir, kc).normalize();
+  curPose.logDist = lerp(curPose.logDist, wantPose.logDist, kc);
+  camTarget.copy(curPose.target);
+  camPos.copy(curPose.target).addScaledVector(curPose.dir, Math.exp(curPose.logDist));
   first = false;
   // Décentrage optique : en paysage, le sujet glisse vers la droite pour libérer la colonne de texte.
   if (!portrait && innerWidth > 720) {
-    const shift = lerp(0.16, 0.02, smooth(0.04, 0.14, p));
+    const shift = lerp(0.16, 0.02, smoother(KEYS[1].p, KEYS[2].p, p));
     camera.setViewOffset(innerWidth, innerHeight, -innerWidth * shift, 0, innerWidth, innerHeight);
   } else if (camera.view) camera.clearViewOffset();
   camera.position.copy(camPos);
