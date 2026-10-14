@@ -396,8 +396,8 @@ const fireLight = new THREE.PointLight(0xffa060, 0, 6, 1.6);
 scene.add(fireLight);
 
 // ------------------------------------------------------------------
-// Matériaux : une teinte franche par famille de pièces ; l'ASCII la reprend pour colorer
-// ses caractères, et l'éclairage en règle la densité.
+// Matériaux : des gris bien espacés, pour que chaque famille de pièces tombe sur une zone
+// différente de la palette ASCII. Les parties chaudes gardent leur teinte et virent à l'orange.
 // Une instance par pièce pour pouvoir atténuer chacune.
 // ------------------------------------------------------------------
 const ramp = new THREE.DataTexture(new Uint8Array([70, 140, 205, 255]), 4, 1, THREE.RedFormat);
@@ -405,16 +405,16 @@ ramp.minFilter = ramp.magFilter = THREE.NearestFilter;
 ramp.needsUpdate = true;
 const flat = (o) => () => new THREE.MeshToonMaterial({ gradientMap: ramp, ...o });
 const MAT = {
-  paint:  flat({ color: 0x3f7dff, side: THREE.DoubleSide }),   // carter externe : bleu
-  ti:     flat({ color: 0xc8f4ff }),                            // aubes, cône : blanc cyan
-  steel:  flat({ color: 0xa86bff, side: THREE.DoubleSide }),   // carter du cœur, brides : violet
-  dark:   flat({ color: 0xff3fb4 }),                            // disques, boîtiers : magenta
-  hot:    flat({ color: 0xff7a2e }),                            // turbines, pétales : orange
-  bronze: flat({ color: 0xffd23f, side: THREE.DoubleSide }),   // chambre, rampes : jaune
-  flap:   flat({ color: 0x2fe0c8, side: THREE.DoubleSide }),   // volets de tuyère : turquoise
-  hole:   flat({ color: 0x1a1030 }),
-  pipe:   flat({ color: 0xff3a3a }),                            // tuyauteries : rouge
-  silver: flat({ color: 0x8fd0ff, side: THREE.DoubleSide }),   // canal de post-combustion : bleu clair
+  paint:  flat({ color: 0xa4a6b4, side: THREE.DoubleSide }),   // carter externe : violet
+  ti:     flat({ color: 0xffffff }),                            // aubes, cône : blanc
+  steel:  flat({ color: 0x7c7f92, side: THREE.DoubleSide }),   // carter du cœur, brides : bleu-violet
+  dark:   flat({ color: 0x50525f }),                            // disques, boîtiers : bleu
+  hot:    flat({ color: 0xe08a52 }),                            // turbines, pétales : orange
+  bronze: flat({ color: 0xd8a868, side: THREE.DoubleSide }),   // chambre, rampes : orange clair
+  flap:   flat({ color: 0x8a8ca0, side: THREE.DoubleSide }),
+  hole:   flat({ color: 0x1a1a22 }),
+  pipe:   flat({ color: 0xd0603e }),                            // tuyauteries : orange vif
+  silver: flat({ color: 0xd2d4de, side: THREE.DoubleSide }),   // canal de post-combustion : rose
   glow:   flat({ color: 0xffd98a, emissive: 0xff9a40, emissiveIntensity: 1.0 }),
   abglow: flat({ color: 0xffc89a, emissive: 0xff7a40, emissiveIntensity: 1.0, transparent: true, opacity: 0.85 }),
 };
@@ -574,15 +574,15 @@ const ink = new THREE.ShaderMaterial({
           // Caractère orienté perpendiculairement au gradient de luminosité.
           float ax = abs(gx), ay = abs(gy);
           code = ax > ay * 2.0 ? 124.0 : ay > ax * 2.0 ? 45.0 : (gx * gy > 0.0 ? 92.0 : 47.0);
-          t = clamp(pow(lum, 0.8) * 1.3 + 0.3, 0.0, 1.0);
+          t = max(0.78, smoothstep(0.12, 0.85, lum));
         } else if (lum < 0.2) {
           code = ramp[int(clamp(lum / 0.2 * 9.0, 0.0, 9.0))];
-          t = lum * 1.4;
+          t = 0.05 + lum * 1.2;
         } else {
           // La phrase défile le long des rangées, décalée d'une rangée à l'autre.
           int idx = int(mod(id.x + id.y * 5.0 + step8, float(PHRASE_LEN)));
           code = phrase[idx];
-          t = clamp(pow(lum, 0.8) * 1.35, 0.0, 1.0);
+          t = smoothstep(0.12, 0.85, lum) * 0.92 + 0.08;
         }
         // Parasites : quelques caractères tirés au hasard, seulement pendant le mouvement.
         float g = hash(id + floor(phase * 1.5) * 0.37);
@@ -591,15 +591,14 @@ const ink = new THREE.ShaderMaterial({
 
       // Une onde lente fait respirer la palette sur la diagonale.
       t = clamp(t + 0.07 * sin(time * 1.3 + id.x * 0.08 + id.y * 0.05), 0.0, 1.0);
-      // Couleur : la teinte de la pièce, saturée et portée à pleine luminosité, mêlée à la palette.
-      float peak = max(c.r, max(c.g, c.b));
-      vec3 hue = peak > 0.02 ? c / peak : vec3(0.0);
-      hue = clamp(mix(vec3(luma(hue)), hue, 1.5), 0.0, 1.0);
-      vec3 ink = mix(palette(t), hue * (0.45 + 0.75 * t), peak > 0.02 ? 0.7 : 0.0);
+      vec3 ink = palette(t);
+      // Les parties chaudes (flamme, flux brûlés, turbines) virent à l'orange.
+      float warm = clamp((c.r - c.b) * 2.4, 0.0, 1.0);
+      ink = mix(ink, vec3(1.0, 0.58, 0.28) * (0.6 + t * 0.6), warm * 0.75);
 
       float m = code > 32.0 ? glyph(code, local) : 0.0;
       // Fond de cellule teinté : les formes restent lisibles même avec de tout petits caractères.
-      float fill = empty ? 0.0 : 0.16 * (0.3 + t);
+      float fill = empty ? 0.0 : 0.13 * (0.25 + t);
       col = BG + ink * fill + ink * m * 1.15;
       vec2 q = vUv - 0.5;
       col *= 1.0 - dot(q, q) * 0.8;
