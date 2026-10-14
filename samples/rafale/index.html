@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>M88 — carnet de bord</title>
-<meta name="description" content="Le bloc propulsif du Rafale — deux moteurs M88 et leurs entrées d'air — démonté pièce par pièce au fil du défilement, sur la mer du soir.">
+<meta name="description" content="Le M88, moteur du Rafale, démonté pièce par pièce au fil du défilement, sur la mer du soir.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Spectral:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
@@ -303,19 +303,19 @@
 </script>
 </head>
 <body>
-  <canvas id="scene" aria-label="Modèle 3D du bloc propulsif d'un Rafale qui se décompose au défilement"></canvas>
+  <canvas id="scene" aria-label="Modèle 3D d'un moteur M88 qui se décompose au défilement"></canvas>
   <div class="fallback">WebGL n'est pas disponible sur cet appareil — le modèle 3D ne peut pas s'afficher.</div>
 
   <svg id="labels" class="overlay" aria-hidden="true"></svg>
 
   <div class="overlay topbar">
-    <span><b>M88</b> &nbsp;/&nbsp; Bloc propulsif du Rafale</span>
+    <span><b>M88</b> &nbsp;/&nbsp; Moteur du Rafale</span>
     <span class="hide-sm">Maquette procédurale · non officielle</span>
   </div>
 
   <div class="overlay hero" id="hero">
-    <h1>Deux cœurs<br>pour un <em>Rafale</em></h1>
-    <p>Le bloc propulsif d'un Rafale : deux moteurs M88 nourris par des entrées d'air fixes. Faites défiler pour démonter le moteur droit, de l'entrée d'air jusqu'à la tuyère.</p>
+    <h1>Le cœur<br>d'un <em>Rafale</em></h1>
+    <p>Le M88, l'un des deux moteurs du Rafale. Faites défiler pour le démonter pièce par pièce, de la soufflante jusqu'à la tuyère.</p>
     <div class="scroll-hint"><i></i>Défiler</div>
   </div>
 
@@ -334,7 +334,7 @@
       <h3>Ordres de grandeur</h3>
       <p class="lede">Ordres de grandeur publics pour un moteur M88-2, à titre indicatif. La maquette simplifie la géométrie et les proportions ; elle n'est ni un plan ni un document officiel.</p>
       <dl class="specs">
-        <div><dt>Moteurs</dt><dd>2 × M88</dd></div>
+        <div><dt>Étages</dt><dd>3 BP + 6 HP</dd></div>
         <div><dt>Poussée sèche</dt><dd>≈ 50 kN</dd></div>
         <div><dt>Avec post-combustion</dt><dd>≈ 75 kN</dd></div>
         <div><dt>Masse d'un moteur</dt><dd>≈ 900 kg</dd></div>
@@ -646,25 +646,8 @@ function mesh(geo, mat, x = 0, y = 0, z = 0) { const m = new THREE.Mesh(geo, mat
 // Bague de section rectangulaire entre deux rayons, à la hauteur y.
 const ringProfile = (rIn, rOut, y, t) => [[rIn, y + t / 2], [rOut, y + t / 2], [rOut, y - t / 2], [rIn, y - t / 2], [rIn, y + t / 2]];
 
-// Entrée d'air fixe et conduit en S : le centre du conduit, de la bouche jusqu'à la face de soufflante.
-const DUCT = [V3(-0.05, 7.6, 0.6), V3(-0.05, 6.6, 0.55), V3(-0.02, 5.3, 0.32), V3(0, 4.2, 0.06), V3(0, 3.72, 0)];
-const ductCurve = new THREE.CatmullRomCurve3(DUCT);
-// Décalage du centre du conduit pour une hauteur y (l'air le suit dans l'entrée).
-function ductCenter(y) {
-  if (y >= DUCT[0].y) return { x: DUCT[0].x, z: DUCT[0].z };
-  if (y <= 3.72) return { x: 0, z: 0 };
-  for (let i = 0; i < DUCT.length - 1; i++) {
-    const a = DUCT[i], b = DUCT[i + 1];
-    if (y <= a.y && y >= b.y) {
-      const t = smooth(0, 1, (a.y - y) / (a.y - b.y)) * 0.5 + ((a.y - y) / (a.y - b.y)) * 0.5;
-      return { x: lerp(a.x, b.x, t), z: lerp(a.z, b.z, t) };
-    }
-  }
-  return { x: 0, z: 0 };
-}
-
 // ------------------------------------------------------------------
-// Assemblage : moteur droit (démonté) à z = 0, moteur gauche (assemblé) derrière.
+// Assemblage : un seul M88, axe Y, avant en +Y.
 // ------------------------------------------------------------------
 const engine = new THREE.Group();
 scene.add(engine);
@@ -757,24 +740,6 @@ function rod(a, b, radius, mat) {
 }
 const boltGeo = new THREE.CylinderGeometry(0.018, 0.018, 0.022, 6);
 const rivetGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.012, 6);
-
-// --- Entrée d'air et conduit en S ---
-{
-  const g = new THREE.Group();
-  const skin = MAT.paint(), steel = MAT.steel(), dark = MAT.dark();
-  g.add(new THREE.Mesh(new THREE.TubeGeometry(ductCurve, 120, 0.6, 40, false), skin));
-  // Lèvre d'entrée, cadres du conduit et bride de raccordement au moteur.
-  for (const [t, tube, mat] of [[0, 0.05, steel], [0.3, 0.022, steel], [0.55, 0.022, steel], [0.8, 0.022, steel], [1, 0.04, dark]]) {
-    const p = ductCurve.getPointAt(t);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.61, tube, 10, 64), mat);
-    ring.position.copy(p);
-    ring.lookAt(p.clone().add(ductCurve.getTangentAt(t)));
-    g.add(ring);
-  }
-  // Piège à couche limite : plaque de séparation entre l'entrée et le flanc du fuselage.
-  g.add(mesh(new THREE.BoxGeometry(1.1, 1.0, 0.04), dark, -0.05, 7.15, -0.03));
-  addPart('intake', g, { dy: 3.6, order: 6, label: { text: "Entrée d'air", r: 0.6, y: 5.6 } });
-}
 
 // --- Cône d'entrée et aubes directrices ---
 {
@@ -955,21 +920,6 @@ let abGlowMat;
   }
 }
 
-// --- Moteur gauche, assemblé : la référence qui reste en place ---
-{
-  const g = new THREE.Group();
-  const skin = MAT.paint(), flap = MAT.flap();
-  g.add(lathe(shellProfile(OUTER, 0.035), skin));
-  g.add(lathe(shellProfile(AB, 0.03), skin));
-  g.add(lathe([[0.75, -4.2], [0.6, -5.62], [0.55, -5.62], [0.72, -4.2], [0.75, -4.2]], flap));
-  const mirrored = new THREE.CatmullRomCurve3(DUCT.map((p) => V3(p.x, p.y, -p.z)));
-  g.add(new THREE.Mesh(new THREE.TubeGeometry(mirrored, 96, 0.6, 32, false), skin));
-  g.add(stage({ y: 3.42, hub: 0.25, tip: OUTER_R - 0.04, count: 22, chord: 0.12, pitch: 0.05, twist: 0.12, bladeMat: MAT.ti(), discMat: MAT.dark() }));
-  g.add(lathe([[0.001, 3.82], [0.1, 3.75], [0.2, 3.6], [0.25, 3.44], [0.25, 3.38]], MAT.ti()));
-  g.position.z = -1.75;
-  addPart('twin', g, { dz: -0.9, order: 0, label: { text: 'Moteur gauche', r: 0.76, y: -1.5 } });
-}
-
 // ------------------------------------------------------------------
 // Détails : brides boulonnées, rivets, boîtier d'accessoires, ferrures, tuyauteries.
 // ------------------------------------------------------------------
@@ -1045,14 +995,12 @@ const FLOWS = [
   {
     // Flux primaire : traverse le cœur.
     particles: 24, start: 9.5, end: -11,
-    center: ductCenter,
     speed: [[9.5, 3.6], [7.0, 3.2], [3.7, 3.0], [2.6, 2.6], [1.2, 2.0], [0.4, 2.6], [-0.4, 4.0], [-1.5, 4.4], [-4.2, 5.0],
             [-4.9, 7.0], [-5.6, 8.5], [-11, 9.0]],
     color: [[9.5, C(0x8ec3d6)], [3.6, C(0x8ec3d6)], [2.5, C(0xb9d6c8)], [1.2, C(0xf4d58a)], [0.4, C(0xf2a05a)],
             [-0.6, C(0xf08a5a)], [-1.6, C(0xf07a6a)], [-4.9, C(0xe0566a)], [-11, C(0xe6a0a0)]],
     radius(y, u) {
-      if (y > DUCT[0].y) return lerp(0.0, 0.5, u) + smooth(DUCT[0].y, 9.5, y) * 0.5 * u;
-      if (y > 3.72) return lerp(0.0, 0.45, u);
+      if (y > 3.5) return lerp(0.08, 0.46, u) + smooth(3.8, 9.5, y) * 0.45 * u;
       if (y > 2.6) return lerp(0.28, 0.48, u);
       if (y > -0.5) return lerp(0.34, coreR(y) - 0.06, u);
       if (y > -4.2) return lerp(0.05, 0.42, u);
@@ -1065,12 +1013,10 @@ const FLOWS = [
     // Flux secondaire : contourne le cœur dans le canal de dérivation, puis rejoint la post-combustion.
     bypass: true,
     particles: 18, start: 9.5, end: -10,
-    center: ductCenter,
     speed: [[9.5, 3.6], [7.0, 3.2], [3.7, 3.0], [2.6, 3.4], [-0.5, 3.6], [-4.2, 4.6], [-4.9, 7.0], [-5.6, 8.5], [-10, 9.0]],
     color: [[9.5, C(0x8ec3d6)], [-0.8, C(0x8ec3d6)], [-1.8, C(0xf2a05a)], [-4.9, C(0xf07a6a)], [-10, C(0xe6a0a0)]],
     radius(y, u) {
-      if (y > DUCT[0].y) return lerp(0.25, 0.56, u) + smooth(DUCT[0].y, 9.5, y) * 0.5;
-      if (y > 3.72) return lerp(0.3, 0.55, u);
+      if (y > 3.5) return lerp(0.5, 0.68, u) + smooth(3.8, 9.5, y) * 0.55;
       if (y > 2.6) return lerp(0.52, 0.66, u);
       if (y > -0.5) return lerp(coreR(y) + 0.04, 0.69, u);
       if (y > -4.2) return lerp(0.45, 0.68, u);
@@ -1162,7 +1108,7 @@ for (const f of FLOWS) {
 }
 
 // Quand le moteur s'éclate, l'air suit les pièces : on décale chaque y comme la pièce qui l'entoure.
-const FLOW_ANCHORS = [[5.4, 'intake'], [3.42, 'igv'], [2.98, 'lpc'], [1.86, 'hpc'], [0.75, 'combustor'], [0.04, 'turbines'],
+const FLOW_ANCHORS = [[3.6, 'spinner'], [3.42, 'igv'], [2.98, 'lpc'], [1.86, 'hpc'], [0.75, 'combustor'], [0.04, 'turbines'],
                       [-1.3, 'ab'], [-3.0, 'abflame'], [-4.9, 'nozzle']];
 function explodeOffset(y) {
   const off = (i) => partById[FLOW_ANCHORS[i][1]].obj.position.y;
@@ -1210,11 +1156,10 @@ function updateFlow(dt) {
         const visible = p.wait <= 0 && tau >= 0 && tau <= f.total;
         along(f, clamp(tau, 0, f.total), at);
         // Légère dérive aléatoire hors du moteur, plus ample dans le jet.
-        const amp = 0.12 * smooth(7.2, 9.5, at.y) + 0.25 * smooth(-6, -11, at.y);
+        const amp = 0.12 * smooth(5.5, 9.5, at.y) + 0.25 * smooth(-6, -11, at.y);
         const r = f.radius(at.y, p.u) + amp * Math.sin(at.y * 0.8 + p.wob);
         const a = p.a + at.twist + amp * 0.2 * Math.cos(at.y * 0.55 + p.wob);
-        const cc = f.center(at.y);
-        const x = Math.cos(a) * r + cc.x, y = at.y + at.off, z = Math.sin(a) * r + cc.z;
+        const x = Math.cos(a) * r, y = at.y + at.off, z = Math.sin(a) * r;
         // La traînée s'efface vers la queue ; la particule apparaît et s'éteint en douceur.
         const life = smooth(0, 0.35, tau) * smooth(f.total, f.total - 0.5, tau);
         const alpha = visible ? (s ** 1.6) * life : 0;
@@ -1246,46 +1191,41 @@ const CHAPTERS = [
   { id: 'core', num: '02', name: 'Le cœur', from: 0.27, to: 0.4,
     text: "Sous le second carter, le générateur de gaz : compresseurs, chambre annulaire et turbines, montés sur deux arbres qui tournent à des vitesses différentes." },
   { id: 'exploded', num: '03', name: 'Vue éclatée', from: 0.42, to: 0.6,
-    text: "Le moteur droit se démonte de l'entrée d'air à la tuyère ; le gauche reste en place. Dans le Rafale, ils sont logés côte à côte au fond du fuselage." },
-  { id: 'intake', num: '04', name: "Entrée d'air", from: 0.61, to: 0.665, focus: ['intake'],
-    text: "Fixe, sans rampe mobile, logée sous l'emplanture de l'aile. Le conduit en S ralentit l'air avant la soufflante et masque sa face aux ondes radar ; une plaque écarte la couche limite du fuselage.",
-    specs: [['Géométrie', 'fixe'], ['Conduit', 'en S']] },
-  { id: 'compressors', num: '05', name: 'Compresseurs', from: 0.67, to: 0.725, focus: ['spinner', 'igv', 'lpc', 'icase', 'hpc'],
+    text: "Un seul M88, démonté de la soufflante à la tuyère. Dans le Rafale, deux moteurs identiques sont logés côte à côte au fond du fuselage." },
+  { id: 'compressors', num: '05', name: 'Compresseurs', from: 0.61, to: 0.68, focus: ['spinner', 'igv', 'lpc', 'icase', 'hpc'],
     text: "Une grille d'aubes directrices, trois étages basse pression, puis six étages haute pression. Le carter intermédiaire sépare le flux froid, qui file vers l'arrière, du flux qui entre dans le cœur.",
     specs: [['Étages', '3 BP + 6 HP']] },
-  { id: 'hot', num: '06', name: 'Chambre et turbines', from: 0.73, to: 0.785, focus: ['combustor', 'turbines'],
+  { id: 'hot', num: '06', name: 'Chambre et turbines', from: 0.69, to: 0.76, focus: ['combustor', 'turbines'],
     text: "Une chambre annulaire, puis une seule roue de turbine haute pression et une seule basse pression. Chacune entraîne, par son arbre, le compresseur placé devant elle.",
     specs: [['Turbines', '1 HP + 1 BP']] },
-  { id: 'ab', num: '07', name: 'Post-combustion', from: 0.79, to: 0.845, focus: ['ab', 'abflame'],
+  { id: 'ab', num: '07', name: 'Post-combustion', from: 0.77, to: 0.84, focus: ['ab', 'abflame'],
     text: "Le mélangeur à lobes réunit flux chaud et flux froid ; les rampes y injectent du carburant, brûlé derrière les accroche-flammes dans l'oxygène encore disponible. La poussée passe d'environ 50 à 75 kN.",
     specs: [['Sans PC', '≈ 50 kN'], ['Avec PC', '≈ 75 kN']] },
-  { id: 'nozzle', num: '08', name: 'Tuyère', from: 0.85, to: 0.905, focus: ['nozzle'],
+  { id: 'nozzle', num: '08', name: 'Tuyère', from: 0.85, to: 0.91, focus: ['nozzle'],
     text: "Des pétales mobiles, actionnés par vérins, règlent la section : convergente-divergente à pleine poussée. Dans le jet, l'air se recomprime en diamants de choc." },
-  { id: 'outro', num: '09', name: 'Un bloc, deux moteurs', from: 0.92, to: 1.01,
-    text: "Deux moteurs pour la sécurité et la poussée, mais un seul trajet d'air à comprendre : entrer, comprimer, brûler, brûler encore, détendre." },
+  { id: 'outro', num: '08', name: 'Un trajet, cinq gestes', from: 0.93, to: 1.01,
+    text: "Moins de quatre mètres pour faire tout le travail : comprimer, brûler, détendre, brûler encore, accélérer. Le Rafale en porte deux, côte à côte." },
 ];
 
 // Images-clés caméra : y = point visé sur l'axe, L = longueur à cadrer le long de l'axe,
 // W = encombrement transversal, fa = décalage vers l'avant (+) ou l'arrière (−), el = élévation.
 const KEYS = [
-  { p: 0.0,   y: 1.6,  L: 18,  W: 5,   fa: 0.85, el: 0.34 },
-  { p: 0.05,  y: 1.6,  L: 18,  W: 5,   fa: 0.85, el: 0.34 },
-  { p: 0.17,  y: 1.2,  L: 9,   W: 6,   fa: 0.45, el: 0.5 },
-  { p: 0.33,  y: 1.0,  L: 8,   W: 5,   fa: 0.2,  el: 0.42 },
-  { p: 0.5,   y: 0.6,  L: 23,  W: 8,   fa: 0.06, el: 0.32 },
-  { p: 0.59,  y: 0.6,  L: 23,  W: 8,   fa: 0.06, el: 0.32 },
-  { p: 0.62,  y: 8.9,  L: 5.5, W: 3,   fa: 0.6,  el: 0.3 },
-  { p: 0.655, y: 8.9,  L: 5.5, W: 3,   fa: 0.5,  el: 0.34 },
-  { p: 0.68,  y: 4.3,  L: 6,   W: 2.6, fa: 0.4,  el: 0.3 },
-  { p: 0.715, y: 4.3,  L: 6,   W: 2.6, fa: 0.3,  el: 0.32 },
-  { p: 0.74,  y: 0.0,  L: 3,   W: 2.2, fa: 0.2,  el: 0.4 },
-  { p: 0.775, y: 0.0,  L: 3,   W: 2.2, fa: 0.1,  el: 0.42 },
-  { p: 0.8,   y: -4.6, L: 5,   W: 2.6, fa: -0.2, el: 0.36 },
-  { p: 0.835, y: -4.6, L: 5,   W: 2.6, fa: -0.3, el: 0.38 },
-  { p: 0.86,  y: -8.6, L: 4.5, W: 2.6, fa: -0.6, el: 0.3 },
+  { p: 0.0,   y: -0.6, L: 12,  W: 4.5, fa: 0.85, el: 0.34 },
+  { p: 0.05,  y: -0.6, L: 12,  W: 4.5, fa: 0.85, el: 0.34 },
+  { p: 0.17,  y: 0.4,  L: 8,   W: 5.5, fa: 0.45, el: 0.5 },
+  { p: 0.33,  y: 0.4,  L: 7,   W: 4.5, fa: 0.2,  el: 0.42 },
+  { p: 0.5,   y: -1.0, L: 18,  W: 6,   fa: 0.06, el: 0.32 },
+  { p: 0.59,  y: -1.0, L: 18,  W: 6,   fa: 0.06, el: 0.32 },
+  { p: 0.625, y: 4.3,  L: 6,   W: 2.6, fa: 0.4,  el: 0.3 },
+  { p: 0.665, y: 4.3,  L: 6,   W: 2.6, fa: 0.3,  el: 0.32 },
+  { p: 0.705, y: 0.0,  L: 3,   W: 2.2, fa: 0.2,  el: 0.4 },
+  { p: 0.745, y: 0.0,  L: 3,   W: 2.2, fa: 0.1,  el: 0.42 },
+  { p: 0.785, y: -4.6, L: 5,   W: 2.6, fa: -0.2, el: 0.36 },
+  { p: 0.825, y: -4.6, L: 5,   W: 2.6, fa: -0.3, el: 0.38 },
+  { p: 0.865, y: -8.6, L: 4.5, W: 2.6, fa: -0.6, el: 0.3 },
   { p: 0.895, y: -8.6, L: 4.5, W: 2.6, fa: -0.7, el: 0.32 },
-  { p: 0.96,  y: 0.6,  L: 23,  W: 8,   fa: 0.12, el: 0.36 },
-  { p: 1.0,   y: 0.6,  L: 23,  W: 8,   fa: 0.14, el: 0.38 },
+  { p: 0.96,  y: -1.0, L: 18,  W: 6,   fa: 0.12, el: 0.36 },
+  { p: 1.0,   y: -1.0, L: 18,  W: 6,   fa: 0.14, el: 0.38 },
 ];
 
 function cameraKey(p) {
@@ -1415,7 +1355,6 @@ function update(p, dt, time) {
       part.obj.position.x = part.splitX * t + Math.sign(part.splitX) * 0.8 * tAxial;
     }
     part.obj.position.y = part.dy * tAxial;
-    if (part.dz) part.obj.position.z = (part.id === 'twin' ? -1.75 : 0) + part.dz * tAxial;
 
     if (part.stages) {
       const center = part.stages.reduce((s, st) => s + st.userData.baseY, 0) / part.stages.length;
