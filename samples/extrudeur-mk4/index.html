@@ -3,28 +3,31 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Nextruder — vue éclatée</title>
+<title>Nextruder — vue éclatée cyberpunk</title>
 <meta name="description" content="La tête d'impression d'une Prusa MK4 qui se décompose pièce par pièce au fil du défilement.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&family=Chakra+Petch:wght@500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0c0f;
-    --bg-raised: #12151a;
-    --ink: #ebe8e1;
-    --muted: #8d9198;
-    --faint: #3a3f46;
-    --accent: #ff7a2f;
-    --display: "Archivo", system-ui, sans-serif;
+    --bg: #0d0820;
+    --bg-raised: #150c2e;
+    --ink: #f3efff;
+    --muted: #b3a6d6;
+    --line: #07040f;
+    --yellow: #fcee0a;
+    --magenta: #ff2a6d;
+    --cyan: #05d9e8;
+    --violet: #3a1f6e;
+    --display: "Chakra Petch", system-ui, sans-serif;
     --sans: "Archivo", system-ui, sans-serif;
     --mono: "JetBrains Mono", ui-monospace, monospace;
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   }
 
   * { box-sizing: border-box; }
-  html { background: var(--bg); scrollbar-color: var(--faint) var(--bg); }
-  ::selection { background: var(--accent); color: var(--bg); }
+  html { background: var(--bg); scrollbar-color: var(--magenta) var(--bg); }
+  ::selection { background: var(--yellow); color: var(--line); }
   body {
     margin: 0;
     background: var(--bg);
@@ -41,58 +44,78 @@
     display: block;
   }
 
-  /* Les overlays fixes ne doivent jamais capter le scroll ou les clics. */
   .overlay { position: fixed; pointer-events: none; z-index: 2; }
 
+  /* Barre du haut : une étiquette de case de BD */
   .topbar {
     top: 0; left: 0; right: 0;
     display: flex;
     justify-content: space-between;
-    align-items: baseline;
-    padding: 20px 28px;
+    align-items: center;
+    padding: 18px 28px;
+    font-family: var(--display);
     font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
     color: var(--muted);
   }
-  .topbar b { color: var(--ink); font-weight: 600; }
+  .topbar b {
+    display: inline-block;
+    padding: 3px 8px 2px;
+    margin-right: 6px;
+    background: var(--yellow);
+    color: var(--line);
+    font-weight: 700;
+    border: 2px solid var(--line);
+    box-shadow: 3px 3px 0 var(--magenta);
+  }
 
   /* Hero */
   .hero {
     left: 28px; right: 28px; bottom: 9vh;
-    max-width: 760px;
+    max-width: 720px;
   }
   .hero h1 {
     font-family: var(--display);
-    font-weight: 650;
-    font-stretch: 72%;
-    font-size: clamp(44px, 6.6vw, 96px);
-    line-height: 0.94;
-    letter-spacing: -0.025em;
+    font-weight: 700;
+    font-size: clamp(48px, 7.4vw, 96px);
+    line-height: 0.9;
+    letter-spacing: -0.015em;
+    text-transform: uppercase;
     margin: 0 0 22px;
+    color: var(--yellow);
+    /* Contour encré + décalage magenta, comme une impression mal calée */
+    -webkit-text-stroke: 2px var(--line);
+    paint-order: stroke fill;
+    text-shadow: 5px 5px 0 var(--magenta), -2px -2px 0 var(--cyan);
     text-wrap: balance;
   }
-  .hero h1 em { color: var(--accent); font-style: normal; }
+  .hero h1 em { font-style: normal; color: var(--cyan); text-shadow: 5px 5px 0 var(--magenta); }
   .hero p {
     margin: 0;
     max-width: 40ch;
-    color: var(--muted);
+    color: var(--ink);
     font-size: 16px;
     line-height: 1.55;
+    text-shadow: 0 1px 0 var(--line);
   }
   .scroll-hint {
     margin-top: 28px;
     display: inline-flex;
     gap: 10px;
     align-items: center;
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.08em;
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--cyan);
   }
   .scroll-hint i {
     display: block;
-    width: 1px; height: 28px;
-    background: linear-gradient(var(--ink), transparent);
+    width: 2px; height: 28px;
+    background: linear-gradient(var(--cyan), transparent);
     transform-origin: top;
     animation: hint 1.8s var(--ease-out) infinite;
   }
@@ -102,38 +125,51 @@
     100% { transform: scaleY(1); opacity: 0; }
   }
 
-  /* Panneaux de chapitre */
+  /* Panneaux : cartouches de BD, coin coupé, ombre portée magenta */
   .panel {
     left: 28px; bottom: 9vh;
-    width: min(380px, calc(100vw - 56px));
+    width: min(400px, calc(100vw - 56px));
     opacity: 0;
     will-change: opacity, transform;
+    /* Contour encré qui suit le coin coupé, puis ombre portée magenta */
+    filter: drop-shadow(2px 0 0 var(--line)) drop-shadow(-2px 0 0 var(--line))
+            drop-shadow(0 2px 0 var(--line)) drop-shadow(0 -2px 0 var(--line))
+            drop-shadow(6px 6px 0 var(--magenta));
+  }
+  .panel .box {
+    padding: 20px 22px 22px;
+    background: var(--yellow);
+    color: var(--line);
+    clip-path: polygon(0 0, calc(100% - 22px) 0, 100% 22px, 100% 100%, 0 100%);
+    position: relative;
   }
   .panel h2 {
     font-family: var(--display);
-    font-weight: 620;
-    font-stretch: 75%;
-    font-size: clamp(34px, 4vw, 52px);
-    line-height: 1;
+    font-weight: 700;
+    font-size: clamp(30px, 3.4vw, 44px);
+    line-height: 0.95;
+    text-transform: uppercase;
     letter-spacing: -0.01em;
-    margin: 0 0 14px;
+    margin: 0 0 12px;
   }
   .panel p {
     margin: 0;
-    color: #b9bcc1;
     font-size: 15px;
-    line-height: 1.6;
+    line-height: 1.55;
+    font-weight: 500;
   }
   .panel dl {
-    margin: 18px 0 0;
+    margin: 16px 0 0;
+    padding-top: 12px;
+    border-top: 2px solid var(--line);
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: 6px 18px;
+    gap: 4px 16px;
     font-family: var(--mono);
     font-size: 12px;
   }
-  .panel dt { color: var(--muted); }
-  .panel dd { margin: 0; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .panel dt { opacity: 0.7; }
+  .panel dd { margin: 0; font-weight: 500; font-variant-numeric: tabular-nums; }
 
   /* Rail de progression */
   .rail {
@@ -152,44 +188,57 @@
     justify-content: flex-end;
     gap: 10px;
     padding: 6px 0;
-    font-family: var(--sans);
+    font-family: var(--display);
+    font-weight: 600;
     font-size: 12px;
-    color: var(--faint);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--violet);
     transition: color 200ms ease;
   }
-  .rail button span { white-space: nowrap; opacity: 0; transform: translateX(6px); transition: opacity 200ms ease, transform 200ms var(--ease-out); }
+  .rail button span {
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateX(6px);
+    transition: opacity 200ms ease, transform 200ms var(--ease-out);
+  }
   .rail button i {
     display: block;
-    width: 14px; height: 1px;
+    width: 14px; height: 3px;
     background: currentColor;
+    transform: skewX(-30deg);
     transition: width 200ms var(--ease-out);
   }
-  .rail button.active { color: var(--ink); }
-  .rail button.active i { width: 28px; background: var(--accent); }
+  .rail button.active { color: var(--cyan); }
+  .rail button.active i { width: 30px; background: var(--magenta); }
   .rail button.active span { opacity: 1; transform: none; }
   @media (hover: hover) and (pointer: fine) {
-    .rail button:hover { color: var(--ink); }
+    .rail button:hover { color: var(--cyan); }
     .rail button:hover span { opacity: 1; transform: none; }
   }
-  .rail button:focus-visible { outline: 1px solid var(--accent); outline-offset: 4px; }
+  .rail button:focus-visible { outline: 2px solid var(--yellow); outline-offset: 4px; }
 
   .progress {
     left: 0; bottom: 0;
-    height: 2px;
+    height: 4px;
     width: 100%;
-    background: var(--accent);
+    background: var(--yellow);
+    box-shadow: 0 -2px 0 var(--line);
     transform-origin: left;
     transform: scaleX(0);
   }
 
+  /* Étiquettes : vignettes jaunes à contour encré */
   #labels { inset: 0; width: 100%; height: 100%; overflow: visible; }
-  #labels line { stroke: var(--muted); stroke-width: 1; }
-  #labels circle { fill: var(--accent); }
+  #labels line { stroke: var(--cyan); stroke-width: 2; }
+  #labels circle { fill: var(--magenta); stroke: var(--line); stroke-width: 2; }
+  #labels rect { fill: var(--yellow); stroke: var(--line); stroke-width: 2; }
   #labels text {
-    fill: var(--ink);
-    font-family: var(--mono);
-    font-size: 11px;
-    letter-spacing: 0.06em;
+    fill: var(--line);
+    font-family: var(--display);
+    font-weight: 700;
+    font-size: 12px;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
   }
 
@@ -199,40 +248,52 @@
     position: relative;
     z-index: 3;
     background: var(--bg-raised);
-    border-top: 1px solid #1f242b;
+    border-top: 4px solid var(--line);
+    box-shadow: 0 -4px 0 var(--magenta);
     padding: 96px 28px 64px;
   }
   footer .inner { max-width: 1120px; margin: 0 auto; }
   footer h3 {
     font-family: var(--display);
-    font-weight: 620;
-    font-stretch: 75%;
+    font-weight: 700;
     font-size: clamp(36px, 5vw, 64px);
     line-height: 1;
-    margin: 0 0 12px;
+    text-transform: uppercase;
+    color: var(--yellow);
+    -webkit-text-stroke: 2px var(--line);
+    paint-order: stroke fill;
+    text-shadow: 4px 4px 0 var(--magenta);
+    margin: 0 0 14px;
   }
-  footer .lede { color: var(--muted); max-width: 52ch; line-height: 1.6; margin: 0 0 56px; }
+  footer .lede { color: var(--muted); max-width: 56ch; line-height: 1.6; margin: 0 0 56px; }
   .specs {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    border-top: 1px solid #262b33;
+    gap: 18px;
+    margin: 0;
   }
-  .specs div { padding: 22px 20px 22px 0; border-bottom: 1px solid #262b33; }
+  .specs div {
+    padding: 18px 20px;
+    background: var(--bg);
+    border: 2px solid var(--cyan);
+    box-shadow: 4px 4px 0 var(--magenta);
+  }
   .specs dt {
-    font-family: var(--mono);
-    font-size: 11px;
+    font-family: var(--display);
+    font-weight: 600;
+    font-size: 12px;
     letter-spacing: 0.08em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--cyan);
     margin-bottom: 10px;
   }
   .specs dd {
     margin: 0;
     font-family: var(--display);
-    font-weight: 500;
-    font-stretch: 80%;
+    font-weight: 700;
     font-size: 40px;
     line-height: 1;
+    color: var(--yellow);
     font-variant-numeric: tabular-nums;
   }
   .colophon {
@@ -241,8 +302,7 @@
     flex-wrap: wrap;
     justify-content: space-between;
     gap: 12px;
-    font-family: var(--mono);
-    font-size: 11px;
+    font-size: 12px;
     color: var(--muted);
   }
 
@@ -259,23 +319,15 @@
   .no-webgl #scene { display: none; }
 
   @media (max-width: 720px) {
-    .topbar { padding: 16px; }
+    .topbar { padding: 14px 16px; font-size: 11px; }
     .topbar .hide-sm { display: none; }
     .hero { left: 16px; right: 16px; bottom: 6vh; }
-    .panel {
-      left: 16px; right: 16px; bottom: 16px;
-      width: auto;
-      padding: 18px;
-      background: rgba(10, 12, 15, 0.72);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid #1f242b;
-      border-radius: 14px;
-    }
+    .panel { left: 16px; right: 22px; bottom: 18px; width: auto; }
+    .panel .box { padding: 16px 18px 18px; }
     .panel p { font-size: 14px; }
     .panel dl { display: none; }
-    #labels text { font-size: 9px; letter-spacing: 0.04em; }
-    .rail { right: 12px; top: 72px; transform: none; }
+    #labels text { font-size: 9px; letter-spacing: 0.02em; }
+    .rail { right: 12px; top: 64px; transform: none; }
     .rail button span { display: none; }
     footer { padding: 64px 16px 48px; }
     .specs dd { font-size: 32px; }
@@ -336,7 +388,6 @@
 
 <script type="module">
 import * as THREE from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -355,53 +406,151 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const canvas = document.getElementById('scene');
 let renderer;
 try {
-  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
 } catch (err) {
   document.body.classList.add('no-webgl');
   throw err;
 }
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
-renderer.outputColorSpace = THREE.SRGBColorSpace;
+const PR = Math.min(devicePixelRatio, 2);
+renderer.setPixelRatio(PR);
+renderer.autoClear = false;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a0c0f);
-scene.fog = new THREE.Fog(0x0a0c0f, 40, 110);
-
-const pmrem = new THREE.PMREMGenerator(renderer);
-scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
-
 const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 300);
 
-scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x14100c, 0.4));
-const key = new THREE.DirectionalLight(0xffffff, 2.2);
+// Éclairage « dessin animé » : une clé blanche, deux contre-jours néon.
+scene.add(new THREE.AmbientLight(0x6a4ab0, 1.1));
+const key = new THREE.DirectionalLight(0xffffff, 2.0);
 key.position.set(8, 12, 10);
 scene.add(key);
-const rim = new THREE.DirectionalLight(0x88aaff, 1.5);
-rim.position.set(-10, 4, -8);
-scene.add(rim);
-const heatLight = new THREE.PointLight(0xff5a1a, 0, 5, 1.6);
+const rimMagenta = new THREE.DirectionalLight(0xff2a6d, 2.6);
+rimMagenta.position.set(-10, 4, -8);
+scene.add(rimMagenta);
+const rimCyan = new THREE.DirectionalLight(0x05d9e8, 1.6);
+rimCyan.position.set(10, -4, -6);
+scene.add(rimCyan);
+const heatLight = new THREE.PointLight(0xff2a6d, 0, 5, 1.6);
 scene.add(heatLight);
 
 // ------------------------------------------------------------------
-// Matériaux — une instance par pièce pour pouvoir atténuer chacune.
+// Matériaux en aplats (3 tons) — une instance par pièce pour pouvoir atténuer chacune.
 // ------------------------------------------------------------------
-const std = (o) => () => new THREE.MeshStandardMaterial(o);
+const ramp = new THREE.DataTexture(new Uint8Array([70, 150, 255]), 3, 1, THREE.RedFormat);
+ramp.minFilter = ramp.magFilter = THREE.NearestFilter;
+ramp.needsUpdate = true;
+const toon = (o) => () => new THREE.MeshToonMaterial({ gradientMap: ramp, ...o });
 const MAT = {
-  orange:   std({ color: 0xee6a2c, metalness: 0.0, roughness: 0.55 }),
-  black:    std({ color: 0x24272c, metalness: 0.0, roughness: 0.5 }),
-  alu:      std({ color: 0xc2c6cc, metalness: 0.9, roughness: 0.32 }),
-  steel:    std({ color: 0x8a9098, metalness: 0.95, roughness: 0.3 }),
-  dark:     std({ color: 0x2f343b, metalness: 0.7, roughness: 0.45 }),
-  brass:    std({ color: 0xcfa75a, metalness: 1.0, roughness: 0.28 }),
-  nylon:    std({ color: 0xd9d6cf, metalness: 0.0, roughness: 0.6 }),
-  copper:   std({ color: 0xc27a4a, metalness: 0.9, roughness: 0.35 }),
-  heater:   std({ color: 0x2a1a14, metalness: 0.6, roughness: 0.4, emissive: 0xff3a0a, emissiveIntensity: 0.9 }),
-  magnet:   std({ color: 0x9aa2ab, metalness: 1.0, roughness: 0.2 }),
-  filament: std({ color: 0x2fb3a8, metalness: 0.0, roughness: 0.35 }),
-  ptfe:     std({ color: 0xffffff, metalness: 0.0, roughness: 0.2, transparent: true, opacity: 0.35, depthWrite: false }),
+  orange:   toon({ color: 0xfcee0a }),
+  black:    toon({ color: 0x3a2466 }),
+  alu:      toon({ color: 0xa9bce6 }),
+  steel:    toon({ color: 0x8696c8 }),
+  dark:     toon({ color: 0x2b1d4f }),
+  brass:    toon({ color: 0xff9a3c }),
+  nylon:    toon({ color: 0xf3efff }),
+  copper:   toon({ color: 0xff2a6d }),
+  heater:   toon({ color: 0x2a0a1a, emissive: 0xff2a6d, emissiveIntensity: 1.2 }),
+  magnet:   toon({ color: 0x05d9e8 }),
+  filament: toon({ color: 0x05d9e8, emissive: 0x05d9e8, emissiveIntensity: 0.45 }),
+  ptfe:     toon({ color: 0xffffff, transparent: true, opacity: 0.3, depthWrite: false }),
 };
+
+// Passes : couleur (+ profondeur), normales, puis un shader qui encre les contours,
+// trame les ombres en points et peint le fond.
+const colorRT = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType });
+colorRT.depthTexture = new THREE.DepthTexture(1, 1);
+const normalRT = new THREE.WebGLRenderTarget(1, 1);
+const normalMat = new THREE.MeshNormalMaterial();
+const post = new THREE.ShaderMaterial({
+  depthTest: false,
+  depthWrite: false,
+  uniforms: {
+    tColor: { value: colorRT.texture },
+    tDepth: { value: colorRT.depthTexture },
+    tNormal: { value: normalRT.texture },
+    resolution: { value: new THREE.Vector2(1, 1) },
+    near: { value: camera.near },
+    far: { value: camera.far },
+    time: { value: 0 },
+    pr: { value: PR },
+    boil: { value: reduceMotion ? 0 : 1 },
+  },
+  vertexShader: /* glsl */`
+    varying vec2 vUv;
+    void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
+  `,
+  fragmentShader: /* glsl */`
+    #include <packing>
+    uniform sampler2D tColor, tDepth, tNormal;
+    uniform vec2 resolution;
+    uniform float near, far, time, pr, boil;
+    varying vec2 vUv;
+
+    const vec3 INK = vec3(0.027, 0.016, 0.059);
+    const vec3 NEON = vec3(0.02, 0.85, 0.91);
+    const vec3 MAGENTA = vec3(1.0, 0.165, 0.427);
+
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    bool isBg(vec2 uv) { return texture2D(tDepth, uv).x >= 0.99999; }
+    float viewZ(vec2 uv) { return -perspectiveDepthToViewZ(texture2D(tDepth, uv).x, near, far); }
+    vec3 nrm(vec2 uv) { return texture2D(tNormal, uv).xyz * 2.0 - 1.0; }
+
+    // Trame de points à 45° : r ∈ [0, 0.5] rayon relatif du point dans sa cellule.
+    float halftone(float cellPx, float r) {
+      vec2 p = gl_FragCoord.xy / (cellPx * pr);
+      p = mat2(0.7071, -0.7071, 0.7071, 0.7071) * p;
+      return 1.0 - smoothstep(r - 0.06, r + 0.06, length(fract(p) - 0.5));
+    }
+
+    void main() {
+      vec2 texel = 1.0 / resolution;
+      // Le trait « bout » à 8 images/s, comme une animation dessinée à la main.
+      float f = floor(time * 8.0);
+      vec2 uv = vUv + (vec2(hash(vUv * 91.0 + f), hash(vUv * 37.0 - f)) - 0.5) * texel * 1.6 * boil;
+      float w = 1.25 * pr;
+
+      bool bg = isBg(uv);
+      float z = bg ? 0.0 : viewZ(uv);
+      vec3 n = nrm(uv);
+      float edgeD = 0.0, edgeN = 0.0;
+      float bgN = 0.0;
+      vec2 o[4];
+      o[0] = vec2(w, 0.0); o[1] = vec2(-w, 0.0); o[2] = vec2(0.0, w); o[3] = vec2(0.0, -w);
+      for (int i = 0; i < 4; i++) {
+        vec2 q = uv + o[i] * texel;
+        if (isBg(q)) { bgN += 1.0; continue; }
+        if (bg) continue;
+        edgeD = max(edgeD, abs(viewZ(q) - z) / max(z, 0.001));
+        edgeN = max(edgeN, 1.0 - dot(n, nrm(q)));
+      }
+      bool silhouette = (bg && bgN < 4.0) || (!bg && bgN > 0.0);
+      bool ink = !bg && (edgeD > 0.025 || edgeN > 0.35);
+
+      // Fond : nuit violette, trame magenta qui monte du bas, lignes de balayage.
+      float y = vUv.y;
+      vec3 back = mix(vec3(0.17, 0.04, 0.27), vec3(0.05, 0.03, 0.13), smoothstep(0.0, 0.85, y));
+      back = mix(back, MAGENTA * 0.55, halftone(9.0, 0.42 * (1.0 - smoothstep(0.0, 0.55, y))) * 0.55);
+
+      vec4 src = texture2D(tColor, vUv);
+      vec3 c = pow(clamp(src.rgb, 0.0, 1.0), vec3(1.0 / 2.2));
+      vec3 col;
+      if (bg) {
+        col = back * (1.0 - sqrt(src.a)) + c;
+      } else {
+        float lum = dot(c, vec3(0.2126, 0.7152, 0.0722));
+        float dots = halftone(5.0, clamp(0.62 - lum * 1.15, 0.0, 0.5));
+        col = mix(c, c * 0.3 + INK * 0.5, dots * 0.9);
+      }
+      if (ink) col = INK;
+      if (silhouette) col = NEON;
+
+      col *= 0.95 + 0.05 * step(0.5, fract(gl_FragCoord.y / (3.0 * pr)));
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `,
+});
+const postScene = new THREE.Scene();
+postScene.add(new THREE.Mesh(new THREE.PlaneGeometry(2, 2), post));
+const postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
 // ------------------------------------------------------------------
 // Géométries
@@ -777,8 +926,8 @@ for (const c of CHAPTERS) {
   if (c.id === 'hero') { c.el = heroEl; continue; }
   const el = document.createElement('section');
   el.className = 'overlay panel';
-  el.innerHTML = `<h2>${c.name}</h2><p>${c.text}</p>` +
-    (c.specs ? `<dl>${c.specs.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : '');
+  el.innerHTML = `<div class="box"><h2>${c.name}</h2><p>${c.text}</p>` +
+    (c.specs ? `<dl>${c.specs.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}</dl>` : '') + '</div>';
   panelsEl.appendChild(el);
   c.el = el;
 
@@ -811,12 +960,13 @@ for (const part of labelled) {
   const g = document.createElementNS(SVG, 'g');
   const line = document.createElementNS(SVG, 'line');
   const dot = document.createElementNS(SVG, 'circle');
-  dot.setAttribute('r', 2.5);
+  dot.setAttribute('r', 4);
+  const tag = document.createElementNS(SVG, 'rect');
   const text = document.createElementNS(SVG, 'text');
   text.textContent = part.label;
-  g.append(line, dot, text);
+  g.append(line, tag, dot, text);
   labelsSvg.appendChild(g);
-  part.nodes = { line, dot, text };
+  part.nodes = { line, dot, tag, text };
 }
 
 // ------------------------------------------------------------------
@@ -833,6 +983,9 @@ let angle = 0, fanAngle = 0;
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h, false);
+  colorRT.setSize(w * PR, h * PR);
+  normalRT.setSize(w * PR, h * PR);
+  post.uniforms.resolution.value.set(w * PR, h * PR);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   portrait = camera.aspect < 0.9;
@@ -967,10 +1120,10 @@ function placeLabels() {
     if (Math.hypot(dx, dy) < 1) dx = 1;
     const len = Math.hypot(dx, dy);
     dx /= len; dy /= len;
-    const pxR = 34 + Math.min(40, radius * 7);
+    const pxR = 40 + Math.min(40, radius * 7);
     const tx = px + dx * pxR * 0.45, ty = py + dy * pxR * 0.45;
     const ex = px + dx * pxR, ey = py + dy * pxR;
-    const { line, dot, text } = part.nodes;
+    const { line, dot, tag, text } = part.nodes;
     line.setAttribute('x1', tx); line.setAttribute('y1', ty);
     line.setAttribute('x2', ex); line.setAttribute('y2', ey);
     dot.setAttribute('cx', tx); dot.setAttribute('cy', ty);
@@ -979,6 +1132,9 @@ function placeLabels() {
     text.setAttribute('y', ey + (horizontal ? 4 : dy > 0 ? 16 : -8));
     text.setAttribute('text-anchor', horizontal ? (dx > 0 ? 'start' : 'end') : 'middle');
     keepInView(text);
+    const b = text.getBBox();
+    tag.setAttribute('x', b.x - 6); tag.setAttribute('y', b.y - 3);
+    tag.setAttribute('width', b.width + 12); tag.setAttribute('height', b.height + 6);
   }
 }
 
@@ -989,7 +1145,26 @@ const clock = new THREE.Clock();
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
   update(scrollProgress(), dt, clock.elapsedTime);
+  post.uniforms.time.value = clock.elapsedTime;
+
+  renderer.setRenderTarget(colorRT);
+  renderer.setClearColor(0x000000, 0);
+  renderer.clear();
   renderer.render(scene, camera);
+
+  // Passe des normales : les pièces presque effacées ne doivent pas laisser de traits.
+  const hidden = parts.filter((part) => part.opacity < 0.5 && part.obj.visible);
+  for (const part of hidden) part.obj.visible = false;
+  scene.overrideMaterial = normalMat;
+  renderer.setRenderTarget(normalRT);
+  renderer.clear();
+  renderer.render(scene, camera);
+  scene.overrideMaterial = null;
+  for (const part of hidden) part.obj.visible = true;
+
+  renderer.setRenderTarget(null);
+  renderer.clear();
+  renderer.render(postScene, postCam);
   requestAnimationFrame(frame);
 }
 frame();
