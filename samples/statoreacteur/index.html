@@ -1394,7 +1394,7 @@ function update(p, dt, time) {
   // Décentrage optique : en paysage, le sujet glisse vers la droite pour libérer la colonne de texte,
   // davantage sur le hero où le titre est large.
   if (!portrait && innerWidth > 720) {
-    const shift = lerp(0.07, 0.03, smooth(0.04, 0.14, p));
+    const shift = lerp(0.1, 0.03, smooth(0.04, 0.14, p));
     camera.setViewOffset(innerWidth, innerHeight, -innerWidth * shift, 0, innerWidth, innerHeight);
   } else if (camera.view) camera.clearViewOffset();
   camera.position.copy(camPos);
