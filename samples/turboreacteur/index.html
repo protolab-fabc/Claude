@@ -3,28 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Turboréacteur — vue éclatée</title>
+<title>Turboréacteur — planche peinte</title>
 <meta name="description" content="Un turboréacteur double flux qui se décompose pièce par pièce au fil du défilement.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,300..800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Jost:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0c0f;
-    --bg-raised: #12151a;
-    --ink: #ebe8e1;
-    --muted: #8d9198;
-    --faint: #3a3f46;
-    --accent: #ff7a2f;
-    --display: "Archivo", system-ui, sans-serif;
-    --sans: "Archivo", system-ui, sans-serif;
-    --mono: "JetBrains Mono", ui-monospace, monospace;
+    --bg: #c9b48f;
+    --paper: #efe6d2;
+    --paper-edge: #d9ccb0;
+    --ink: #231d18;
+    --umber: #4a3d31;
+    --muted: #6b5a49;
+    --rust: #8f3d1c;
+    --haze: #e9dcc0;
+    --display: "Jost", "Futura", system-ui, sans-serif;
+    --sans: "Jost", "Futura", system-ui, sans-serif;
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   }
 
   * { box-sizing: border-box; }
-  html { background: var(--bg); scrollbar-color: var(--faint) var(--bg); }
-  ::selection { background: var(--accent); color: var(--bg); }
+  html { background: var(--bg); scrollbar-color: var(--umber) var(--paper-edge); }
+  ::selection { background: var(--rust); color: var(--paper); }
   body {
     margin: 0;
     background: var(--bg);
@@ -41,7 +42,6 @@
     display: block;
   }
 
-  /* Les overlays fixes ne doivent jamais capter le scroll ou les clics. */
   .overlay { position: fixed; pointer-events: none; z-index: 2; }
 
   .topbar {
@@ -49,52 +49,56 @@
     display: flex;
     justify-content: space-between;
     align-items: baseline;
-    padding: 20px 28px;
-    font-size: 13px;
-    color: var(--muted);
+    padding: 22px 32px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--umber);
   }
   .topbar b { color: var(--ink); font-weight: 600; }
 
-  /* Hero */
+  /* Hero : titrage de planche de production, capitales espacées */
   .hero {
-    left: 28px; right: 28px; bottom: 9vh;
-    max-width: 760px;
+    left: 32px; right: 32px; bottom: 9vh;
+    max-width: 680px;
   }
   .hero h1 {
     font-family: var(--display);
-    font-weight: 650;
-    font-stretch: 72%;
-    font-size: clamp(44px, 6.6vw, 96px);
-    line-height: 0.94;
-    letter-spacing: -0.025em;
+    font-weight: 500;
+    font-size: clamp(40px, 5.6vw, 84px);
+    line-height: 1.02;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
     margin: 0 0 22px;
+    color: var(--ink);
     text-wrap: balance;
   }
-  .hero h1 em { color: var(--accent); font-style: normal; }
+  .hero h1 em { font-style: normal; color: var(--rust); }
   .hero p {
     margin: 0;
-    max-width: 40ch;
-    color: var(--muted);
-    font-size: 16px;
+    max-width: 42ch;
+    color: var(--umber);
+    font-size: 17px;
     line-height: 1.55;
   }
   .scroll-hint {
     margin-top: 28px;
     display: inline-flex;
-    gap: 10px;
+    gap: 12px;
     align-items: center;
-    font-family: var(--mono);
     font-size: 11px;
-    letter-spacing: 0.08em;
+    font-weight: 500;
+    letter-spacing: 0.26em;
     text-transform: uppercase;
-    color: var(--muted);
+    color: var(--umber);
   }
   .scroll-hint i {
     display: block;
-    width: 1px; height: 28px;
+    width: 1px; height: 30px;
     background: linear-gradient(var(--ink), transparent);
     transform-origin: top;
-    animation: hint 1.8s var(--ease-out) infinite;
+    animation: hint 2.2s var(--ease-out) infinite;
   }
   @keyframes hint {
     0% { transform: scaleY(0); opacity: 1; }
@@ -102,42 +106,48 @@
     100% { transform: scaleY(1); opacity: 0; }
   }
 
-  /* Panneaux de chapitre */
+  /* Panneaux : cartel de musée posé sur la peinture */
   .panel {
-    left: 28px; bottom: 9vh;
-    width: min(380px, calc(100vw - 56px));
+    left: 32px; bottom: 9vh;
+    width: min(380px, calc(100vw - 64px));
+    padding: 22px 24px 24px;
+    background: var(--paper);
+    border: 1px solid var(--paper-edge);
+    box-shadow: 0 18px 40px -18px rgba(35, 29, 24, 0.45);
     opacity: 0;
     will-change: opacity, transform;
   }
   .panel h2 {
     font-family: var(--display);
-    font-weight: 620;
-    font-stretch: 75%;
-    font-size: clamp(34px, 4vw, 52px);
-    line-height: 1;
-    letter-spacing: -0.01em;
-    margin: 0 0 14px;
+    font-weight: 500;
+    font-size: clamp(24px, 2.4vw, 32px);
+    line-height: 1.1;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 0 0 12px;
+    color: var(--ink);
   }
   .panel p {
     margin: 0;
-    color: #b9bcc1;
+    color: var(--umber);
     font-size: 15px;
     line-height: 1.6;
   }
   .panel dl {
-    margin: 18px 0 0;
+    margin: 16px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--paper-edge);
     display: grid;
     grid-template-columns: auto 1fr;
-    gap: 6px 18px;
-    font-family: var(--mono);
-    font-size: 12px;
+    gap: 4px 18px;
+    font-size: 13px;
   }
-  .panel dt { color: var(--muted); }
-  .panel dd { margin: 0; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .panel dt { color: var(--muted); letter-spacing: 0.04em; }
+  .panel dd { margin: 0; color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
 
   /* Rail de progression */
   .rail {
-    right: 28px; top: 50%;
+    right: 32px; top: 50%;
     transform: translateY(-50%);
     pointer-events: auto;
     display: flex;
@@ -152,12 +162,19 @@
     justify-content: flex-end;
     gap: 10px;
     padding: 6px 0;
-    font-family: var(--sans);
-    font-size: 12px;
-    color: var(--faint);
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: rgba(35, 29, 24, 0.35);
     transition: color 200ms ease;
   }
-  .rail button span { white-space: nowrap; opacity: 0; transform: translateX(6px); transition: opacity 200ms ease, transform 200ms var(--ease-out); }
+  .rail button span {
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateX(6px);
+    transition: opacity 200ms ease, transform 200ms var(--ease-out);
+  }
   .rail button i {
     display: block;
     width: 14px; height: 1px;
@@ -165,31 +182,34 @@
     transition: width 200ms var(--ease-out);
   }
   .rail button.active { color: var(--ink); }
-  .rail button.active i { width: 28px; background: var(--accent); }
+  .rail button.active i { width: 30px; background: var(--rust); height: 2px; }
   .rail button.active span { opacity: 1; transform: none; }
   @media (hover: hover) and (pointer: fine) {
     .rail button:hover { color: var(--ink); }
     .rail button:hover span { opacity: 1; transform: none; }
   }
-  .rail button:focus-visible { outline: 1px solid var(--accent); outline-offset: 4px; }
+  .rail button:focus-visible { outline: 1px solid var(--rust); outline-offset: 4px; }
 
   .progress {
     left: 0; bottom: 0;
     height: 2px;
     width: 100%;
-    background: var(--accent);
+    background: var(--rust);
     transform-origin: left;
     transform: scaleX(0);
   }
 
+  /* Étiquettes : annotations au crayon sur la planche */
   #labels { inset: 0; width: 100%; height: 100%; overflow: visible; }
-  #labels line { stroke: var(--muted); stroke-width: 1; }
-  #labels circle { fill: var(--accent); }
+  #labels line { stroke: var(--ink); stroke-width: 1; }
+  #labels circle { fill: var(--rust); }
+  #labels rect { fill: var(--paper); stroke: var(--paper-edge); stroke-width: 1; }
   #labels text {
     fill: var(--ink);
-    font-family: var(--mono);
+    font-family: var(--sans);
+    font-weight: 500;
     font-size: 11px;
-    letter-spacing: 0.06em;
+    letter-spacing: 0.16em;
     text-transform: uppercase;
   }
 
@@ -198,30 +218,32 @@
   footer {
     position: relative;
     z-index: 3;
-    background: var(--bg-raised);
-    border-top: 1px solid #1f242b;
-    padding: 96px 28px 64px;
+    background: var(--paper);
+    border-top: 1px solid var(--paper-edge);
+    padding: 96px 32px 64px;
   }
   footer .inner { max-width: 1120px; margin: 0 auto; }
   footer h3 {
     font-family: var(--display);
-    font-weight: 620;
-    font-stretch: 75%;
-    font-size: clamp(36px, 5vw, 64px);
-    line-height: 1;
-    margin: 0 0 12px;
+    font-weight: 500;
+    font-size: clamp(30px, 4vw, 52px);
+    line-height: 1.05;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 0 0 14px;
   }
-  footer .lede { color: var(--muted); max-width: 52ch; line-height: 1.6; margin: 0 0 56px; }
+  footer .lede { color: var(--umber); max-width: 56ch; line-height: 1.6; margin: 0 0 56px; font-size: 17px; }
   .specs {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    border-top: 1px solid #262b33;
+    border-top: 1px solid var(--ink);
+    margin: 0;
   }
-  .specs div { padding: 22px 20px 22px 0; border-bottom: 1px solid #262b33; }
+  .specs div { padding: 22px 20px 22px 0; border-bottom: 1px solid var(--paper-edge); }
   .specs dt {
-    font-family: var(--mono);
     font-size: 11px;
-    letter-spacing: 0.08em;
+    font-weight: 500;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
     color: var(--muted);
     margin-bottom: 10px;
@@ -229,10 +251,10 @@
   .specs dd {
     margin: 0;
     font-family: var(--display);
-    font-weight: 500;
-    font-stretch: 80%;
+    font-weight: 400;
     font-size: 40px;
     line-height: 1;
+    color: var(--ink);
     font-variant-numeric: tabular-nums;
   }
   .colophon {
@@ -241,8 +263,7 @@
     flex-wrap: wrap;
     justify-content: space-between;
     gap: 12px;
-    font-family: var(--mono);
-    font-size: 11px;
+    font-size: 13px;
     color: var(--muted);
   }
 
@@ -253,28 +274,19 @@
     place-items: center;
     padding: 28px;
     text-align: center;
-    color: var(--muted);
+    color: var(--umber);
   }
   .no-webgl .fallback { display: grid; }
   .no-webgl #scene { display: none; }
 
   @media (max-width: 720px) {
-    .topbar { padding: 16px; }
+    .topbar { padding: 16px; letter-spacing: 0.16em; font-size: 11px; }
     .topbar .hide-sm { display: none; }
     .hero { left: 16px; right: 16px; bottom: 6vh; }
-    .panel {
-      left: 16px; right: 16px; bottom: 16px;
-      width: auto;
-      padding: 18px;
-      background: rgba(10, 12, 15, 0.72);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid #1f242b;
-      border-radius: 14px;
-    }
+    .panel { left: 16px; right: 16px; bottom: 16px; width: auto; padding: 18px 18px 20px; }
     .panel p { font-size: 14px; }
     .panel dl { display: none; }
-    #labels text { font-size: 9px; letter-spacing: 0.04em; }
+    #labels text { font-size: 9px; letter-spacing: 0.1em; }
     .rail { right: 12px; top: 72px; transform: none; }
     .rail button span { display: none; }
     footer { padding: 64px 16px 48px; }
@@ -328,7 +340,7 @@
         <div><dt>Gaz en sortie de chambre</dt><dd>&gt; 1 500 °C</dd></div>
       </dl>
       <div class="colophon">
-        <span>Modèle généré en code avec Three.js — aucun fichier 3D externe.</span>
+        <span>Modèle généré en code avec Three.js, peint en temps réel à la manière de l'art conceptuel des années 1970.</span>
         <span>Sample · design &amp; motion</span>
       </div>
     </div>
@@ -336,7 +348,6 @@
 
 <script type="module">
 import * as THREE from 'three';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
 
@@ -358,43 +369,164 @@ try {
   document.body.classList.add('no-webgl');
   throw err;
 }
-renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.05;
-renderer.outputColorSpace = THREE.SRGBColorSpace;
+// La peinture n'a pas besoin de la pleine définition : moins de pixels, coups de pinceau plus francs.
+const PR = Math.min(devicePixelRatio, 1.5);
+renderer.setPixelRatio(PR);
+renderer.autoClear = false;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x0a0c0f);
-scene.fog = new THREE.Fog(0x0a0c0f, 40, 110);
-
-const pmrem = new THREE.PMREMGenerator(renderer);
-scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+// Brume atmosphérique : les pièces lointaines se fondent dans le ciel, réglée sur la distance caméra.
+const HAZE = new THREE.Color(0xe2d2b2);
+scene.fog = new THREE.Fog(HAZE, 20, 80);
 
 const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 300);
 
-scene.add(new THREE.HemisphereLight(0xbfd4ff, 0x14100c, 0.35));
-const key = new THREE.DirectionalLight(0xffffff, 2.2);
-key.position.set(6, 12, 10);
+// Lumière de fin de journée : ciel crème, sol ocre, soleil bas et chaud, contre-jour froid.
+scene.add(new THREE.HemisphereLight(0xf1e4c8, 0x8a6a48, 1.25));
+const key = new THREE.DirectionalLight(0xffdcb0, 2.4);
+key.position.set(9, 7, 6);
 scene.add(key);
-const rim = new THREE.DirectionalLight(0x88aaff, 1.6);
+const rim = new THREE.DirectionalLight(0x9fb3c8, 1.1);
 rim.position.set(-10, 4, -8);
 scene.add(rim);
-const fireLight = new THREE.PointLight(0xff6a1a, 0, 6, 1.6);
+const fireLight = new THREE.PointLight(0xff7a2a, 0, 6, 1.6);
 scene.add(fireLight);
 
 // ------------------------------------------------------------------
-// Matériaux — une instance par pièce pour pouvoir atténuer chacune.
+// Matériaux — gouache mate, palette désaturée. Une instance par pièce pour pouvoir atténuer chacune.
 // ------------------------------------------------------------------
 const std = (o) => () => new THREE.MeshStandardMaterial(o);
 const MAT = {
-  paint:  std({ color: 0xe4e2dc, metalness: 0.15, roughness: 0.42, side: THREE.DoubleSide }),
-  ti:     std({ color: 0xc6cad0, metalness: 1.0,  roughness: 0.26 }),
-  steel:  std({ color: 0x737981, metalness: 0.9,  roughness: 0.4,  side: THREE.DoubleSide }),
-  dark:   std({ color: 0x30353c, metalness: 0.75, roughness: 0.48 }),
-  hot:    std({ color: 0xa07a52, metalness: 0.9,  roughness: 0.36 }),
-  bronze: std({ color: 0xab7c50, metalness: 0.85, roughness: 0.34, side: THREE.DoubleSide }),
-  glow:   std({ color: 0x1a0800, emissive: 0xff5a14, emissiveIntensity: 2.4 }),
+  paint:  std({ color: 0xe0d6c2, metalness: 0.0,  roughness: 0.8,  side: THREE.DoubleSide }),
+  ti:     std({ color: 0xb9b3a6, metalness: 0.45, roughness: 0.55 }),
+  steel:  std({ color: 0x8e8a80, metalness: 0.4,  roughness: 0.6,  side: THREE.DoubleSide }),
+  dark:   std({ color: 0x5a5249, metalness: 0.3,  roughness: 0.7 }),
+  hot:    std({ color: 0x9a6848, metalness: 0.35, roughness: 0.6 }),
+  bronze: std({ color: 0xa87a52, metalness: 0.4,  roughness: 0.55, side: THREE.DoubleSide }),
+  glow:   std({ color: 0x1a0800, emissive: 0xff7a2a, emissiveIntensity: 2.0 }),
 };
+
+// ------------------------------------------------------------------
+// Peinture : un ciel peint en fond, la scène par-dessus, puis un filtre de Kuwahara
+// (aplats de pinceau qui gardent les bords), étalonnage chaud, grain de papier.
+// ------------------------------------------------------------------
+const paintRT = new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType });
+const quadGeo = new THREE.PlaneGeometry(2, 2);
+const quadVert = /* glsl */`
+  varying vec2 vUv;
+  void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }
+`;
+const noiseGlsl = /* glsl */`
+  float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+  float vnoise(vec2 p) {
+    vec2 i = floor(p), f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+    return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
+  }
+  float fbm(vec2 p) { float v = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { v += a * vnoise(p); p *= 2.03; a *= 0.5; } return v; }
+  vec3 lin(vec3 c) { return pow(c, vec3(2.2)); }
+`;
+const sky = new THREE.ShaderMaterial({
+  depthTest: false,
+  depthWrite: false,
+  uniforms: { aspect: { value: 1 }, scroll: { value: 0 } },
+  vertexShader: quadVert,
+  fragmentShader: /* glsl */`
+    uniform float aspect, scroll;
+    varying vec2 vUv;
+    ${noiseGlsl}
+    void main() {
+      vec2 p = vec2(vUv.x * aspect, vUv.y);
+      float horizon = 0.27 + 0.05 * scroll;
+      float y = vUv.y;
+      // Ciel : bleu-gris poussiéreux en haut, crème doré vers l'horizon, balayé à l'horizontale.
+      float streak = fbm(vec2(p.x * 1.2, y * 9.0)) - 0.5;
+      vec3 top = vec3(0.49, 0.55, 0.58), mid = vec3(0.80, 0.77, 0.69), low = vec3(0.93, 0.86, 0.73);
+      float t = clamp((y - horizon) / (1.0 - horizon), 0.0, 1.0) + streak * 0.08;
+      vec3 col = mix(low, mid, smoothstep(0.0, 0.35, t));
+      col = mix(col, top, smoothstep(0.35, 1.0, t));
+      // Grand astre pâle, bas sur l'horizon, avec son halo.
+      vec2 sunPos = vec2(0.76 * aspect, horizon + 0.36);
+      float d = length(p - sunPos);
+      col = mix(col, vec3(0.97, 0.94, 0.86), smoothstep(0.075, 0.07, d));
+      col += vec3(0.10, 0.07, 0.03) * exp(-d * 7.0);
+      // Mesas lointaines, noyées de brume.
+      float ridge = horizon + 0.012 + 0.05 * pow(fbm(vec2(p.x * 2.4, 3.1)), 2.2) + 0.03 * step(0.62, fbm(vec2(p.x * 0.9, 7.0)));
+      col = mix(col, vec3(0.78, 0.69, 0.56), step(y, ridge) * smoothstep(horizon - 0.01, horizon + 0.004, y));
+      // Sol : désert ocre, strates horizontales, plus sombre au premier plan.
+      if (y < horizon) {
+        float g = (horizon - y) / horizon;
+        vec3 sand = mix(vec3(0.84, 0.74, 0.58), vec3(0.62, 0.48, 0.33), smoothstep(0.0, 1.0, g));
+        sand *= 0.94 + 0.12 * fbm(vec2(p.x * 3.0, y * 40.0));
+        col = sand;
+      }
+      col *= 0.96 + 0.08 * fbm(p * 3.0);
+      gl_FragColor = vec4(lin(col), 1.0);
+    }
+  `,
+});
+const skyScene = new THREE.Scene();
+skyScene.add(new THREE.Mesh(quadGeo, sky));
+
+const paint = new THREE.ShaderMaterial({
+  depthTest: false,
+  depthWrite: false,
+  uniforms: {
+    tScene: { value: paintRT.texture },
+    resolution: { value: new THREE.Vector2(1, 1) },
+    pr: { value: PR },
+  },
+  vertexShader: quadVert,
+  fragmentShader: /* glsl */`
+    uniform sampler2D tScene;
+    uniform vec2 resolution;
+    uniform float pr;
+    varying vec2 vUv;
+    ${noiseGlsl}
+    #define R 3
+    void main() {
+      vec2 texel = 1.0 / resolution;
+      // Le pinceau suit un léger flottement : les aplats ne sont pas alignés sur la grille des pixels.
+      vec2 warp = (vec2(fbm(vUv * 40.0), fbm(vUv * 40.0 + 9.0)) - 0.5) * texel * 3.0 * pr;
+      vec3 m0 = vec3(0), m1 = vec3(0), m2 = vec3(0), m3 = vec3(0);
+      vec3 s0 = vec3(0), s1 = vec3(0), s2 = vec3(0), s3 = vec3(0);
+      float stride = 1.15 * pr;
+      for (int j = -R; j <= R; j++) {
+        for (int i = -R; i <= R; i++) {
+          vec3 c = texture2D(tScene, vUv + warp + vec2(i, j) * texel * stride).rgb;
+          vec3 c2 = c * c;
+          if (i <= 0 && j <= 0) { m0 += c; s0 += c2; }
+          if (i >= 0 && j <= 0) { m1 += c; s1 += c2; }
+          if (i <= 0 && j >= 0) { m2 += c; s2 += c2; }
+          if (i >= 0 && j >= 0) { m3 += c; s3 += c2; }
+        }
+      }
+      float n = float((R + 1) * (R + 1));
+      vec3 col = m0 / n; float best = dot(s0 / n - col * col, vec3(1));
+      vec3 mean; float v;
+      mean = m1 / n; v = dot(s1 / n - mean * mean, vec3(1)); if (v < best) { best = v; col = mean; }
+      mean = m2 / n; v = dot(s2 / n - mean * mean, vec3(1)); if (v < best) { best = v; col = mean; }
+      mean = m3 / n; v = dot(s3 / n - mean * mean, vec3(1)); if (v < best) { best = v; col = mean; }
+
+      col = pow(clamp(col, 0.0, 1.0), vec3(1.0 / 2.2));
+      // Étalonnage : noirs relevés (jamais de noir pur), légère désaturation, dominante chaude.
+      float l = dot(col, vec3(0.299, 0.587, 0.114));
+      col = mix(vec3(l), col, 0.84);
+      col = mix(vec3(0.17, 0.145, 0.125), vec3(1.0, 0.985, 0.95), col);
+      // Papier : fibres et grain fixes, comme une gouache sur carton illustration.
+      float fiber = fbm(gl_FragCoord.xy / pr * vec2(0.02, 0.35));
+      col *= 0.97 + 0.05 * fiber;
+      col += (hash(floor(gl_FragCoord.xy / pr)) - 0.5) * 0.035;
+      // Vignettage doux.
+      vec2 q = vUv - 0.5;
+      col *= 1.0 - dot(q, q) * 0.35;
+      gl_FragColor = vec4(col, 1.0);
+    }
+  `,
+});
+const paintScene = new THREE.Scene();
+paintScene.add(new THREE.Mesh(quadGeo, paint));
+const quadCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
 
 // ------------------------------------------------------------------
 // Géométries
@@ -712,14 +844,15 @@ labelled.forEach((part, i) => {
   const g = document.createElementNS(SVG, 'g');
   const line = document.createElementNS(SVG, 'line');
   const dot = document.createElementNS(SVG, 'circle');
-  dot.setAttribute('r', 2.5);
+  dot.setAttribute('r', 3);
+  const tag = document.createElementNS(SVG, 'rect');
   const text = document.createElementNS(SVG, 'text');
   text.textContent = part.label.text;
-  g.append(line, dot, text);
+  g.append(line, dot, tag, text);
   labelsSvg.appendChild(g);
   // Alternance au-dessus / au-dessous de l'axe pour éviter les chevauchements.
   part.label.side = i % 2 === 0 ? 1 : -1;
-  part.label.nodes = { g, line, dot, text };
+  part.label.nodes = { g, line, dot, tag, text };
 });
 
 // ------------------------------------------------------------------
@@ -738,6 +871,9 @@ let angleN1 = 0, angleN2 = 0;
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h, false);
+  paintRT.setSize(w * PR, h * PR);
+  paint.uniforms.resolution.value.set(w * PR, h * PR);
+  sky.uniforms.aspect.value = w / h;
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
   portrait = camera.aspect < 0.9;
@@ -846,6 +982,9 @@ function update(p, dt, time) {
   v.z += 1;
   v.normalize();
   wantPos.copy(wantTarget).addScaledVector(v, dist);
+  scene.fog.near = dist * 0.75;
+  scene.fog.far = dist * 3.4;
+  sky.uniforms.scroll.value = p;
 
   const kc = reduceMotion || first ? 1 : 1 - Math.exp(-dt * 5);
   camPos.lerp(wantPos, kc);
@@ -859,6 +998,7 @@ function update(p, dt, time) {
   } else if (camera.view) camera.clearViewOffset();
   camera.position.copy(camPos);
   camera.lookAt(camTarget);
+  camera.updateMatrixWorld();
 
   // Étiquettes de la vue éclatée
   const labelAlpha = smooth(0.45, 0.5, p) * (1 - smooth(0.585, 0.605, p)) + smooth(0.975, 0.995, p);
@@ -890,7 +1030,7 @@ function placeLabels() {
     let dx = tx - ax, dy = ty - ay;
     const len = Math.hypot(dx, dy) || 1;
     dx /= len; dy /= len;
-    const ex = tx + dx * 36, ey = ty + dy * 36;
+    const ex = tx + dx * 40, ey = ty + dy * 40;
     nodes.line.setAttribute('x1', tx); nodes.line.setAttribute('y1', ty);
     nodes.line.setAttribute('x2', ex); nodes.line.setAttribute('y2', ey);
     nodes.dot.setAttribute('cx', tx); nodes.dot.setAttribute('cy', ty);
@@ -899,6 +1039,9 @@ function placeLabels() {
     nodes.text.setAttribute('y', ey + (horizontal ? 4 : dy > 0 ? 16 : -8));
     nodes.text.setAttribute('text-anchor', horizontal ? (dx > 0 ? 'start' : 'end') : 'middle');
     keepInView(nodes.text);
+    const b = nodes.text.getBBox();
+    nodes.tag.setAttribute('x', b.x - 7); nodes.tag.setAttribute('y', b.y - 4);
+    nodes.tag.setAttribute('width', b.width + 14); nodes.tag.setAttribute('height', b.height + 8);
   }
 }
 
@@ -909,7 +1052,12 @@ const clock = new THREE.Clock();
 function frame() {
   const dt = Math.min(clock.getDelta(), 0.05);
   update(scrollProgress(), dt, clock.elapsedTime);
+  renderer.setRenderTarget(paintRT);
+  renderer.clear();
+  renderer.render(skyScene, quadCam);
   renderer.render(scene, camera);
+  renderer.setRenderTarget(null);
+  renderer.render(paintScene, quadCam);
   requestAnimationFrame(frame);
 }
 frame();
