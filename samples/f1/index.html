@@ -209,16 +209,17 @@
 
   /* Étiquettes */
   #labels { inset: 0; width: 100%; height: 100%; overflow: visible; }
-  #labels line { stroke: var(--ink); stroke-width: 1; opacity: 0.7; }
-  #labels circle { fill: var(--accent); }
-  #labels rect { fill: var(--paper); stroke: var(--rule); stroke-width: 1; }
+  #labels line { stroke: var(--ink); stroke-width: 1.5; }
+  #labels circle { fill: var(--accent); stroke: var(--paper); stroke-width: 1.5; }
+  #labels rect { fill: var(--paper); stroke: var(--ink); stroke-width: 1; }
   #labels text {
     fill: var(--ink);
     font-family: var(--sans);
     font-weight: 500;
-    font-size: 13px;
-    letter-spacing: 0.02em;
+    font-size: 16px;
+    letter-spacing: 0.01em;
   }
+  @media (min-width: 1600px) { #labels text { font-size: 18px; } }
 
   #track { position: relative; height: 1200vh; }
 
@@ -425,6 +426,8 @@ colorRT.depthTexture = new THREE.DepthTexture(1, 1);
 const normalRT = new THREE.WebGLRenderTarget(1, 1, { samples: 4 });
 // Double face : les coques vues par leur envers doivent masquer ce qui est derrière elles.
 const normalMat = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide });
+// Le moteur écrit un alpha de 0,5 dans la passe des normales : le post-traitement le teinte dans son propre repère.
+const normalMatEngine = new THREE.MeshNormalMaterial({ side: THREE.DoubleSide, opacity: 0.5 });
 const ink = new THREE.ShaderMaterial({
   depthTest: false,
   depthWrite: false,
@@ -438,6 +441,7 @@ const ink = new THREE.ShaderMaterial({
     pr: { value: PR },
     tanHalf: { value: Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)) },
     camRot: { value: new THREE.Matrix3() },
+    engineInv: { value: new THREE.Matrix3() },
     fogStart: { value: 40 },
     fogScale: { value: 60 },
     aspect: { value: 1 },
@@ -451,7 +455,7 @@ const ink = new THREE.ShaderMaterial({
     uniform sampler2D tColor, tDepth, tNormal;
     uniform vec2 resolution;
     uniform float near, far, pr, tanHalf, fogStart, fogScale, aspect;
-    uniform mat3 camRot;
+    uniform mat3 camRot, engineInv;
     varying vec2 vUv;
 
     // Une teinte par orientation : haut, bas, ±X, ±Z.
@@ -460,7 +464,7 @@ const ink = new THREE.ShaderMaterial({
     const vec3 C_DOWN = vec3(0.46, 0.38, 0.72);
     const vec3 C_PX = vec3(1.0, 0.56, 0.3);
     const vec3 C_NX = vec3(0.16, 0.68, 0.68);
-    const vec3 C_PZ = vec3(0.97, 0.965, 0.98);
+    const vec3 C_PZ = vec3(1.0, 0.86, 0.76);
     const vec3 C_NZ = vec3(0.3, 0.48, 0.9);
     const vec3 FOG_TOP = vec3(0.6, 0.8, 0.93);
     const vec3 FOG_LOW = vec3(0.92, 0.9, 0.95);
@@ -516,11 +520,13 @@ const ink = new THREE.ShaderMaterial({
         float z = viewZ(vUv);
         vec3 nv = nrm(vUv);
         vec3 nw = normalize(camRot * nv);
+        // Couché ou debout, le moteur garde les mêmes couleurs : on le teinte selon ses propres axes.
+        vec3 no = texture2D(tNormal, vUv).a < 0.75 ? normalize(engineInv * nw) : nw;
         vec3 alb = pow(clamp(src.rgb, 0.0, 1.0), vec3(1.0 / 2.2));
         float key = 0.82 + 0.18 * max(dot(nw, normalize(vec3(0.35, 0.8, 0.5))), 0.0);
         // Les matières colorées (cuivre, conduits, vannes) gardent leur teinte : l'orientation ne fait que les nuancer.
         float sat = max(alb.r, max(alb.g, alb.b)) - min(alb.r, min(alb.g, alb.b));
-        vec3 tint = mix(orient(nw), vec3(0.6 + 0.4 * nw.y * 0.5 + 0.2), smoothstep(0.15, 0.5, sat) * 0.75);
+        vec3 tint = mix(orient(no), vec3(0.6 + 0.4 * nw.y * 0.5 + 0.2), smoothstep(0.15, 0.5, sat) * 0.75);
         col = alb * tint * key;
         col *= 1.0 - 0.75 * occlusion(z);
 
@@ -1466,7 +1472,7 @@ for (const part of labelled) {
   const g = document.createElementNS(SVG, 'g');
   const line = document.createElementNS(SVG, 'line');
   const dot = document.createElementNS(SVG, 'circle');
-  dot.setAttribute('r', 3);
+  dot.setAttribute('r', 4);
   const tag = document.createElementNS(SVG, 'rect');
   const text = document.createElementNS(SVG, 'text');
   text.textContent = part.label.text;
@@ -1593,6 +1599,7 @@ function update(p, dt, time) {
   camera.lookAt(camTarget);
   camera.updateMatrixWorld();
   ink.uniforms.camRot.value.setFromMatrix4(camera.matrixWorld);
+  ink.uniforms.engineInv.value.setFromMatrix4(engine.matrixWorld).transpose();
   const camDist = camPos.distanceTo(camTarget);
   ink.uniforms.fogStart.value = camDist + 4;
   ink.uniforms.fogScale.value = 26 + camDist * 0.45;
@@ -1648,8 +1655,8 @@ function placeLabels() {
     nodes.line.setAttribute('x1', tx); nodes.line.setAttribute('y1', ty);
     nodes.line.setAttribute('x2', ex); nodes.line.setAttribute('y2', ey);
     nodes.dot.setAttribute('cx', tx); nodes.dot.setAttribute('cy', ty);
-    nodes.tag.setAttribute('x', b.x - 7); nodes.tag.setAttribute('y', b.y - 4);
-    nodes.tag.setAttribute('width', b.width + 14); nodes.tag.setAttribute('height', b.height + 8);
+    nodes.tag.setAttribute('x', b.x - 9); nodes.tag.setAttribute('y', b.y - 5);
+    nodes.tag.setAttribute('width', b.width + 18); nodes.tag.setAttribute('height', b.height + 10);
   }
 }
 
@@ -1669,10 +1676,16 @@ function frame() {
   // Passe des normales : les pièces presque effacées ne doivent pas laisser de traits.
   const hidden = parts.filter((part) => part.opacity < 0.5 && part.obj.visible);
   for (const part of hidden) part.obj.visible = false;
-  scene.overrideMaterial = normalMat;
   renderer.setRenderTarget(normalRT);
   renderer.clear();
+  engine.visible = false;
+  scene.overrideMaterial = normalMat;
   renderer.render(scene, camera);
+  engine.visible = true;
+  world.visible = false;
+  scene.overrideMaterial = normalMatEngine;
+  renderer.render(scene, camera);
+  world.visible = true;
   scene.overrideMaterial = null;
   for (const part of hidden) part.obj.visible = true;
 
