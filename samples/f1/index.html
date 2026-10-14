@@ -1399,8 +1399,8 @@ const CHAPTERS = [
 
 // Images-clés caméra : point visé (x, y), hauteur L et largeur W à cadrer, azimut et élévation.
 const KEYS = [
-  { p: 0.0,   x: 0.8,  y: -7.5, L: 34,  W: 9,   az: 0.32,  el: 0.1 },
-  { p: 0.05,  x: 0.8,  y: -7.5, L: 34,  W: 9,   az: 0.32,  el: 0.1 },
+  { p: 0.0,   x: 0.8,  y: -3.5, L: 24,  W: 10,  az: 0.42,  el: 0.62 },
+  { p: 0.05,  x: 0.8,  y: -3.5, L: 24,  W: 10,  az: 0.42,  el: 0.62 },
   { p: 0.17,  x: 1.5,  y: 3.4,  L: 8,   W: 7,   az: 0.55,  el: 0.3 },
   { p: 0.23,  x: 1.5,  y: 3.4,  L: 8,   W: 7,   az: 0.7,   el: 0.34 },
   { p: 0.33,  x: 0.2,  y: -7.5, L: 20,  W: 10,  az: -0.3,  el: -0.12 },
@@ -1582,12 +1582,6 @@ function update(p, dt, time) {
 
   // L'eau des cascades tombe sans fin.
   if (!reduceMotion) waterTex.offset.y = (time * 0.12) % 1;
-
-  // Intro : le moteur est incliné de 20° vers la droite, puis se remet d'aplomb dès qu'on défile.
-  const roll = THREE.MathUtils.degToRad(-20) * (1 - smooth(0.03, 0.12, p));
-  engine.rotation.z = baseRoll + roll;
-  fxRoot.rotation.z = engine.rotation.z;
-  engine.updateMatrixWorld(true);
 
   // Caméra
   const ck = cameraKey(p);
