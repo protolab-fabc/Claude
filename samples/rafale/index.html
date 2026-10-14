@@ -1584,7 +1584,9 @@ function update(p, dt, time) {
   // davantage sur le hero où le titre est large.
   if (!portrait && innerWidth > 720) {
     const shift = lerp(0.03, 0.0, smooth(0.04, 0.14, p));
-    camera.setViewOffset(innerWidth, innerHeight, -innerWidth * shift, 0, innerWidth, innerHeight);
+    // Sur le hero, le moteur descend un peu sous la ligne du titre.
+    const drop = lerp(0.07, 0.0, smooth(0.04, 0.14, p));
+    camera.setViewOffset(innerWidth, innerHeight, -innerWidth * shift, -innerHeight * drop, innerWidth, innerHeight);
   } else if (camera.view) camera.clearViewOffset();
   camera.position.copy(camPos);
   camera.lookAt(camTarget);
