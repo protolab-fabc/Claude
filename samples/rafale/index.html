@@ -1359,8 +1359,9 @@ labelled.forEach((part, i) => {
   text.textContent = part.label.text;
   g.append(line, dot, tag, text);
   labelsSvg.appendChild(g);
-  // Alternance au-dessus / au-dessous de l'axe pour éviter les chevauchements.
-  part.label.side = i % 2 === 0 ? 1 : -1;
+  // Alternance au-dessus / au-dessous de l'axe pour éviter les chevauchements ;
+  // une demi-coque se repère toujours du côté où elle s'écarte, sinon le point tombe dans le vide.
+  part.label.side = part.split ? Math.sign(part.splitX) : i % 2 === 0 ? 1 : -1;
   part.label.nodes = { g, line, dot, tag, text };
 });
 
@@ -1547,7 +1548,11 @@ function project(vec) {
   vec.project(camera);
   return [(vec.x + 1) / 2 * innerWidth, (1 - vec.y) / 2 * innerHeight];
 }
+function overlaps(a, b) {
+  return a.x < b.x + b.width + 6 && b.x < a.x + a.width + 6 && a.y < b.y + b.height + 4 && b.y < a.y + a.height + 4;
+}
 function placeLabels() {
+  const placed = [];
   for (const part of labelled) {
     const { r, y, side, nodes } = part.label;
     part.obj.updateMatrixWorld();
@@ -1556,16 +1561,25 @@ function placeLabels() {
     let dx = tx - ax, dy = ty - ay;
     const len = Math.hypot(dx, dy) || 1;
     dx /= len; dy /= len;
-    const ex = tx + dx * 40, ey = ty + dy * 40;
+    const horizontal = Math.abs(dx) > Math.abs(dy);
+    nodes.text.setAttribute('text-anchor', horizontal ? (dx > 0 ? 'start' : 'end') : 'middle');
+    // Décale l'étiquette tant qu'elle en chevauche une autre déjà posée :
+    // le filet s'allonge, ou, à l'horizontale (souvent bloquée par le bord), s'incline en haut puis en bas.
+    let b, ex, ey;
+    for (let k = 0; k < 7; k++) {
+      const step = Math.ceil(k / 2) * (k % 2 ? 1 : -1);
+      const reach = horizontal ? 40 : 40 + k * 24;
+      ex = tx + dx * reach; ey = ty + dy * reach + (horizontal ? step * 26 : 0);
+      nodes.text.setAttribute('x', ex + (horizontal ? dx * 8 : 0));
+      nodes.text.setAttribute('y', ey + (horizontal ? 4 : dy > 0 ? 16 : -8));
+      keepInView(nodes.text);
+      b = nodes.text.getBBox();
+      if (!placed.some((o) => overlaps(b, o))) break;
+    }
+    placed.push(b);
     nodes.line.setAttribute('x1', tx); nodes.line.setAttribute('y1', ty);
     nodes.line.setAttribute('x2', ex); nodes.line.setAttribute('y2', ey);
     nodes.dot.setAttribute('cx', tx); nodes.dot.setAttribute('cy', ty);
-    const horizontal = Math.abs(dx) > Math.abs(dy);
-    nodes.text.setAttribute('x', ex + (horizontal ? dx * 8 : 0));
-    nodes.text.setAttribute('y', ey + (horizontal ? 4 : dy > 0 ? 16 : -8));
-    nodes.text.setAttribute('text-anchor', horizontal ? (dx > 0 ? 'start' : 'end') : 'middle');
-    keepInView(nodes.text);
-    const b = nodes.text.getBBox();
     nodes.tag.setAttribute('x', b.x - 7); nodes.tag.setAttribute('y', b.y - 4);
     nodes.tag.setAttribute('width', b.width + 14); nodes.tag.setAttribute('height', b.height + 8);
   }
