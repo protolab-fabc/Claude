@@ -3,28 +3,29 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Rafale — bloc propulsif</title>
-<meta name="description" content="Le bloc propulsif d'un Rafale, deux moteurs M88 et leurs entrées d'air, démonté pièce par pièce au fil du défilement.">
+<title>Rafale — carnet de bord</title>
+<meta name="description" content="Un Rafale au-dessus de la mer du soir, puis son bloc propulsif — deux moteurs M88 et leurs entrées d'air — démonté pièce par pièce au fil du défilement.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@700;800&family=Karla:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=Spectral:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #fbe7c6;
-    --paper: #fbf1c7;
-    --paper-edge: #e6d39a;
-    --ink: #2a1f2d;
-    --umber: #4d3a4f;
-    --muted: #7a5636;
-    --rust: #b0413e;
-    --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
-    --sans: "Karla", system-ui, sans-serif;
+    --bg: #142022;
+    --panel: #1b2a2b;
+    --panel-edge: #8f8463;
+    --ink: #e8dfc4;
+    --body: #cfc6aa;
+    --muted: #a8a084;
+    --accent: #e0a35a;
+    --line: #0f1a1b;
+    --display: "IM Fell English SC", Georgia, serif;
+    --sans: "Spectral", Georgia, serif;
     --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   }
 
   * { box-sizing: border-box; }
-  html { background: var(--bg); scrollbar-color: var(--umber) var(--paper-edge); }
-  ::selection { background: var(--rust); color: var(--paper); }
+  html { background: var(--bg); scrollbar-color: var(--panel-edge) var(--bg); }
+  ::selection { background: var(--accent); color: var(--line); }
   body {
     margin: 0;
     background: var(--bg);
@@ -33,13 +34,7 @@
     -webkit-font-smoothing: antialiased;
   }
 
-  #scene {
-    position: fixed;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    display: block;
-  }
+  #scene { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 
   .overlay { position: fixed; pointer-events: none; z-index: 2; }
 
@@ -49,56 +44,51 @@
     justify-content: space-between;
     align-items: baseline;
     padding: 22px 32px;
-    font-size: 12px;
-    font-weight: 500;
-    letter-spacing: 0.22em;
-    text-transform: uppercase;
-    color: var(--umber);
+    font-family: var(--display);
+    font-size: 16px;
+    color: var(--muted);
   }
-  .topbar b { color: var(--ink); font-weight: 600; }
+  .topbar b { color: var(--ink); font-weight: 400; }
 
-  /* Hero : titrage de couverture de bande dessinée, capitales condensées */
+  /* Hero : titre de carnet de bord, sur le ciel du soir */
   .hero {
-    /* Au-dessus de l'horizon dessiné, sur le ciel uni */
-    left: 32px; right: 32px; bottom: calc(28vh + 24px);
-    max-width: 680px;
+    left: 32px; right: 32px; top: 18vh;
+    max-width: 640px;
   }
   .hero h1 {
     font-family: var(--display);
-    font-weight: 800;
-    font-size: clamp(52px, 7.4vw, 112px);
-    line-height: 0.92;
-    letter-spacing: 0.01em;
-    text-transform: uppercase;
+    font-weight: 400;
+    font-size: clamp(48px, 6.6vw, 96px);
+    line-height: 0.95;
     margin: 0 0 22px;
     color: var(--ink);
+    text-shadow: 0 2px 18px rgba(10, 18, 19, 0.6);
     text-wrap: balance;
   }
-  .hero h1 em { font-style: normal; color: var(--rust); }
+  .hero h1 em { font-style: italic; color: var(--accent); }
   .hero p {
     margin: 0;
-    max-width: 42ch;
-    color: var(--umber);
-    font-size: 17px;
+    max-width: 40ch;
+    color: var(--body);
+    font-size: 18px;
     line-height: 1.55;
+    text-shadow: 0 1px 10px rgba(10, 18, 19, 0.7);
   }
   .scroll-hint {
-    margin-top: 28px;
+    margin-top: 26px;
     display: inline-flex;
     gap: 12px;
     align-items: center;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.26em;
-    text-transform: uppercase;
-    color: var(--umber);
+    font-family: var(--display);
+    font-size: 16px;
+    color: var(--muted);
   }
   .scroll-hint i {
     display: block;
     width: 1px; height: 30px;
     background: linear-gradient(var(--ink), transparent);
     transform-origin: top;
-    animation: hint 2.2s var(--ease-out) infinite;
+    animation: hint 2.4s var(--ease-out) infinite;
   }
   @keyframes hint {
     0% { transform: scaleY(0); opacity: 1; }
@@ -106,43 +96,43 @@
     100% { transform: scaleY(1); opacity: 0; }
   }
 
-  /* Panneaux : cartel de musée posé sur la peinture */
+  /* Panneaux : pages du carnet, double filet laiton */
   .panel {
     left: 32px; bottom: 9vh;
-    width: min(380px, calc(100vw - 64px));
+    width: min(400px, calc(100vw - 64px));
     padding: 22px 24px 24px;
-    background: var(--paper);
-    border: 1.5px solid var(--ink);
+    background: rgba(27, 42, 43, 0.94);
+    border: 1px solid var(--panel-edge);
+    outline: 1px solid rgba(143, 132, 99, 0.45);
+    outline-offset: 4px;
     opacity: 0;
     will-change: opacity, transform;
   }
   .panel h2 {
     font-family: var(--display);
-    font-weight: 800;
-    font-size: clamp(30px, 3vw, 40px);
-    line-height: 1;
-    letter-spacing: 0.01em;
-    text-transform: uppercase;
+    font-weight: 400;
+    font-size: clamp(28px, 2.8vw, 38px);
+    line-height: 1.05;
     margin: 0 0 12px;
     color: var(--ink);
   }
   .panel p {
     margin: 0;
-    color: var(--umber);
-    font-size: 15px;
+    color: var(--body);
+    font-size: 16px;
     line-height: 1.6;
   }
   .panel dl {
     margin: 16px 0 0;
     padding-top: 12px;
-    border-top: 1px solid var(--paper-edge);
+    border-top: 1px solid rgba(143, 132, 99, 0.5);
     display: grid;
     grid-template-columns: auto 1fr;
     gap: 4px 18px;
-    font-size: 13px;
+    font-size: 15px;
   }
-  .panel dt { color: var(--muted); letter-spacing: 0.04em; }
-  .panel dd { margin: 0; color: var(--ink); font-weight: 500; font-variant-numeric: tabular-nums; }
+  .panel dt { color: var(--muted); font-style: italic; }
+  .panel dd { margin: 0; color: var(--ink); font-variant-numeric: tabular-nums; }
 
   /* Rail de progression */
   .rail {
@@ -161,11 +151,9 @@
     justify-content: flex-end;
     gap: 10px;
     padding: 6px 0;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.18em;
-    text-transform: uppercase;
-    color: rgba(35, 29, 24, 0.35);
+    font-family: var(--display);
+    font-size: 15px;
+    color: rgba(232, 223, 196, 0.35);
     transition: color 200ms ease;
   }
   .rail button span {
@@ -181,91 +169,81 @@
     transition: width 200ms var(--ease-out);
   }
   .rail button.active { color: var(--ink); }
-  .rail button.active i { width: 30px; background: var(--rust); height: 2px; }
+  .rail button.active i { width: 30px; height: 2px; background: var(--accent); }
   .rail button.active span { opacity: 1; transform: none; }
   @media (hover: hover) and (pointer: fine) {
     .rail button:hover { color: var(--ink); }
     .rail button:hover span { opacity: 1; transform: none; }
   }
-  .rail button:focus-visible { outline: 1px solid var(--rust); outline-offset: 4px; }
+  .rail button:focus-visible { outline: 1px solid var(--accent); outline-offset: 4px; }
 
   .legend {
     right: 32px; bottom: 22px;
     display: flex;
     gap: 22px;
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.14em;
-    text-transform: uppercase;
-    color: var(--umber);
+    font-family: var(--display);
+    font-size: 14px;
+    color: var(--body);
   }
   .legend span { display: inline-flex; align-items: center; gap: 8px; }
-  .legend i { display: block; width: 22px; height: 4px; border: 1px solid var(--ink); }
-  .legend .cold { background: #8ec3d6; }
-  .legend .hot { background: linear-gradient(90deg, #8ec3d6, #f4d58a, #f2a05a, #f07a6a, #d9506a); }
+  .legend i { display: block; width: 22px; height: 3px; }
+  .legend .cold { background: #9fc4c0; }
+  .legend .hot { background: linear-gradient(90deg, #9fc4c0, #e8c77a, #e0a35a, #d0603a); }
 
   .progress {
     left: 0; bottom: 0;
     height: 2px;
     width: 100%;
-    background: var(--rust);
+    background: var(--accent);
     transform-origin: left;
     transform: scaleX(0);
   }
 
-  /* Étiquettes : annotations au crayon sur la planche */
+  /* Étiquettes : fiches du carnet */
   #labels { inset: 0; width: 100%; height: 100%; overflow: visible; }
-  #labels line { stroke: var(--ink); stroke-width: 1; }
-  #labels circle { fill: var(--rust); }
-  #labels rect { fill: var(--paper); stroke: var(--ink); stroke-width: 1.2; }
+  #labels line { stroke: var(--ink); stroke-width: 1; opacity: 0.8; }
+  #labels circle { fill: var(--accent); }
+  #labels rect { fill: #1b2a2b; stroke: var(--panel-edge); stroke-width: 1; }
   #labels text {
     fill: var(--ink);
     font-family: var(--display);
-    font-weight: 700;
-    font-size: 13px;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
+    font-size: 14px;
   }
 
-  #track { position: relative; height: 1100vh; }
+  #track { position: relative; height: 1300vh; }
 
   footer {
     position: relative;
     z-index: 3;
-    background: var(--paper);
-    border-top: 1px solid var(--paper-edge);
+    background: var(--panel);
+    border-top: 1px solid var(--panel-edge);
     padding: 96px 32px 64px;
   }
   footer .inner { max-width: 1120px; margin: 0 auto; }
   footer h3 {
     font-family: var(--display);
-    font-weight: 800;
-    font-size: clamp(40px, 5vw, 68px);
+    font-weight: 400;
+    font-size: clamp(38px, 4.6vw, 60px);
     line-height: 1;
-    letter-spacing: 0.01em;
-    text-transform: uppercase;
     margin: 0 0 14px;
   }
-  footer .lede { color: var(--umber); max-width: 56ch; line-height: 1.6; margin: 0 0 56px; font-size: 17px; }
+  footer .lede { color: var(--body); max-width: 56ch; line-height: 1.6; margin: 0 0 56px; font-size: 17px; }
   .specs {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    border-top: 1px solid var(--ink);
+    border-top: 1px solid var(--panel-edge);
     margin: 0;
   }
-  .specs div { padding: 22px 20px 22px 0; border-bottom: 1px solid var(--paper-edge); }
+  .specs div { padding: 22px 20px 22px 0; border-bottom: 1px solid rgba(143, 132, 99, 0.4); }
   .specs dt {
-    font-size: 11px;
-    font-weight: 500;
-    letter-spacing: 0.2em;
-    text-transform: uppercase;
+    font-style: italic;
+    font-size: 15px;
     color: var(--muted);
     margin-bottom: 10px;
   }
   .specs dd {
     margin: 0;
     font-family: var(--display);
-    font-weight: 400;
     font-size: 40px;
     line-height: 1;
     color: var(--ink);
@@ -277,7 +255,7 @@
     flex-wrap: wrap;
     justify-content: space-between;
     gap: 12px;
-    font-size: 13px;
+    font-size: 14px;
     color: var(--muted);
   }
 
@@ -288,23 +266,23 @@
     place-items: center;
     padding: 28px;
     text-align: center;
-    color: var(--umber);
+    color: var(--body);
   }
   .no-webgl .fallback { display: grid; }
   .no-webgl #scene { display: none; }
 
   @media (max-width: 720px) {
-    .legend { left: 16px; right: auto; top: 44px; bottom: auto; flex-direction: column; gap: 6px; font-size: 9px; }
-    .topbar { padding: 16px; letter-spacing: 0.16em; font-size: 11px; }
+    .legend { left: 16px; right: auto; top: 46px; bottom: auto; flex-direction: column; gap: 6px; font-size: 12px; }
+    .topbar { padding: 16px; font-size: 14px; }
     .topbar .hide-sm { display: none; }
-    .hero { left: 16px; right: 16px; bottom: 16px; padding: 18px 18px 20px; background: var(--paper); border: 1.5px solid var(--ink); }
-    .hero h1 { font-size: 34px; margin-bottom: 12px; }
+    .hero { left: 16px; right: 16px; top: auto; bottom: 16px; padding: 18px 18px 20px; background: rgba(27, 42, 43, 0.94); border: 1px solid var(--panel-edge); }
+    .hero h1 { font-size: 40px; margin-bottom: 12px; }
     .hero p { font-size: 15px; }
-    .scroll-hint { margin-top: 16px; }
-    .panel { left: 16px; right: 16px; bottom: 16px; width: auto; padding: 18px 18px 20px; }
-    .panel p { font-size: 14px; }
+    .scroll-hint { margin-top: 14px; }
+    .panel { left: 16px; right: 16px; bottom: 16px; width: auto; padding: 18px 18px 20px; outline: none; }
+    .panel p { font-size: 15px; }
     .panel dl { display: none; }
-    #labels text { font-size: 11px; letter-spacing: 0.03em; }
+    #labels text { font-size: 12px; }
     .rail { right: 12px; top: 72px; transform: none; }
     .rail button span { display: none; }
     footer { padding: 64px 16px 48px; }
@@ -325,7 +303,7 @@
 </script>
 </head>
 <body>
-  <canvas id="scene" aria-label="Modèle 3D du bloc propulsif d'un Rafale qui se décompose au défilement"></canvas>
+  <canvas id="scene" aria-label="Modèle 3D d'un Rafale dont le bloc propulsif se décompose au défilement"></canvas>
   <div class="fallback">WebGL n'est pas disponible sur cet appareil — le modèle 3D ne peut pas s'afficher.</div>
 
   <svg id="labels" class="overlay" aria-hidden="true"></svg>
@@ -336,8 +314,8 @@
   </div>
 
   <div class="overlay hero" id="hero">
-    <h1>Deux cœurs<br>pour un <em>Rafale</em></h1>
-    <p>Le bloc propulsif d'un Rafale : deux moteurs M88 nourris par des entrées d'air fixes. Faites défiler pour démonter le moteur droit, de l'entrée d'air jusqu'à la tuyère.</p>
+    <h1>Le cœur<br>d'un <em>Rafale</em></h1>
+    <p>Un Rafale au-dessus de la mer, à la tombée du jour. Faites défiler pour plonger dans son fuselage et démonter le bloc propulsif, de l'entrée d'air jusqu'à la tuyère.</p>
     <div class="scroll-hint"><i></i>Défiler</div>
   </div>
 
@@ -362,7 +340,7 @@
         <div><dt>Masse d'un moteur</dt><dd>≈ 900 kg</dd></div>
       </dl>
       <div class="colophon">
-        <span>Modèle généré en code avec Three.js, dessiné en temps réel en ligne claire, aplats pastel et hachures. Projet non affilié à Safran ni à Dassault Aviation.</span>
+        <span>Modèle généré en code avec Three.js, rendu en temps réel : aplats sourds, contour fin, brume du soir. Projet non affilié à Safran ni à Dassault Aviation.</span>
         <span>Sample · design &amp; motion</span>
       </div>
     </div>
@@ -401,39 +379,44 @@ renderer.autoClear = false;
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 300);
 
-// Lumière de plein jour : une clé franche, un ciel pastel ; l'ombre se lit par les hachures.
-scene.add(new THREE.HemisphereLight(0xfff3e6, 0xd8b8d0, 1.35));
-const key = new THREE.DirectionalLight(0xffffff, 1.7);
-key.position.set(7, 10, 8);
+// Crépuscule sur la mer : ciel froid, reflets d'eau sombre, une lune basse comme seule clé.
+scene.add(new THREE.HemisphereLight(0xc8d8d0, 0x2a3a38, 1.25));
+const key = new THREE.DirectionalLight(0xe8f0e0, 1.5);
+key.position.set(6, 9, 7);
 scene.add(key);
 const fireLight = new THREE.PointLight(0xffa060, 0, 6, 1.6);
 scene.add(fireLight);
 
 // ------------------------------------------------------------------
-// Matériaux : aplats à trois tons, palette pastel de ligne claire.
+// Matériaux : aplats à trois tons doux, palette vert-de-gris.
 // Une instance par pièce pour pouvoir atténuer chacune.
 // ------------------------------------------------------------------
-const ramp = new THREE.DataTexture(new Uint8Array([95, 165, 255]), 3, 1, THREE.RedFormat);
+const ramp = new THREE.DataTexture(new Uint8Array([115, 190, 255]), 3, 1, THREE.RedFormat);
 ramp.minFilter = ramp.magFilter = THREE.NearestFilter;
 ramp.needsUpdate = true;
 const flat = (o) => () => new THREE.MeshToonMaterial({ gradientMap: ramp, ...o });
 const MAT = {
-  paint:  flat({ color: 0xf3dcc8, side: THREE.DoubleSide }),
-  ti:     flat({ color: 0xd2d8ea }),
-  steel:  flat({ color: 0xa3d0c4, side: THREE.DoubleSide }),
-  dark:   flat({ color: 0x6f7194 }),
-  hot:    flat({ color: 0xe8a07e }),
-  bronze: flat({ color: 0xebc48c, side: THREE.DoubleSide }),
-  flap:   flat({ color: 0x86a9b2, side: THREE.DoubleSide }),
-  hole:   flat({ color: 0x4a3a4e }),
-  pipe:   flat({ color: 0xd98b8b }),
-  glow:   flat({ color: 0xffd98a, emissive: 0xffa060, emissiveIntensity: 0.8 }),
-  abglow: flat({ color: 0xffcfae, emissive: 0xff806a, emissiveIntensity: 0.8, transparent: true, opacity: 0.85 }),
+  paint:  flat({ color: 0xb9b39a, side: THREE.DoubleSide }),
+  ti:     flat({ color: 0xc9cfc6 }),
+  steel:  flat({ color: 0x8fa39c, side: THREE.DoubleSide }),
+  dark:   flat({ color: 0x46524f }),
+  hot:    flat({ color: 0xc47a4e }),
+  bronze: flat({ color: 0xc49a5e, side: THREE.DoubleSide }),
+  flap:   flat({ color: 0x6e8580, side: THREE.DoubleSide }),
+  hole:   flat({ color: 0x1c2626 }),
+  pipe:   flat({ color: 0x9a5a4a }),
+  glow:   flat({ color: 0xffcf7a, emissive: 0xff9a40, emissiveIntensity: 0.9 }),
+  abglow: flat({ color: 0xffc89a, emissive: 0xff7a40, emissiveIntensity: 0.9, transparent: true, opacity: 0.85 }),
+  // Cellule
+  skin:   flat({ color: 0x95a3a3, side: THREE.DoubleSide }),
+  skinDk: flat({ color: 0x5d6b6c, side: THREE.DoubleSide }),
+  glass:  flat({ color: 0x1f3a3f, emissive: 0x2c5a5a, emissiveIntensity: 0.25 }),
+  store:  flat({ color: 0xd2ccb4 }),
 };
 
 // ------------------------------------------------------------------
-// Dessin : passe couleur (+ profondeur), passe normales, puis un shader qui encre les arêtes,
-// hachure les ombres comme à la plume et peint un décor de désert en ligne claire.
+// Rendu : passe couleur (+ profondeur), passe normales, puis un shader qui trace un contour fin,
+// noie les lointains dans la brume et peint la mer du soir.
 // ------------------------------------------------------------------
 const colorRT = new THREE.WebGLRenderTarget(1, 1, { samples: 4 });
 colorRT.depthTexture = new THREE.DepthTexture(1, 1);
@@ -452,6 +435,9 @@ const ink = new THREE.ShaderMaterial({
     pr: { value: PR },
     aspect: { value: 1 },
     scroll: { value: 0 },
+    time: { value: 0 },
+    fogNear: { value: 20 },
+    fogFar: { value: 60 },
   },
   vertexShader: /* glsl */`
     varying vec2 vUv;
@@ -461,100 +447,86 @@ const ink = new THREE.ShaderMaterial({
     #include <packing>
     uniform sampler2D tColor, tDepth, tNormal;
     uniform vec2 resolution;
-    uniform float near, far, pr, aspect, scroll;
+    uniform float near, far, pr, aspect, scroll, time, fogNear, fogFar;
     varying vec2 vUv;
 
-    const vec3 INK = vec3(0.165, 0.12, 0.176);
-    const vec3 SKY_LOW = vec3(0.984, 0.906, 0.776);
-    const vec3 SKY_MID = vec3(0.965, 0.804, 0.722);
-    const vec3 SKY_TOP = vec3(0.847, 0.765, 0.89);
-    const vec3 PLANET = vec3(0.81, 0.902, 0.84);
-    const vec3 MESA = vec3(0.863, 0.639, 0.663);
-    const vec3 SAND = vec3(0.918, 0.702, 0.549);
-    const vec3 SAND_SHADE = vec3(0.847, 0.6, 0.506);
+    const vec3 LINE = vec3(0.06, 0.1, 0.105);
+    const vec3 FOG = vec3(0.56, 0.64, 0.6);
+    const vec3 SKY_TOP = vec3(0.094, 0.16, 0.172);
+    const vec3 SKY_MID = vec3(0.365, 0.478, 0.447);
+    const vec3 SKY_GLOW = vec3(0.788, 0.773, 0.604);
+    const vec3 SEA_FAR = vec3(0.184, 0.29, 0.278);
+    const vec3 SEA_NEAR = vec3(0.078, 0.141, 0.145);
+    const vec3 WAVE = vec3(0.365, 0.498, 0.471);
+    const vec3 ROCK_FAR = vec3(0.29, 0.384, 0.365);
+    const vec3 ROCK = vec3(0.165, 0.227, 0.224);
+    const vec3 MOON = vec3(0.91, 0.894, 0.784);
+    const vec3 LAMP = vec3(1.0, 0.86, 0.55);
 
     bool isBg(vec2 uv) { return texture2D(tDepth, uv).x >= 0.99999; }
     float viewZ(vec2 uv) { return -perspectiveDepthToViewZ(texture2D(tDepth, uv).x, near, far); }
     vec3 nrm(vec2 uv) { return texture2D(tNormal, uv).xyz * 2.0 - 1.0; }
-    float stroke(float d, float px) { return 1.0 - smoothstep(px * 0.5, px * 0.5 + 1.0, abs(d) * resolution.y); }
-    // Hachures fines à 45° (dir = ±1), espacées en pixels d'écran.
-    float hatch(float dir, float spacing) {
-      vec2 f = gl_FragCoord.xy / pr;
-      float v = dir > 0.0 ? f.x + f.y : f.x - f.y;
-      return step(fract(v / spacing), 0.2);
+    float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+    float vnoise(vec2 p) {
+      vec2 i = floor(p), f = fract(p);
+      vec2 u = f * f * (3.0 - 2.0 * f);
+      return mix(mix(hash(i), hash(i + vec2(1, 0)), u.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), u.x), u.y);
     }
+    float fbm(vec2 p) { float v = 0.0, a = 0.5; for (int i = 0; i < 5; i++) { v += a * vnoise(p); p *= 2.03; a *= 0.5; } return v; }
 
     vec3 backdrop() {
       vec2 p = vec2(vUv.x * aspect, vUv.y);
       float y = vUv.y;
-      float horizon = 0.3 + 0.04 * scroll;
-      float lw = 1.2 * pr;
-      // Ciel en trois aplats.
-      float t = (y - horizon) / (1.0 - horizon);
-      vec3 col = t < 0.2 ? SKY_LOW : t < 0.5 ? SKY_MID : SKY_TOP;
+      float h = 0.36 + 0.03 * scroll;
+      vec3 col;
+      vec2 moon = vec2(0.78 * aspect, h + 0.32);
 
-      // Grande planète annelée, ombrée aux hachures.
-      vec2 c = vec2(0.8 * aspect, horizon + 0.43);
-      float R = 0.12;
-      vec2 q = p - c;
-      float d = length(q) - R;
-      if (d < 0.0) {
-        col = PLANET;
-        if (dot(q, normalize(vec2(-1.0, -0.6))) > R * 0.35) col = mix(col, INK, hatch(1.0, 5.0) * 0.8);
-        for (int k = 0; k < 3; k++) {
-          vec2 cc = c + vec2(0.04 * float(k) - 0.03, 0.05 - 0.045 * float(k));
-          col = mix(col, INK, stroke(length(p - cc) - 0.012 - 0.006 * float(k), lw * 0.8));
-        }
-      }
-      col = mix(col, INK, stroke(d, lw));
-      // Anneau incliné : masqué derrière la planète, dessiné devant.
-      vec2 rq = mat2(0.97, 0.24, -0.24, 0.97) * q;
-      float e = length(vec2(rq.x / 2.2, rq.y / 0.42)) - R;
-      if (!(d < 0.0 && rq.y > 0.0)) col = mix(col, INK, stroke(e * 0.5, lw));
-
-      // Oiseaux au loin : deux traits en V.
-      for (int k = 0; k < 3; k++) {
-        vec2 b = vec2((0.56 + 0.06 * float(k)) * aspect, horizon + 0.5 + 0.04 * mod(float(k), 2.0));
-        vec2 r = p - b;
-        float s = 0.012 - 0.002 * float(k);
-        float wing = abs(r.y - abs(r.x) * 0.55);
-        if (abs(r.x) < s) col = mix(col, INK, stroke(wing, lw));
-      }
-
-      // Mesas : colonnes de roche à flancs inclinés, face droite hachurée.
-      for (int k = 0; k < 4; k++) {
-        float fk = float(k);
-        // Regroupées à droite : la moitié gauche reste dégagée pour le texte.
-        float cx = (0.5 + fk * 0.16 + 0.03 * sin(fk * 3.1)) * aspect;
-        float w = 0.04 + 0.025 * mod(fk * 1.7, 2.0);
-        float h = 0.14 + 0.09 * mod(fk * 2.3, 3.0) / 2.0;
-        float yy = y - horizon;
-        // Flancs presque droits, légèrement évasés au pied, et un chapeau rocheux qui déborde.
-        float hw = w * (1.0 + 0.35 * (1.0 - smoothstep(0.0, 0.25 * h, yy))) + 0.003 * sin(yy * 90.0 + fk)
-                 + (yy > h * 0.86 ? w * 0.18 : 0.0);
-        float dSide = hw - abs(p.x - cx);
-        float dTop = h - yy;
-        if (yy > 0.0 && dSide > 0.0 && dTop > 0.0) {
-          col = MESA;
-          if (p.x > cx + w * 0.15) col = mix(col, INK, hatch(-1.0, 4.0) * 0.7);
-          // Strates horizontales
-          col = mix(col, INK, stroke(mod(yy, 0.035) - 0.0175, lw * 0.6) * 0.6);
-        }
-        if (yy > 0.0 && dTop > -0.002) col = mix(col, INK, stroke(dSide, lw) * step(0.0, dTop + 0.001));
-        if (yy > 0.0 && dSide > -0.002) col = mix(col, INK, stroke(dTop, lw) * step(0.0, dSide + 0.001));
+      if (y >= h) {
+        // Ciel : lueur jaunâtre sur l'horizon, vert-de-gris, nuit qui tombe.
+        float t = (y - h) / (1.0 - h);
+        col = mix(SKY_GLOW, SKY_MID, smoothstep(0.0, 0.3, t));
+        col = mix(col, SKY_TOP, smoothstep(0.3, 1.0, t));
+        // Nuages en traînées sombres.
+        float cl = fbm(vec2(p.x * 1.6 + time * 0.01, y * 9.0));
+        col = mix(col, vec3(0.17, 0.25, 0.25), smoothstep(0.5, 0.75, cl) * 0.5 * smoothstep(0.1, 0.6, t));
+        // Lune voilée.
+        float dm = length(p - moon);
+        col += MOON * 0.35 * exp(-dm * 9.0);
+        if (dm < 0.055) col = mix(MOON, col, smoothstep(0.045, 0.055, dm) * 0.6);
+        // Îlots lointains, puis rochers proches hérissés d'arbres morts.
+        float far1 = h + 0.025 + 0.04 * pow(fbm(vec2(p.x * 2.2, 1.0)), 2.0) * step(0.45, fbm(vec2(p.x * 0.7, 5.0)));
+        if (y < far1) col = mix(ROCK_FAR, col, 0.25);
+        float near1 = h + 0.07 * pow(fbm(vec2(p.x * 3.5 + 7.0, 2.0)), 1.5) * smoothstep(0.52, 0.6, fbm(vec2(p.x * 0.9 + 3.0, 9.0)));
+        float spike = step(0.82, hash(vec2(floor(p.x * 140.0), 3.0))) * 0.035 * hash(vec2(floor(p.x * 140.0), 7.0));
+        if (y < near1 + spike * step(h + 0.01, near1)) col = ROCK;
+      } else {
+        // Mer : sombre au premier plan, rides claires qui se resserrent vers l'horizon.
+        float d = (h - y) / h;
+        col = mix(SEA_FAR, SEA_NEAR, smoothstep(0.0, 1.0, d));
+        float r = log(d + 0.02) * 14.0;
+        float wave = smoothstep(0.82, 1.0, fract(r)) * step(0.55, vnoise(vec2(p.x * (6.0 / (d + 0.08)) + time * 0.25, floor(r))));
+        col = mix(col, WAVE, wave * 0.55);
+        // Reflet de lune, en touches brisées.
+        float colm = abs(p.x - moon.x) - 0.02 - 0.08 * d;
+        if (colm < 0.0) col = mix(col, MOON, wave * 0.75);
       }
 
-      // Sol : désert rose-ocre, crêtes de dunes à l'encre, faces d'ombre hachurées.
-      if (y < horizon) {
-        col = SAND;
-        float dune1 = horizon - 0.07 + 0.025 * sin(p.x * 3.1 + 1.0) + 0.012 * sin(p.x * 7.3);
-        float dune2 = horizon - 0.17 + 0.035 * sin(p.x * 2.2 + 4.0) + 0.015 * sin(p.x * 5.1);
-        if (y < dune1 && y > dune1 - 0.035) col = mix(SAND_SHADE, INK, hatch(1.0, 5.0) * 0.5);
-        if (y < dune2 && y > dune2 - 0.05) col = mix(SAND_SHADE, INK, hatch(1.0, 5.0) * 0.5);
-        col = mix(col, INK, stroke(y - dune1, lw * 0.8));
-        col = mix(col, INK, stroke(y - dune2, lw * 0.8));
+      // Phare sur un rocher, faisceau qui balaie la brume.
+      vec2 base = vec2(0.16 * aspect, h);
+      vec2 lamp = base + vec2(0.0, 0.085);
+      if (abs(p.x - base.x) < 0.008 && y > h - 0.005 && y < lamp.y) {
+        col = mod(floor((y - h) * 120.0), 2.0) < 1.0 ? vec3(0.78, 0.76, 0.66) : vec3(0.55, 0.25, 0.22);
       }
-      col = mix(col, INK, stroke(y - horizon, lw));
+      if (abs(p.x - base.x) < 0.03 && y < h + 0.012 && y > h - 0.004) col = ROCK;
+      float a = time * 0.5;
+      vec2 beam = normalize(vec2(cos(a), 0.06 * sin(a * 2.0)));
+      vec2 lp = p - lamp;
+      float cone = smoothstep(0.975, 0.998, dot(normalize(lp), beam)) * (1.0 - smoothstep(0.0, 0.9, length(lp)));
+      col += LAMP * cone * 0.35 * (0.6 + 0.4 * cos(a));
+      col = mix(col, LAMP, smoothstep(0.012, 0.004, length(lp)));
+
+      // Brume qui monte de l'eau.
+      col = mix(col, FOG, exp(-abs(y - h) * 12.0) * 0.5);
       return col;
     }
 
@@ -574,21 +546,25 @@ const ink = new THREE.ShaderMaterial({
         edgeD = max(edgeD, abs(viewZ(qq) - z) / max(z, 0.001));
         edgeN = max(edgeN, 1.0 - dot(n, nrm(qq)));
       }
-      bool line = (bg && bgN < 4.0) || (!bg && (bgN > 0.0 || edgeD > 0.02 || edgeN > 0.3));
 
       vec4 src = texture2D(tColor, vUv);
       vec3 c = pow(clamp(src.rgb, 0.0, 1.0), vec3(1.0 / 2.2));
       vec3 col;
+      float fog = 0.0;
       if (bg) {
         col = backdrop() * (1.0 - sqrt(src.a)) + c;
       } else {
-        // Ombre : hachures simples, puis croisées dans les ombres profondes.
-        float lum = dot(c, vec3(0.299, 0.587, 0.114));
         col = c;
-        if (lum < 0.55) col = mix(col, INK, hatch(1.0, 4.5) * 0.7);
-        if (lum < 0.33) col = mix(col, INK, hatch(-1.0, 4.5) * 0.7);
+        if (edgeD > 0.02 || edgeN > 0.3 || bgN > 0.0) col = mix(col, LINE, 0.85);
+        // Brume : les lointains se fondent dans l'air humide.
+        fog = smoothstep(fogNear, fogFar, z) * 0.75;
+        col = mix(col, FOG, fog);
       }
-      if (line) col = INK;
+      if (bg && bgN < 4.0) col = mix(col, LINE, 0.6);
+      // Vignettage sombre et grain léger.
+      vec2 q = vUv - 0.5;
+      col *= 1.0 - dot(q, q) * 0.9;
+      col += (hash(floor(gl_FragCoord.xy / pr)) - 0.5) * 0.025;
       gl_FragColor = vec4(col, 1.0);
     }
   `,
@@ -1050,6 +1026,109 @@ for (const part of parts) for (const m of part.mats) if (!matOwner.has(m)) matOw
   crown(OUTER_IDS, new THREE.CylinderGeometry(0.035, 0.03, 0.12, 6), steel, 2, (i) => ({ a: i * Math.PI + 0.9, r: 0.8, y: 0.9 }));
 }
 
+
+// ------------------------------------------------------------------
+// Cellule du Rafale : fuselage, verrière, aile delta, canards, dérive, emports.
+// Repère moteur : axe avant = +Y, haut = +X, les deux moteurs côte à côte selon Z.
+// Elle n'est pas une « pièce » : elle s'efface d'un bloc quand la caméra plonge vers les moteurs.
+// ------------------------------------------------------------------
+const ZC = -0.875;   // axe de symétrie de l'avion, entre les deux moteurs
+const airframe = new THREE.Group();
+engine.add(airframe);
+
+// Fuselage : sections en super-ellipse interpolées le long de l'axe. [y, centre x, demi-hauteur, demi-largeur]
+const HULL = [[-4.9, 0.15, 0.98, 1.85], [-1.0, 0.2, 1.1, 1.9], [3.0, 0.25, 1.12, 1.85], [4.6, 0.6, 0.95, 1.2],
+              [6.0, 1.0, 0.8, 0.82], [9.0, 1.05, 0.82, 0.82], [12.5, 1.0, 0.82, 0.78], [16.0, 0.85, 0.68, 0.64],
+              [19.5, 0.62, 0.48, 0.46], [22.5, 0.42, 0.26, 0.25], [24.2, 0.32, 0.06, 0.06], [24.6, 0.3, 0.004, 0.004]];
+function hullGeometry(rows, scale = 1, segY = 180, segA = 56) {
+  const pos = [], idx = [];
+  const y0 = rows[0][0], y1 = rows[rows.length - 1][0];
+  for (let i = 0; i <= segY; i++) {
+    const y = lerp(y0, y1, i / segY);
+    let k = 0;
+    while (k < rows.length - 2 && y > rows[k + 1][0]) k++;
+    const A = rows[k], B = rows[k + 1];
+    const lin = (y - A[0]) / (B[0] - A[0]);
+    const t = lin * 0.4 + smooth(A[0], B[0], y) * 0.6;
+    const cx = lerp(A[1], B[1], t), rx = lerp(A[2], B[2], t) * scale, rz = lerp(A[3], B[3], t) * scale;
+    for (let j = 0; j < segA; j++) {
+      const a = (j / segA) * TAU;
+      const c = Math.cos(a), s = Math.sin(a);
+      pos.push(cx + rx * Math.sign(c) * Math.abs(c) ** 0.8, y, ZC + rz * Math.sign(s) * Math.abs(s) ** 0.8);
+    }
+  }
+  for (let i = 0; i < segY; i++) {
+    for (let j = 0; j < segA; j++) {
+      const a = i * segA + j, b = i * segA + ((j + 1) % segA), c = (i + 1) * segA + j, d = (i + 1) * segA + ((j + 1) % segA);
+      idx.push(a, c, b, b, c, d);
+    }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setIndex(idx);
+  g.computeVertexNormals();
+  return g;
+}
+// Panneau plat extrudé, défini dans le plan (envergure s, y) ; side = +1 à droite (z > ZC), −1 à gauche.
+function planform(points, thick, mat, side, x, zRoot) {
+  const shape = new THREE.Shape(points.map(([s, y]) => new THREE.Vector2(-side * s, y)));
+  const g = new THREE.ExtrudeGeometry(shape, { depth: thick, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 1 });
+  g.translate(0, 0, -thick / 2);
+  g.rotateY(Math.PI / 2);   // (s, y, épaisseur) → (épaisseur, y, s)
+  const m = new THREE.Mesh(g, mat);
+  m.position.set(x, 0, ZC + side * zRoot);
+  return m;
+}
+{
+  const skin = MAT.skin(), dk = MAT.skinDk(), glass = MAT.glass(), store = MAT.store();
+  airframe.add(new THREE.Mesh(hullGeometry(HULL), skin));
+  // Radôme, un ton plus sombre.
+  airframe.add(new THREE.Mesh(hullGeometry(HULL.filter(([y]) => y >= 19.5), 1.012), dk));
+  // Verrière et son arceau.
+  const canopy = mesh(new THREE.SphereGeometry(1, 40, 20), glass, 1.62, 15.4, ZC);
+  canopy.scale.set(0.52, 2.5, 0.5);
+  airframe.add(canopy);
+  const bow = new THREE.Mesh(new THREE.TorusGeometry(0.5, 0.035, 8, 40, Math.PI), dk);
+  bow.position.set(1.62, 14.6, ZC);
+  bow.rotation.set(Math.PI / 2, Math.PI / 2, 0);
+  airframe.add(bow);
+  // Perche de ravitaillement fixe et sonde de nez.
+  airframe.add(rod(V3(1.05, 17.5, ZC + 0.42), V3(1.2, 21.6, ZC + 0.5), 0.05, dk));
+  airframe.add(rod(V3(0.3, 24.5, ZC), V3(0.3, 25.6, ZC), 0.014, dk));
+
+  for (const side of [1, -1]) {
+    // Aile delta, élevons au bord de fuite.
+    airframe.add(planform([[0, 5.0], [10.3, -3.0], [10.6, -4.3], [0, -4.4]], 0.16, skin, side, -0.08, 1.4));
+    for (const [s0, s1] of [[1.6, 5.5], [5.8, 9.8]]) {
+      airframe.add(planform([[s0, -4.42], [s1, -4.36], [s1, -3.75], [s0, -3.8]], 0.2, dk, side, -0.08, 1.4));
+    }
+    // Canard au-dessus de l'entrée d'air.
+    airframe.add(planform([[0, 11.4], [3.0, 9.4], [3.1, 8.9], [0, 9.0]], 0.08, skin, side, 0.75, 0.7));
+    // Missile en bout d'aile : corps, ogive, empennage.
+    const tipZ = ZC + side * (1.4 + 10.45);
+    airframe.add(rod(V3(-0.12, -3.4, tipZ), V3(-0.12, 0.2, tipZ), 0.09, store));
+    airframe.add(mesh(new THREE.ConeGeometry(0.09, 0.35, 16), dk, -0.12, 0.37, tipZ));
+    for (let k = 0; k < 4; k++) {
+      const fin = mesh(new THREE.BoxGeometry(0.02, 0.4, 0.26), dk, -0.12, -3.1, tipZ);
+      fin.rotation.y = (k * Math.PI) / 2;
+      airframe.add(fin);
+    }
+    // Bidon sous l'aile, sur son pylône.
+    const tank = mesh(new THREE.SphereGeometry(1, 28, 14), store, -0.75, -0.6, ZC + side * 6.2);
+    tank.scale.set(0.32, 1.6, 0.32);
+    airframe.add(tank);
+    airframe.add(mesh(new THREE.BoxGeometry(0.5, 1.2, 0.08), dk, -0.35, -0.5, ZC + side * 6.2));
+  }
+  // Dérive.
+  const finShape = new THREE.Shape([[1.2, 1.0], [4.4, 6.2], [5.6, 6.2], [5.4, 1.0]].map(([a, b]) => new THREE.Vector2(a, b)));
+  const finGeo = new THREE.ExtrudeGeometry(finShape, { depth: 0.14, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 1 });
+  finGeo.translate(0, 0, -0.07);
+  finGeo.rotateZ(-Math.PI / 2);   // (−y, x) → (x, y)
+  airframe.add(mesh(finGeo, skin, 0, 0, ZC));
+}
+const airMats = [];
+airframe.traverse((o) => { if (o.material && !airMats.includes(o.material)) airMats.push(o.material); });
+
 // ------------------------------------------------------------------
 // Flux d'air : des particules qui suivent le trajet réel de l'air en laissant une traînée qui s'efface.
 // Secondaire (froid) autour du cœur ; primaire comprimé, brûlé, puis réchauffé par la post-combustion.
@@ -1266,8 +1345,13 @@ function updateFlow(dt) {
 // ------------------------------------------------------------------
 // Récit : chapitres, caméra
 // ------------------------------------------------------------------
+// L'introduction (l'avion entier, puis la plongée) occupe le début du défilement ;
+// le démontage du moteur se joue ensuite sur une progression ramenée à 0–1.
+const INTRO = 0.2;
 const CHAPTERS = [
-  { id: 'hero', from: 0, to: 0.06 },
+  { id: 'hero', intro: true, from: 0, to: 0.06 },
+  { id: 'airframe', intro: true, num: '00', name: 'Le Rafale', from: 0.08, to: 0.19,
+    text: "Biréacteur à aile delta et plan canard. Ses deux moteurs occupent l'arrière du fuselage, côte à côte ; deux entrées d'air fixes, sous l'aile, les alimentent. La cellule s'efface : place au bloc propulsif." },
   { id: 'outer', num: '01', name: 'Carter externe', from: 0.09, to: 0.25,
     text: "Un M88 tient dans un cylindre d'à peine 70 cm de diamètre. Sous le carter externe, un étroit canal de dérivation enveloppe le cœur : un double flux à faible taux de dilution, pensé pour la vitesse plutôt que pour l'économie." },
   { id: 'core', num: '02', name: 'Le cœur', from: 0.27, to: 0.4,
@@ -1315,6 +1399,21 @@ const KEYS = [
   { p: 1.0,   y: 0.6,  L: 23,  W: 8,   fa: 0.14, el: 0.38 },
 ];
 
+const INTRO_KEYS = [
+  { p: 0.0,  y: 9.0, L: 28, W: 20, fa: 0.5, el: 0.4 },
+  { p: 0.05, y: 9.0, L: 28, W: 20, fa: 0.5, el: 0.4 },
+  { p: 0.13, y: 0.5, L: 14, W: 7,  fa: 0.25, el: 0.5 },
+];
+function introKey(pAll) {
+  const keys = [...INTRO_KEYS, { ...KEYS[0], p: INTRO }];
+  let i = 0;
+  while (i < keys.length - 2 && pAll > keys[i + 1].p) i++;
+  const a = keys[i], b = keys[i + 1];
+  const t = smooth(a.p, b.p, pAll);
+  const out = {};
+  for (const k of ['y', 'L', 'W', 'fa', 'el']) out[k] = lerp(a[k], b[k], t);
+  return out;
+}
 function cameraKey(p) {
   let i = 0;
   while (i < KEYS.length - 2 && p > KEYS[i + 1].p) i++;
@@ -1347,7 +1446,10 @@ for (const c of CHAPTERS) {
   btn.type = 'button';
   btn.innerHTML = `<span>${c.name}</span><i></i>`;
   btn.setAttribute('aria-label', c.name);
-  btn.addEventListener('click', () => scrollToProgress((c.from + Math.min(c.to, 1)) / 2));
+  btn.addEventListener('click', () => {
+    const mid = (c.from + Math.min(c.to, 1)) / 2;
+    scrollToProgress(c.intro ? mid : INTRO + mid * (1 - INTRO));
+  });
   railEl.appendChild(btn);
   c.btn = btn;
 }
@@ -1394,6 +1496,7 @@ const camTarget = new THREE.Vector3();
 const wantPos = new THREE.Vector3();
 const wantTarget = new THREE.Vector3();
 let first = true;
+let airVis = 1;
 let angleN1 = 0, angleN2 = 0;
 
 function resize() {
@@ -1426,7 +1529,8 @@ function chapterWeight(c, p) {
   return fadeIn * fadeOut;
 }
 
-function update(p, dt, time) {
+function update(pAll, dt, time) {
+  const p = clamp((pAll - INTRO) / (1 - INTRO));
   // Phases de démontage
   const tNacelle = smooth(0.08, 0.24, p);
   const tCasing = smooth(0.2, 0.34, p);
@@ -1474,7 +1578,7 @@ function update(p, dt, time) {
   // Chapitres : opacité des panneaux, pièce mise en avant
   let focus = null, focusWeight = 0, active = null;
   for (const c of CHAPTERS) {
-    const w = chapterWeight(c, p);
+    const w = chapterWeight(c, c.intro ? pAll : p);
     c.el.style.opacity = w.toFixed(3);
     c.el.style.transform = `translateY(${((1 - w) * 12).toFixed(2)}px)`;
     c.el.style.visibility = w < 0.002 ? 'hidden' : 'visible';
@@ -1483,7 +1587,7 @@ function update(p, dt, time) {
   }
   bypassVis = 1 - focusWeight;
   for (const c of CHAPTERS) c.btn?.classList.toggle('active', c === active);
-  progressEl.style.transform = `scaleX(${p.toFixed(4)})`;
+  progressEl.style.transform = `scaleX(${pAll.toFixed(4)})`;
 
   const k = 1 - Math.exp(-dt * 7);
   for (const part of parts) {
@@ -1509,7 +1613,7 @@ function update(p, dt, time) {
   fireLight.intensity = (tCasing * 2 + 0.5) * combustor.opacity;
 
   // Caméra
-  const ck = cameraKey(p);
+  const ck = pAll < INTRO ? introKey(pAll) : cameraKey(p);
   const halfTan = Math.tan(THREE.MathUtils.degToRad(camera.fov / 2));
   const along = portrait ? 2 * halfTan : 2 * halfTan * camera.aspect;
   const across = portrait ? 2 * halfTan * camera.aspect : 2 * halfTan;
@@ -1520,7 +1624,19 @@ function update(p, dt, time) {
   v.z += 1;
   v.normalize();
   wantPos.copy(wantTarget).addScaledVector(v, dist);
-  ink.uniforms.scroll.value = p;
+  ink.uniforms.scroll.value = pAll;
+  ink.uniforms.fogNear.value = dist * 0.9;
+  ink.uniforms.fogFar.value = dist * 3.2;
+
+  // La cellule s'efface pendant la plongée vers les moteurs.
+  airVis = 1 - smooth(0.11, 0.19, pAll);
+  for (const m of airMats) {
+    const transparent = airVis < 0.995;
+    if (m.transparent !== transparent) { m.transparent = transparent; m.needsUpdate = true; }
+    m.opacity = airVis;
+    m.depthWrite = airVis > 0.5;
+  }
+  airframe.visible = airVis > 0.01;
 
   const kc = reduceMotion || first ? 1 : 1 - Math.exp(-dt * 5);
   camPos.lerp(wantPos, kc);
@@ -1529,7 +1645,7 @@ function update(p, dt, time) {
   // Décentrage optique : en paysage, le sujet glisse vers la droite pour libérer la colonne de texte,
   // davantage sur le hero où le titre est large.
   if (!portrait && innerWidth > 720) {
-    const shift = lerp(0.26, 0.09, smooth(0.04, 0.14, p));
+    const shift = lerp(0.2, 0.09, smooth(0.04, 0.14, pAll));
     camera.setViewOffset(innerWidth, innerHeight, -innerWidth * shift, 0, innerWidth, innerHeight);
   } else if (camera.view) camera.clearViewOffset();
   camera.position.copy(camPos);
@@ -1597,6 +1713,8 @@ function frame() {
   const hidden = parts.filter((part) => part.opacity < 0.5 && part.obj.visible);
   for (const part of hidden) part.obj.visible = false;
   flowGroup.visible = false;
+  const airShown = airframe.visible;
+  if (airVis < 0.5) airframe.visible = false;
   scene.overrideMaterial = normalMat;
   renderer.setRenderTarget(normalRT);
   renderer.clear();
@@ -1604,9 +1722,11 @@ function frame() {
   scene.overrideMaterial = null;
   for (const part of hidden) part.obj.visible = true;
   flowGroup.visible = true;
+  airframe.visible = airShown;
 
   renderer.setRenderTarget(null);
   renderer.clear();
+  ink.uniforms.time.value = reduceMotion ? 0 : clock.elapsedTime;
   renderer.render(inkScene, quadCam);
   requestAnimationFrame(frame);
 }
