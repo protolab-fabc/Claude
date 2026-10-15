@@ -2,106 +2,263 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Moteurs démontés</title>
 <meta name="description" content="Six moteurs qui se démontent au fil du défilement, chacun dans son style graphique.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
 <style>
+  /* Relevé lidar : un nuage de points tourne derrière une liste de relevés. Un seul thème, sombre, par choix. */
   :root {
-    --bg: #f4f1ea;
-    --ink: #1c1a17;
-    --body: #4a463f;
-    --muted: #6e695f;
-    --rule: rgba(28, 26, 23, 0.14);
-    --accent: #c4452a;
-    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #151412;
-      --ink: #f1ede4;
-      --body: #c4beb2;
-      --muted: #9a9488;
-      --rule: rgba(241, 237, 228, 0.14);
-      --accent: #f07a55;
-    }
+    --bg: #07090c;
+    --ink: #e9eef2;
+    --body: #b3bec7;
+    --muted: #7d8a95;
+    --rule: rgba(160, 200, 220, 0.16);
+    --accent: #5ff0c8;
+    --panel: rgba(7, 9, 12, 0.72);
+    --sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --mono: "IBM Plex Mono", ui-monospace, monospace;
+    color-scheme: dark;
   }
   * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
   body {
-    margin: 0;
-    background: var(--bg);
-    color: var(--ink);
     font-family: var(--sans);
     -webkit-font-smoothing: antialiased;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
   }
-  main { max-width: 960px; margin: 0 auto; padding: 72px 24px 64px; }
-  h1 { font-size: clamp(36px, 6vw, 56px); font-weight: 600; line-height: 1; letter-spacing: -0.02em; margin: 0 0 14px; }
-  .lede { color: var(--body); font-size: 17px; line-height: 1.55; max-width: 52ch; margin: 0 0 48px; }
-  ul { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+  #cloud { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  main {
+    position: relative;
+    z-index: 1;
+    max-width: 640px;
+    padding-block: max(64px, 10vh) 56px;
+  }
+  @media (min-width: 900px) { main { margin-left: 4vw; } }
+  .scan {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 { font-size: clamp(38px, 6vw, 60px); font-weight: 600; line-height: 1; letter-spacing: -0.02em; margin: 0 0 14px; text-wrap: balance; }
+  .lede { color: var(--body); font-size: 17px; line-height: 1.55; max-width: 46ch; margin: 0 0 40px; }
+  ul {
+    list-style: none; margin: 0; padding: 0;
+    background: var(--panel);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    border-top: 1px solid var(--rule);
+  }
   li { border-bottom: 1px solid var(--rule); }
   a {
     display: grid;
-    grid-template-columns: 1fr auto;
-    gap: 4px 24px;
-    padding: 22px 4px;
+    grid-template-columns: 56px minmax(0, 1fr) auto;
+    gap: 2px 16px;
+    padding: 18px 12px;
     color: inherit;
     text-decoration: none;
   }
-  a h2 { margin: 0; font-size: 21px; font-weight: 600; }
-  a p { margin: 0; color: var(--body); font-size: 15px; line-height: 1.5; grid-column: 1; }
-  a span { grid-row: 1 / span 2; grid-column: 2; align-self: center; color: var(--muted); font-size: 14px; white-space: nowrap; }
-  a span::after { content: "→"; display: inline-block; margin-left: 6px; transition: transform 160ms ease-out; }
+  a .id { white-space: nowrap; grid-row: 1 / span 2; font-family: var(--mono); font-size: 12px; color: var(--muted); padding-top: 5px; font-variant-numeric: tabular-nums; }
+  a h2 { margin: 0; font-size: 19px; font-weight: 600; }
+  a p { margin: 0; color: var(--body); font-size: 14px; line-height: 1.5; grid-column: 2; }
+  a .tag { grid-row: 1 / span 2; grid-column: 3; align-self: center; font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
+  a .tag::after { content: "→"; display: inline-block; margin-left: 8px; transition: transform 160ms ease-out; }
   @media (hover: hover) and (pointer: fine) {
     a:hover h2 { color: var(--accent); }
-    a:hover span::after { transform: translateX(4px); }
+    a:hover .tag::after { transform: translateX(4px); }
   }
-  a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-  footer { margin-top: 40px; color: var(--muted); font-size: 14px; }
+  a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  footer { margin-top: 28px; color: var(--muted); font-family: var(--mono); font-size: 12px; }
   @media (max-width: 560px) {
-    a { grid-template-columns: 1fr; }
-    a span { grid-row: auto; grid-column: 1; margin-top: 6px; }
+    a { grid-template-columns: 52px minmax(0, 1fr); gap: 2px 10px; }
+    a .tag { grid-row: auto; grid-column: 2; margin-top: 6px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    a span::after { transition: none; }
+    a .tag::after { transition: none; }
   }
 </style>
 </head>
 <body>
+  <canvas id="cloud" aria-hidden="true"></canvas>
   <main>
+    <p class="scan" id="scan">Relevé lidar · 0 points</p>
     <h1>Moteurs démontés</h1>
     <p class="lede">Six moteurs qui se démontent pièce par pièce au fil du défilement, chacun dans son propre style graphique.</p>
     <ul>
       <li><a href="samples/turboreacteur/index.html">
+        <span class="id">SCN-01</span>
         <h2>Turboréacteur</h2>
         <p>Un turbofan de ligne et ses flux d'air, en aplats encrés façon Sable.</p>
-        <span>Dessin à plat</span>
+        <span class="tag">Dessin à plat</span>
       </a></li>
       <li><a href="samples/statoreacteur/index.html">
+        <span class="id">SCN-02</span>
         <h2>Statoréacteur</h2>
         <p>Ondes de choc, chambre et jet supersonique, en pixel art façon A Short Hike.</p>
-        <span>Pixel art</span>
+        <span class="tag">Pixel art</span>
       </a></li>
       <li><a href="samples/rafale/index.html">
+        <span class="id">SCN-03</span>
         <h2>M88 du Rafale</h2>
         <p>Le moteur à post-combustion du Rafale, rendu en ASCII art vivant.</p>
-        <span>ASCII</span>
+        <span class="tag">ASCII</span>
       </a></li>
       <li><a href="samples/f1/index.html">
+        <span class="id">SCN-04</span>
         <h2>F-1 de Saturn V</h2>
         <p>Le moteur-fusée et ses ergols, dans une architecture infinie façon Manifold Garden.</p>
-        <span>Manifold Garden</span>
+        <span class="tag">Manifold Garden</span>
       </a></li>
       <li><a href="samples/pw150a/index.html">
+        <span class="id">SCN-05</span>
         <h2>PW150A</h2>
         <p>Le turbopropulseur du Dash 8-400, en dessin animé des années 1930 façon Cuphead.</p>
-        <span>Dessin animé</span>
+        <span class="tag">Dessin animé</span>
       </a></li>
       <li><a href="samples/extrudeur-mk4/index.html">
+        <span class="id">SCN-06</span>
         <h2>Extrudeur Prusa MK4</h2>
         <p>La tête d'impression d'une imprimante 3D, en cyberpunk dessiné à la main.</p>
-        <span>Cyberpunk</span>
+        <span class="tag">Cyberpunk</span>
       </a></li>
     </ul>
     <footer>Maquettes procédurales générées en code avec Three.js, non officielles.</footer>
   </main>
+
+<script>
+(() => {
+  const canvas = document.getElementById('cloud');
+  const ctx = canvas.getContext('2d');
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const TAU = Math.PI * 2;
+  const rnd = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+
+  // Nuage de points : un turbofan posé sur un sol balayé en anneaux, comme un relevé lidar.
+  // Chaque point : position (x, y, z), intensité de retour.
+  const pts = [];
+  const add = (x, y, z, k = 1) => pts.push({ x, y, z, k, ox: 0, oy: 0, vx: 0, vy: 0 });
+  // Nacelle : profil [rayon, x] le long de l'axe.
+  const NAC = [[1.05, -2.2], [1.18, -1.8], [1.2, -0.6], [1.12, 0.6], [0.95, 1.4], [0.85, 1.8]];
+  const nacR = (x) => {
+    for (let i = 0; i < NAC.length - 1; i++) {
+      const [r0, x0] = NAC[i], [r1, x1] = NAC[i + 1];
+      if (x >= x0 && x <= x1) return r0 + (r1 - r0) * (x - x0) / (x1 - x0);
+    }
+    return 0;
+  };
+  const Y0 = 1.6;   // hauteur de l'axe au-dessus du sol
+  for (let i = 0; i < 2600; i++) {
+    const x = -2.2 + rnd() * 4.0, a = rnd() * TAU, r = nacR(x);
+    add(x, Y0 + Math.sin(a) * r, Math.cos(a) * r, 0.8 + 0.2 * rnd());
+  }
+  // Lèvre d'entrée, cône, aubes de soufflante, cœur et tuyère.
+  for (let i = 0; i < 500; i++) { const a = rnd() * TAU, r = 1.0 + rnd() * 0.08; add(-2.2 - rnd() * 0.05, Y0 + Math.sin(a) * r, Math.cos(a) * r, 1); }
+  for (let i = 0; i < 420; i++) { const t = rnd(), a = rnd() * TAU, r = t * 0.32; add(-1.9 + (1 - t) * -0.45, Y0 + Math.sin(a) * r, Math.cos(a) * r, 1); }
+  for (let b = 0; b < 22; b++) {
+    const a0 = (b / 22) * TAU;
+    for (let i = 0; i < 26; i++) { const r = 0.32 + rnd() * 0.68, a = a0 + r * 0.25; add(-1.75 + rnd() * 0.06, Y0 + Math.sin(a) * r, Math.cos(a) * r, 0.7); }
+  }
+  for (let i = 0; i < 700; i++) { const x = 1.8 + rnd() * 1.1, a = rnd() * TAU, r = 0.62 - (x - 1.8) * 0.22; add(x, Y0 + Math.sin(a) * r, Math.cos(a) * r, 0.9); }
+  for (let i = 0; i < 260; i++) { const x = 2.9 + rnd() * 0.5, a = rnd() * TAU, r = 0.38 - (x - 2.9) * 0.6; add(x, Y0 + Math.sin(a) * Math.max(r, 0.02), Math.cos(a) * Math.max(r, 0.02), 1); }
+  // Mât et support au sol.
+  for (let i = 0; i < 300; i++) { const x = -0.6 + rnd() * 1.6; add(x, Y0 + 1.2 + rnd() * 0.5, (rnd() - 0.5) * 0.16, 0.7); }
+  for (let i = 0; i < 360; i++) { const s = rnd() < 0.5 ? -1 : 1; add(s * 0.7 + (rnd() - 0.5) * 0.12, rnd() * (Y0 - 0.9), (rnd() - 0.5) * 0.9, 0.6); }
+  // Sol : anneaux concentriques autour du capteur, plus clairsemés au loin.
+  for (let ring = 1; ring < 46; ring++) {
+    const R = 0.6 + ring * 0.24, n = Math.floor(90 + ring * 6);
+    for (let i = 0; i < n; i++) {
+      if (rnd() < 0.18) continue;
+      const a = (i / n) * TAU + rnd() * 0.01;
+      const x = Math.cos(a) * R, z = Math.sin(a) * R;
+      if (Math.abs(x) < 3.2 && Math.abs(z) < 1.6 && rnd() < 0.7) continue;   // ombre portée du moteur
+      add(x, (rnd() - 0.5) * 0.02, z, 0.45);
+    }
+  }
+  document.getElementById('scan').textContent = `Relevé lidar · ${pts.length.toLocaleString('fr-FR')} points`;
+
+  // Palette de distance au capteur : proche = cyan clair, loin = violet sombre.
+  const RAMP = [[95, 240, 200], [80, 190, 240], [120, 120, 235], [150, 80, 190], [90, 50, 120]];
+  const ramp = (t) => {
+    t = Math.min(1, Math.max(0, t)) * (RAMP.length - 1);
+    const i = Math.min(RAMP.length - 2, Math.floor(t)), f = t - i;
+    return RAMP[i].map((c, k) => c + (RAMP[i + 1][k] - c) * f);
+  };
+
+  let W = 0, H = 0, DPR = 1;
+  function resize() {
+    DPR = Math.min(devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    canvas.width = W * DPR; canvas.height = H * DPR;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+  addEventListener('resize', resize);
+  resize();
+
+  const mouse = { x: -1e4, y: -1e4, on: false };
+  addEventListener('pointermove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.on = true; });
+  addEventListener('pointerleave', () => { mouse.on = false; mouse.x = mouse.y = -1e4; });
+  document.addEventListener('pointerout', (e) => { if (!e.relatedTarget) { mouse.on = false; mouse.x = mouse.y = -1e4; } });
+
+  let yaw = 0.6, last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000);
+    last = now;
+    if (!reduce) yaw += dt * 0.12;
+    // Le moteur se place à droite de la liste sur grand écran, au centre en dessous.
+    const wide = W > 900;
+    const cx = wide ? W * 0.66 : W * 0.5, cy = wide ? H * 0.58 : H * 0.5;
+    const scale = Math.min(W * (wide ? 0.62 : 0.95), H * 1.1) / 7.5;
+    const cyaw = Math.cos(yaw), syaw = Math.sin(yaw);
+    const pitch = 0.32, cp = Math.cos(pitch), sp = Math.sin(pitch);
+    const camD = 9;
+    const beam = (yaw * 3.2) % TAU;   // faisceau qui balaie le relevé
+
+    ctx.fillStyle = '#07090c';
+    ctx.fillRect(0, 0, W, H);
+    const R = 120, R2 = R * R;
+    for (const p of pts) {
+      // Rotation autour de l'axe vertical, inclinaison de la caméra, perspective.
+      const x = p.x * cyaw - p.z * syaw, z = p.x * syaw + p.z * cyaw;
+      const y = p.y - 1.2;
+      const y2 = y * cp - z * sp, z2 = y * sp + z * cp;
+      const d = camD - z2;
+      if (d < 0.5) continue;
+      const f = scale * 7 / d;
+      let sx = cx + x * f, sy = cy - y2 * f;
+      // Le curseur repousse les points ; un ressort les ramène.
+      if (!reduce) {
+        const dx = sx + p.ox - mouse.x, dy = sy + p.oy - mouse.y, dd = dx * dx + dy * dy;
+        if (dd < R2 && dd > 0.01) {
+          const dist = Math.sqrt(dd), push = (1 - dist / R) ** 2 * 900;
+          p.vx += (dx / dist) * push * dt; p.vy += (dy / dist) * push * dt;
+        }
+        p.vx += -p.ox * 14 * dt; p.vy += -p.oy * 14 * dt;
+        p.vx *= Math.exp(-dt * 6); p.vy *= Math.exp(-dt * 6);
+        p.ox += p.vx * dt; p.oy += p.vy * dt;
+      }
+      sx += p.ox; sy += p.oy;
+      if (sx < -4 || sx > W + 4 || sy < -4 || sy > H + 4) continue;
+      const depth = (d - camD + 4) / 8;
+      const az = Math.atan2(p.z, p.x);
+      let hit = (az - beam) % TAU; if (hit < 0) hit += TAU;
+      const sweep = Math.exp(-hit * 3.5);
+      const disp = Math.min(1, Math.hypot(p.ox, p.oy) / 30);
+      const [r, g, b] = ramp(depth - disp * 0.6);
+      const a = Math.min(1, (0.25 + 0.6 * p.k) * (1 - depth * 0.45) + sweep * 0.5 + disp * 0.5);
+      ctx.fillStyle = `rgba(${r | 0},${g | 0},${b | 0},${a.toFixed(3)})`;
+      const s = (p.k > 0.5 ? 1.6 : 1.3) * (1 + sweep * 0.6 + disp * 0.8);
+      ctx.fillRect(sx - s / 2, sy - s / 2, s, s);
+    }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
 </body>
 </html>
