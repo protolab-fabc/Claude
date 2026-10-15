@@ -307,6 +307,10 @@
   @media (prefers-reduced-motion: reduce) {
     .scroll-hint i { animation: none; }
   }
+  /* Retour au hub : le seul élément cliquable du bandeau. */
+  .topbar .home { pointer-events: auto; color: inherit; text-decoration: none; padding: 6px 0; transition: color 160ms ease-out; }
+  @media (hover: hover) and (pointer: fine) { .topbar .home:hover { color: var(--accent); } }
+  .topbar .home:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 </style>
 <script type="importmap">
 {
@@ -324,7 +328,7 @@
   <svg id="labels" class="overlay" aria-hidden="true"></svg>
 
   <div class="overlay topbar">
-    <span><b>SR-03</b> &nbsp;/&nbsp; Statoréacteur</span>
+    <span><a class="home" href="../../index.html" aria-label="Retour au hub des moteurs">← Moteurs</a> &nbsp;/&nbsp; <b>SR-03</b> &nbsp;/&nbsp; Statoréacteur</span>
     <span class="hide-sm">Maquette procédurale · échelle libre</span>
   </div>
 
