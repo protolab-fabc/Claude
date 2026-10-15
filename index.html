@@ -7,18 +7,21 @@
 <meta name="description" content="Six moteurs qui se démontent au fil du défilement, chacun dans son style graphique.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:wght@400;600&display=swap" rel="stylesheet">
 <style>
-  /* Relevé lidar : un nuage de points tourne derrière une liste de relevés. Un seul thème, sombre, par choix. */
+  /* Station de relevé lidar : la liste à gauche pilote le scanner, le nuage de points se reforme à droite.
+     Un seul thème, sombre, par choix. */
   :root {
-    --bg: #07090c;
+    --bg: #06080b;
     --ink: #e9eef2;
     --body: #b3bec7;
     --muted: #7d8a95;
-    --rule: rgba(160, 200, 220, 0.16);
+    --rule: rgba(160, 200, 220, 0.14);
     --accent: #5ff0c8;
-    --panel: rgba(7, 9, 12, 0.72);
+    --warm: #ff8a5c;
+    --panel: rgba(6, 8, 11, 0.74);
     --sans: "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+    --cond: "IBM Plex Sans Condensed", "IBM Plex Sans", ui-sans-serif, sans-serif;
     --mono: "IBM Plex Mono", ui-monospace, monospace;
     color-scheme: dark;
   }
@@ -31,23 +34,37 @@
     padding-right: max(16px, env(safe-area-inset-right, 0px));
   }
   #cloud { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+
+  /* Bandeau d'instrument, en haut */
+  .bar {
+    position: fixed; z-index: 2; top: 0; left: 0; right: 0;
+    display: flex; justify-content: space-between; gap: 16px;
+    padding: 14px max(16px, env(safe-area-inset-right, 0px)) 14px max(16px, env(safe-area-inset-left, 0px));
+    font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase;
+    color: var(--muted);
+    pointer-events: none;
+  }
+  .bar b { color: var(--accent); font-weight: 500; }
+  .bar .rec::before { content: ""; display: inline-block; width: 7px; height: 7px; margin-right: 8px; border-radius: 50%; background: var(--warm); vertical-align: 1px; animation: rec 1.6s steps(2) infinite; }
+  @keyframes rec { 50% { opacity: 0.2; } }
+
   main {
     position: relative;
     z-index: 1;
-    max-width: 640px;
-    padding-block: max(64px, 10vh) 56px;
+    max-width: 600px;
+    padding-block: max(72px, 11vh) 56px;
   }
   @media (min-width: 900px) { main { margin-left: 4vw; } }
-  .scan {
-    font-family: var(--mono);
-    font-size: 12px;
-    letter-spacing: 0.08em;
+  .scan { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); margin: 0 0 16px; }
+  h1 {
+    font-family: var(--cond);
+    font-size: clamp(44px, 7vw, 84px); font-weight: 600; line-height: 0.92; letter-spacing: -0.01em;
     text-transform: uppercase;
-    color: var(--accent);
-    margin: 0 0 18px;
+    margin: 0 0 16px; text-wrap: balance;
   }
-  h1 { font-size: clamp(38px, 6vw, 60px); font-weight: 600; line-height: 1; letter-spacing: -0.02em; margin: 0 0 14px; text-wrap: balance; }
-  .lede { color: var(--body); font-size: 17px; line-height: 1.55; max-width: 46ch; margin: 0 0 40px; }
+  h1 span { color: transparent; -webkit-text-stroke: 1.5px var(--ink); }
+  .lede { color: var(--body); font-size: 16px; line-height: 1.55; max-width: 44ch; margin: 0 0 36px; }
+
   ul {
     list-style: none; margin: 0; padding: 0;
     background: var(--panel);
@@ -55,73 +72,110 @@
     backdrop-filter: blur(6px);
     border-top: 1px solid var(--rule);
   }
-  li { border-bottom: 1px solid var(--rule); }
+  li { border-bottom: 1px solid var(--rule); position: relative; }
   a {
+    position: relative;
     display: grid;
     grid-template-columns: 56px minmax(0, 1fr) auto;
     gap: 2px 16px;
-    padding: 18px 12px;
+    padding: 16px 14px;
     color: inherit;
     text-decoration: none;
+    transition: background-color 200ms ease;
   }
-  a .id { white-space: nowrap; grid-row: 1 / span 2; font-family: var(--mono); font-size: 12px; color: var(--muted); padding-top: 5px; font-variant-numeric: tabular-nums; }
-  a h2 { margin: 0; font-size: 19px; font-weight: 600; }
+  /* Ligne active : marqueur d'accent, fond teinté, identifiant allumé */
+  a::before {
+    content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 2px;
+    background: var(--accent); transform: scaleY(0); transform-origin: top;
+    transition: transform 240ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  a.on { background: rgba(95, 240, 200, 0.06); }
+  a.on::before { transform: scaleY(1); }
+  a .id { white-space: nowrap; grid-row: 1 / span 2; font-family: var(--mono); font-size: 12px; color: var(--muted); padding-top: 4px; font-variant-numeric: tabular-nums; transition: color 200ms ease; }
+  a.on .id { color: var(--accent); }
+  a h2 { margin: 0; font-family: var(--cond); font-size: 21px; font-weight: 600; letter-spacing: 0.01em; }
   a p { margin: 0; color: var(--body); font-size: 14px; line-height: 1.5; grid-column: 2; }
-  a .tag { grid-row: 1 / span 2; grid-column: 3; align-self: center; font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
+  a .tag { grid-row: 1 / span 2; grid-column: 3; align-self: center; font-family: var(--mono); font-size: 11px; letter-spacing: 0.04em; color: var(--muted); white-space: nowrap; }
   a .tag::after { content: "→"; display: inline-block; margin-left: 8px; transition: transform 160ms ease-out; }
+  a.on .tag { color: var(--ink); }
   @media (hover: hover) and (pointer: fine) {
-    a:hover h2 { color: var(--accent); }
     a:hover .tag::after { transform: translateX(4px); }
   }
   a:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
-  footer { margin-top: 28px; color: var(--muted); font-family: var(--mono); font-size: 12px; }
+  footer { margin-top: 24px; color: var(--muted); font-family: var(--mono); font-size: 11px; line-height: 1.6; }
+
+  /* Fiche du relevé, en bas à droite */
+  .readout {
+    position: fixed; z-index: 1;
+    right: max(24px, env(safe-area-inset-right, 0px)); bottom: 24px;
+    width: 300px;
+    font-family: var(--mono); font-size: 11px; line-height: 1.7; color: var(--muted);
+    pointer-events: none;
+  }
+  .readout .name { font-family: var(--cond); font-size: 26px; font-weight: 600; letter-spacing: 0.01em; line-height: 1.1; color: var(--ink); text-transform: uppercase; margin: 2px 0 8px; min-height: 1.1em; }
+  .readout dl { display: grid; grid-template-columns: auto 1fr; gap: 0 14px; margin: 0; border-top: 1px solid var(--rule); padding-top: 8px; }
+  .readout dt { text-transform: uppercase; letter-spacing: 0.06em; }
+  .readout dd { margin: 0; color: var(--body); text-align: right; font-variant-numeric: tabular-nums; }
+  .readout .meter { height: 2px; margin-top: 10px; background: var(--rule); }
+  .readout .meter i { display: block; height: 100%; width: 0; background: var(--accent); }
+
+  @media (max-width: 900px) {
+    .readout { display: none; }
+  }
   @media (max-width: 560px) {
+    .bar .hide-sm { display: none; }
     a { grid-template-columns: 52px minmax(0, 1fr); gap: 2px 10px; }
     a .tag { grid-row: auto; grid-column: 2; margin-top: 6px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    a .tag::after { transition: none; }
+    a .tag::after, a::before, a { transition: none; }
+    .bar .rec::before { animation: none; }
   }
 </style>
 </head>
 <body>
   <canvas id="cloud" aria-hidden="true"></canvas>
+  <div class="bar" aria-hidden="true">
+    <span class="rec">Scan en cours</span>
+    <span class="hide-sm">Capteur 128 voies · <b id="hz">10 Hz</b></span>
+  </div>
+
   <main>
     <p class="scan" id="scan">Relevé lidar · 0 points</p>
-    <h1>Moteurs démontés</h1>
-    <p class="lede">Six moteurs qui se démontent pièce par pièce au fil du défilement, chacun dans son propre style graphique.</p>
-    <ul>
-      <li><a href="samples/turboreacteur/index.html">
+    <h1>Moteurs <span>démontés</span></h1>
+    <p class="lede">Six moteurs qui se démontent pièce par pièce au fil du défilement, chacun dans son propre style graphique. Survolez un relevé pour le scanner.</p>
+    <ul id="list">
+      <li><a href="samples/turboreacteur/index.html" data-model="0" class="on">
         <span class="id">SCN-01</span>
         <h2>Turboréacteur</h2>
         <p>Un turbofan de ligne et ses flux d'air, en aplats encrés façon Sable.</p>
         <span class="tag">Dessin à plat</span>
       </a></li>
-      <li><a href="samples/statoreacteur/index.html">
+      <li><a href="samples/statoreacteur/index.html" data-model="1">
         <span class="id">SCN-02</span>
         <h2>Statoréacteur</h2>
         <p>Ondes de choc, chambre et jet supersonique, en pixel art façon A Short Hike.</p>
         <span class="tag">Pixel art</span>
       </a></li>
-      <li><a href="samples/rafale/index.html">
+      <li><a href="samples/rafale/index.html" data-model="2">
         <span class="id">SCN-03</span>
         <h2>M88 du Rafale</h2>
         <p>Le moteur à post-combustion du Rafale, rendu en ASCII art vivant.</p>
         <span class="tag">ASCII</span>
       </a></li>
-      <li><a href="samples/f1/index.html">
+      <li><a href="samples/f1/index.html" data-model="3">
         <span class="id">SCN-04</span>
         <h2>F-1 de Saturn V</h2>
         <p>Le moteur-fusée et ses ergols, dans une architecture infinie façon Manifold Garden.</p>
         <span class="tag">Manifold Garden</span>
       </a></li>
-      <li><a href="samples/pw150a/index.html">
+      <li><a href="samples/pw150a/index.html" data-model="4">
         <span class="id">SCN-05</span>
         <h2>PW150A</h2>
         <p>Le turbopropulseur du Dash 8-400, en dessin animé des années 1930 façon Cuphead.</p>
         <span class="tag">Dessin animé</span>
       </a></li>
-      <li><a href="samples/extrudeur-mk4/index.html">
+      <li><a href="samples/extrudeur-mk4/index.html" data-model="5">
         <span class="id">SCN-06</span>
         <h2>Extrudeur Prusa MK4</h2>
         <p>La tête d'impression d'une imprimante 3D, en cyberpunk dessiné à la main.</p>
@@ -131,63 +185,229 @@
     <footer>Maquettes procédurales générées en code avec Three.js, non officielles.</footer>
   </main>
 
+  <aside class="readout" aria-hidden="true">
+    <div id="ro-id">SCN-01</div>
+    <div class="name" id="ro-name">Turboréacteur</div>
+    <dl>
+      <dt>Type</dt><dd id="ro-type">Turbofan double flux</dd>
+      <dt>Points</dt><dd id="ro-pts">0</dd>
+      <dt>Envergure</dt><dd id="ro-len">0,0 m</dd>
+      <dt>Rotation</dt><dd id="ro-yaw">0°</dd>
+    </dl>
+    <div class="meter"><i id="ro-meter"></i></div>
+  </aside>
+
 <script>
 (() => {
   const canvas = document.getElementById('cloud');
   const ctx = canvas.getContext('2d');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const TAU = Math.PI * 2;
-  const rnd = (() => { let s = 7; return () => (s = (s * 16807) % 2147483647) / 2147483647; })();
+  let seed = 11;
+  const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
 
-  // Nuage de points : un turbofan posé sur un sol balayé en anneaux, comme un relevé lidar.
-  // Chaque point : position (x, y, z), intensité de retour.
-  const pts = [];
-  const add = (x, y, z, k = 1) => pts.push({ x, y, z, k, ox: 0, oy: 0, vx: 0, vy: 0 });
-  // Nacelle : profil [rayon, x] le long de l'axe.
-  const NAC = [[1.05, -2.2], [1.18, -1.8], [1.2, -0.6], [1.12, 0.6], [0.95, 1.4], [0.85, 1.8]];
-  const nacR = (x) => {
-    for (let i = 0; i < NAC.length - 1; i++) {
-      const [r0, x0] = NAC[i], [r1, x1] = NAC[i + 1];
-      if (x >= x0 && x <= x1) return r0 + (r1 - r0) * (x - x0) / (x1 - x0);
-    }
-    return 0;
+  // ------------------------------------------------------------------
+  // Modèles : chacun est un tirage de N points sur ses pièces, axe du moteur le long de X, centré en Y0.
+  // ------------------------------------------------------------------
+  const N = 8000, Y0 = 1.7;
+  const ring = (x, r, a) => [x, Y0 + Math.sin(a) * r, Math.cos(a) * r];
+  // Surface de révolution : profil [[x, r], …], tirage uniforme en x puis en angle.
+  const revolve = (prof) => () => {
+    const t = rnd() * (prof.length - 1), i = Math.floor(t), f = t - i;
+    const [x0, r0] = prof[i], [x1, r1] = prof[Math.min(i + 1, prof.length - 1)];
+    return ring(x0 + (x1 - x0) * f, r0 + (r1 - r0) * f, rnd() * TAU);
   };
-  const Y0 = 1.6;   // hauteur de l'axe au-dessus du sol
-  for (let i = 0; i < 2600; i++) {
-    const x = -2.2 + rnd() * 4.0, a = rnd() * TAU, r = nacR(x);
-    add(x, Y0 + Math.sin(a) * r, Math.cos(a) * r, 0.8 + 0.2 * rnd());
+  const disk = (x, r0, r1) => () => ring(x + (rnd() - 0.5) * 0.03, r0 + Math.sqrt(rnd()) * (r1 - r0), rnd() * TAU);
+  const blades = (x, n, r0, r1, twist = 0.3, w = 0.05) => () => {
+    const b = Math.floor(rnd() * n), r = r0 + rnd() * (r1 - r0);
+    return ring(x + (rnd() - 0.5) * 0.06, r, (b / n) * TAU + r * twist + (rnd() - 0.5) * w);
+  };
+  const box = (cx, cy, cz, sx, sy, sz) => () => {
+    // Tirage sur les faces, proportionnel à leur aire.
+    const ax = sy * sz, ay = sx * sz, az = sx * sy, t = rnd() * (ax + ay + az) * 2;
+    let x = (rnd() - 0.5) * sx, y = (rnd() - 0.5) * sy, z = (rnd() - 0.5) * sz;
+    const s = rnd() < 0.5 ? -0.5 : 0.5;
+    if (t < ax * 2) x = s * sx; else if (t < (ax + ay) * 2) y = s * sy; else z = s * sz;
+    return [cx + x, cy + y, cz + z];
+  };
+  const tube = (pts, r) => () => {
+    const t = rnd() * (pts.length - 1), i = Math.floor(t), f = t - i;
+    const a = pts[i], b = pts[Math.min(i + 1, pts.length - 1)];
+    const ang = rnd() * TAU;
+    return [a[0] + (b[0] - a[0]) * f + Math.cos(ang) * r * 0.5, a[1] + (b[1] - a[1]) * f + Math.sin(ang) * r, a[2] + (b[2] - a[2]) * f + Math.cos(ang) * r];
+  };
+  function build(parts) {
+    const total = parts.reduce((s, [w]) => s + w, 0);
+    const out = new Float32Array(N * 4);
+    for (let i = 0; i < N; i++) {
+      let u = rnd() * total, k = 0;
+      while (u > parts[k][0] && k < parts.length - 1) u -= parts[k++][0];
+      const [x, y, z] = parts[k][1]();
+      out.set([x, y, z, parts[k][2] ?? 1], i * 4);
+    }
+    return out;
   }
-  // Lèvre d'entrée, cône, aubes de soufflante, cœur et tuyère.
-  for (let i = 0; i < 500; i++) { const a = rnd() * TAU, r = 1.0 + rnd() * 0.08; add(-2.2 - rnd() * 0.05, Y0 + Math.sin(a) * r, Math.cos(a) * r, 1); }
-  for (let i = 0; i < 420; i++) { const t = rnd(), a = rnd() * TAU, r = t * 0.32; add(-1.9 + (1 - t) * -0.45, Y0 + Math.sin(a) * r, Math.cos(a) * r, 1); }
-  for (let b = 0; b < 22; b++) {
-    const a0 = (b / 22) * TAU;
-    for (let i = 0; i < 26; i++) { const r = 0.32 + rnd() * 0.68, a = a0 + r * 0.25; add(-1.75 + rnd() * 0.06, Y0 + Math.sin(a) * r, Math.cos(a) * r, 0.7); }
-  }
-  for (let i = 0; i < 700; i++) { const x = 1.8 + rnd() * 1.1, a = rnd() * TAU, r = 0.62 - (x - 1.8) * 0.22; add(x, Y0 + Math.sin(a) * r, Math.cos(a) * r, 0.9); }
-  for (let i = 0; i < 260; i++) { const x = 2.9 + rnd() * 0.5, a = rnd() * TAU, r = 0.38 - (x - 2.9) * 0.6; add(x, Y0 + Math.sin(a) * Math.max(r, 0.02), Math.cos(a) * Math.max(r, 0.02), 1); }
-  // Mât et support au sol.
-  for (let i = 0; i < 300; i++) { const x = -0.6 + rnd() * 1.6; add(x, Y0 + 1.2 + rnd() * 0.5, (rnd() - 0.5) * 0.16, 0.7); }
-  for (let i = 0; i < 360; i++) { const s = rnd() < 0.5 ? -1 : 1; add(s * 0.7 + (rnd() - 0.5) * 0.12, rnd() * (Y0 - 0.9), (rnd() - 0.5) * 0.9, 0.6); }
-  // Sol : anneaux concentriques autour du capteur, plus clairsemés au loin.
-  for (let ring = 1; ring < 46; ring++) {
-    const R = 0.6 + ring * 0.24, n = Math.floor(90 + ring * 6);
-    for (let i = 0; i < n; i++) {
-      if (rnd() < 0.18) continue;
-      const a = (i / n) * TAU + rnd() * 0.01;
-      const x = Math.cos(a) * R, z = Math.sin(a) * R;
-      if (Math.abs(x) < 3.2 && Math.abs(z) < 1.6 && rnd() < 0.7) continue;   // ombre portée du moteur
-      add(x, (rnd() - 0.5) * 0.02, z, 0.45);
+
+  const MODELS = [
+    { id: 'SCN-01', name: 'Turboréacteur', type: 'Turbofan double flux', len: 4.1, pts: build([
+      [34, revolve([[-2.2, 1.05], [-1.8, 1.18], [-0.6, 1.2], [0.6, 1.12], [1.4, 0.95], [1.8, 0.85]])],
+      [5, revolve([[-2.25, 0.98], [-2.2, 1.08]]), 1.2],
+      [12, blades(-1.75, 22, 0.32, 1.0, 0.25), 0.8],
+      [5, revolve([[-2.35, 0.0], [-2.0, 0.3], [-1.85, 0.33]]), 1.2],
+      [9, revolve([[1.8, 0.62], [2.5, 0.48], [2.9, 0.4]])],
+      [4, revolve([[2.9, 0.38], [3.3, 0.12], [3.4, 0.0]]), 1.2],
+      [5, box(0.3, Y0 + 1.45, 0, 1.8, 0.5, 0.14), 0.7],
+    ]) },
+    { id: 'SCN-02', name: 'Statoréacteur', type: 'Ramjet à cône central', len: 6.4, pts: build([
+      [38, revolve([[-2.2, 0.55], [-1.6, 0.66], [1.4, 0.66], [2.0, 0.5], [2.8, 0.6]])],
+      [5, revolve([[-2.25, 0.5], [-2.2, 0.58]]), 1.2],
+      [16, revolve([[-3.6, 0.0], [-2.5, 0.34], [-1.7, 0.34], [-1.0, 0.08]]), 1.1],
+      [6, disk(-0.6, 0.2, 0.62), 0.7],
+      [5, disk(-0.2, 0.25, 0.6), 0.8],
+      [8, revolve([[2.8, 0.6], [3.4, 0.66]]), 1.2],
+      [4, () => { const x = -2.0 + rnd() * 0.5, a = Math.floor(rnd() * 3) * TAU / 3; return ring(x, 0.3 + rnd() * 0.35, a); }, 0.8],
+    ]) },
+    { id: 'SCN-03', name: 'M88 du Rafale', type: 'Double flux à post-combustion', len: 5.6, pts: build([
+      [36, revolve([[-2.6, 0.5], [-2.3, 0.6], [-0.6, 0.62], [0.4, 0.6], [1.6, 0.56]])],
+      [10, blades(-2.45, 20, 0.12, 0.5, 0.3), 0.8],
+      [4, revolve([[-2.75, 0.0], [-2.5, 0.12]]), 1.2],
+      [16, () => { const x = 1.6 + rnd(), a = rnd() * TAU, r = 0.56 - (x - 1.6) * 0.12; const p = Math.floor((a / TAU) * 14) / 14 * TAU; return ring(x, r + 0.02 * Math.cos((a - p) * 14), a); }, 1.1],
+      [7, box(-0.8, Y0 - 0.78, 0, 1.6, 0.32, 0.5), 0.7],
+      [6, disk(0.9, 0.15, 0.5), 0.7],
+      [5, tube([[-1.6, Y0 + 0.62, 0.2], [-0.4, Y0 + 0.66, 0.25], [1.2, Y0 + 0.6, 0.2]], 0.05), 0.8],
+    ]) },
+    { id: 'SCN-04', name: 'F-1 de Saturn V', type: 'Moteur-fusée kérosène / LOX', len: 5.8, pts: build([
+      [36, () => { const t = rnd(), x = -0.5 + t * 3.6, r = 0.42 + 1.2 * Math.pow(t, 0.75); return ring(x, r, rnd() * TAU); }],
+      [8, revolve([[-1.7, 0.55], [-1.0, 0.55], [-0.5, 0.42]])],
+      [6, revolve([[-2.2, 0.0], [-2.0, 0.42], [-1.75, 0.58]]), 1.1],
+      [10, () => { const a = rnd() * TAU, b = rnd() * TAU; const R = 1.15, r = 0.14; return [0.6 + Math.cos(b) * r, Y0 + Math.sin(a) * (R + Math.cos(b) * r), Math.cos(a) * (R + Math.cos(b) * r)]; }, 0.9],
+      [12, () => { const x = -2.1 + rnd() * 1.5, a = rnd() * TAU, r = 0.32; return [x, Y0 + 1.1 + Math.sin(a) * r, 0.35 + Math.cos(a) * r]; }, 0.9],
+      [6, tube([[-1.4, Y0 + 0.9, 0.5], [-1.2, Y0 + 0.5, 0.7], [-1.3, Y0 + 0.2, 0.6]], 0.1), 0.8],
+      [6, tube([[-0.8, Y0 + 0.9, 0.2], [-0.5, Y0 + 0.65, -0.3], [-0.9, Y0 + 0.3, -0.55]], 0.09), 0.8],
+    ]) },
+    { id: 'SCN-05', name: 'PW150A', type: 'Turbopropulseur, hélice six pales', len: 5.2, pts: build([
+      [26, revolve([[-1.2, 0.5], [-0.6, 0.48], [0.0, 0.42], [2.2, 0.42], [2.6, 0.32]])],
+      [7, revolve([[-2.6, 0.0], [-2.2, 0.3], [-1.8, 0.5], [-1.7, 0.55]]), 1.2],
+      [7, revolve([[-1.7, 0.56], [-1.2, 0.58]]), 0.9],
+      [26, () => { const b = Math.floor(rnd() * 6), r = 0.55 + rnd() * 2.0, w = 0.16 * Math.sin(Math.PI * Math.min(1, r / 2.3)) + 0.04; return ring(-1.8 + (rnd() - 0.5) * 0.05, r, (b / 6) * TAU + (rnd() - 0.5) * w / r * 2 - r * 0.06); }, 0.85],
+      [6, () => { const s = rnd() < 0.5 ? -1 : 1, a = rnd() * TAU, r = Math.sqrt(rnd()) * 0.28; return [-0.7 + Math.cos(a) * r, Y0 + Math.sin(a) * r, s * 0.5]; }, 1.1],
+      [6, tube([[1.6, Y0 + 0.35, 0], [1.9, Y0 + 0.75, 0], [2.0, Y0 + 0.95, 0]], 0.22), 0.9],
+      [5, box(2.75, Y0 - 0.55, 0.1, 0.4, 0.3, 0.5), 0.7],
+    ]) },
+    { id: 'SCN-06', name: 'Extrudeur Prusa MK4', type: 'Tête d\'impression Nextruder', len: 1.6, pts: build([
+      [28, box(0, Y0 + 0.2, 0, 1.3, 1.6, 1.0)],
+      [14, () => { const a = rnd() * TAU, r = Math.sqrt(rnd()) * 0.5; const b = Math.floor(rnd() * 7); const on = rnd() < 0.5 ? r : 0.5; return [Math.cos(a) * on * 0.5 + (rnd() < 0.5 ? 0 : Math.cos(b * TAU / 7 + r * 2) * r - Math.cos(a) * on * 0.5), Y0 + 0.25 + Math.sin(a) * on, 0.52]; }, 1.1],
+      [12, () => { const f = Math.floor(rnd() * 9); return [-0.66 - rnd() * 0.25, Y0 - 0.3 + f * 0.11, (rnd() - 0.5) * 0.9]; }, 0.8],
+      [7, box(0, Y0 - 0.85, 0, 0.5, 0.26, 0.4), 1.0],
+      [5, revolve([[0, 0], [0, 0]]), 1],
+      [8, tube([[0.2, Y0 + 1.0, 0], [0.25, Y0 + 1.6, 0], [0.3, Y0 + 2.2, 0.05]], 0.07), 0.8],
+      [6, () => { const t = rnd(), a = rnd() * TAU, r = 0.12 * (1 - t); return [Math.cos(a) * r, Y0 - 1.0 - t * 0.3, Math.sin(a) * r]; }, 1.2],
+    ]) },
+  ];
+  // La buse de l'extrudeur pointe vers le bas : on remplace le tirage vide par la buse.
+  {
+    const m = MODELS[5].pts;
+    for (let i = 0; i < N; i++) if (m[i * 4] === 0 && m[i * 4 + 2] === 0 && Math.abs(m[i * 4 + 1] - Y0) < 0.01) {
+      const t = rnd(), a = rnd() * TAU, r = 0.14 * (1 - t) + 0.02;
+      m.set([Math.cos(a) * r, Y0 - 1.0 - t * 0.35, Math.sin(a) * r, 1.2], i * 4);
     }
   }
-  document.getElementById('scan').textContent = `Relevé lidar · ${pts.length.toLocaleString('fr-FR')} points`;
 
-  // Palette de distance au capteur : proche = cyan clair, loin = violet sombre.
-  const RAMP = [[95, 240, 200], [80, 190, 240], [120, 120, 235], [150, 80, 190], [90, 50, 120]];
+  // Chaque modèle est recentré et mis à l'échelle pour occuper la même place à l'écran.
+  for (const m of MODELS) {
+    const q = m.pts;
+    let x0 = 1e9, x1 = -1e9, y0 = 1e9, y1 = -1e9, z0 = 1e9, z1 = -1e9;
+    for (let i = 0; i < N; i++) {
+      x0 = Math.min(x0, q[i * 4]); x1 = Math.max(x1, q[i * 4]);
+      y0 = Math.min(y0, q[i * 4 + 1]); y1 = Math.max(y1, q[i * 4 + 1]);
+      z0 = Math.min(z0, q[i * 4 + 2]); z1 = Math.max(z1, q[i * 4 + 2]);
+    }
+    const cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, cz = (z0 + z1) / 2;
+    const k = Math.min(5.4 / (x1 - x0), 3.6 / (y1 - y0));
+    for (let i = 0; i < N; i++) {
+      q[i * 4] = (q[i * 4] - cx) * k;
+      q[i * 4 + 1] = Y0 + (q[i * 4 + 1] - cy) * k;
+      q[i * 4 + 2] = (q[i * 4 + 2] - cz) * k;
+    }
+  }
+
+  // Points vivants : position courante, départ et arrivée d'un morphing, décalage dû au curseur.
+  const P = Array.from({ length: N }, (_, i) => ({ x: 0, y: 0, z: 0, k: 1, fx: 0, fy: 0, fz: 0, tx: 0, ty: 0, tz: 0, tk: 1, t0: 0, sx: 0, sy: 0, ox: 0, oy: 0, vx: 0, vy: 0 }));
+  // Sol balayé en anneaux autour du capteur.
+  const ground = [];
+  for (let ringI = 1; ringI < 44; ringI++) {
+    const R = 0.7 + ringI * 0.25, n = Math.floor(80 + ringI * 5);
+    for (let i = 0; i < n; i++) {
+      if (rnd() < 0.2) continue;
+      const a = (i / n) * TAU + rnd() * 0.01;
+      ground.push({ x: Math.cos(a) * R, y: (rnd() - 0.5) * 0.02, z: Math.sin(a) * R, k: 0.42, ox: 0, oy: 0, vx: 0, vy: 0 });
+    }
+  }
+
+  let current = 0, morphStart = -1e9;
+  const MORPH = 1300;
+  function select(idx, now = performance.now()) {
+    const m = MODELS[idx].pts;
+    // Ordre aléatoire d'appariement : les points traversent l'espace pour se reformer.
+    const order = Array.from({ length: N }, (_, i) => i);
+    for (let i = N - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+    for (let i = 0; i < N; i++) {
+      const p = P[i], j = order[i] * 4;
+      p.fx = p.x; p.fy = p.y; p.fz = p.z;
+      p.tx = m[j]; p.ty = m[j + 1]; p.tz = m[j + 2]; p.tk = m[j + 3];
+      // Le scanner reconstruit le modèle de l'avant vers l'arrière.
+      p.t0 = now + (p.tx + 3.6) * 70 + rnd() * 120;
+    }
+    current = idx;
+    morphStart = now;
+    setReadout(idx);
+  }
+  // Premier modèle : posé d'emblée.
+  {
+    const m = MODELS[0].pts;
+    for (let i = 0; i < N; i++) { const p = P[i]; p.x = p.tx = m[i * 4]; p.y = p.ty = m[i * 4 + 1]; p.z = p.tz = m[i * 4 + 2]; p.k = p.tk = m[i * 4 + 3]; p.t0 = -1e9; }
+  }
+  const total = N + ground.length;
+  document.getElementById('scan').textContent = `Relevé lidar · ${total.toLocaleString('fr-FR')} points`;
+
+  // ------------------------------------------------------------------
+  // Fiche du relevé : le nom se « décode » caractère par caractère.
+  // ------------------------------------------------------------------
+  const ro = { id: document.getElementById('ro-id'), name: document.getElementById('ro-name'), type: document.getElementById('ro-type'),
+    pts: document.getElementById('ro-pts'), len: document.getElementById('ro-len'), yaw: document.getElementById('ro-yaw'), meter: document.getElementById('ro-meter') };
+  const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#/-';
+  let decode = null;
+  function setReadout(idx) {
+    const m = MODELS[idx];
+    ro.id.textContent = m.id;
+    ro.type.textContent = m.type;
+    ro.len.textContent = `${m.len.toFixed(1).replace('.', ',')} m`;
+    decode = { text: m.name, t0: performance.now() };
+  }
+  setReadout(0);
+
+  // ------------------------------------------------------------------
+  // Liste : survol, focus ou toucher choisit le modèle ; défilement automatique tant que personne n'y touche.
+  // ------------------------------------------------------------------
+  const links = [...document.querySelectorAll('#list a')];
+  let userTouched = false;
+  function activate(idx) {
+    if (idx === current) return;
+    links.forEach((a, i) => a.classList.toggle('on', i === idx));
+    select(idx);
+  }
+  links.forEach((a, i) => {
+    a.addEventListener('pointerenter', () => { userTouched = true; activate(i); });
+    a.addEventListener('focus', () => { userTouched = true; activate(i); });
+  });
+  if (!reduce) setInterval(() => { if (!userTouched && !document.hidden) activate((current + 1) % MODELS.length); }, 5200);
+
+  // Palette de distance : proche = cyan clair, loin = violet sombre ; les points en vol virent à l'orange.
+  const RAMP = [[95, 240, 200], [80, 190, 240], [120, 120, 235], [150, 80, 190], [80, 46, 110]];
   const ramp = (t) => {
     t = Math.min(1, Math.max(0, t)) * (RAMP.length - 1);
     const i = Math.min(RAMP.length - 2, Math.floor(t)), f = t - i;
-    return RAMP[i].map((c, k) => c + (RAMP[i + 1][k] - c) * f);
+    return [0, 1, 2].map((k) => RAMP[i][k] + (RAMP[i + 1][k] - RAMP[i][k]) * f);
   };
 
   let W = 0, H = 0, DPR = 1;
@@ -200,38 +420,39 @@
   addEventListener('resize', resize);
   resize();
 
-  const mouse = { x: -1e4, y: -1e4, on: false };
-  addEventListener('pointermove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; mouse.on = true; });
-  addEventListener('pointerleave', () => { mouse.on = false; mouse.x = mouse.y = -1e4; });
-  document.addEventListener('pointerout', (e) => { if (!e.relatedTarget) { mouse.on = false; mouse.x = mouse.y = -1e4; } });
+  const mouse = { x: -1e4, y: -1e4 };
+  addEventListener('pointermove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
+  document.addEventListener('pointerout', (e) => { if (!e.relatedTarget) mouse.x = mouse.y = -1e4; });
 
-  let yaw = 0.6, last = performance.now();
+  const ease = (t) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+  let yaw = 0.6, clockT = 0, last = performance.now();
   function frame(now) {
     const dt = Math.min(0.05, (now - last) / 1000);
     last = now;
-    if (!reduce) yaw += dt * 0.12;
-    // Le moteur se place à droite de la liste sur grand écran, au centre en dessous.
+    if (!reduce) clockT += dt;
+    // Le scanner oscille autour d'une vue de trois quarts, pour que le moteur reste lisible de profil.
+    yaw = 0.55 + 0.5 * Math.sin(clockT * 0.16);
     const wide = W > 900;
-    const cx = wide ? W * 0.66 : W * 0.5, cy = wide ? H * 0.58 : H * 0.5;
-    const scale = Math.min(W * (wide ? 0.62 : 0.95), H * 1.1) / 7.5;
+    const cx = wide ? W * 0.68 : W * 0.5, cy = wide ? H * 0.5 : H * 0.5;
+    const scale = Math.min(W * (wide ? 0.6 : 0.95), H * 1.1) / 7.5;
     const cyaw = Math.cos(yaw), syaw = Math.sin(yaw);
     const pitch = 0.32, cp = Math.cos(pitch), sp = Math.sin(pitch);
     const camD = 9;
-    const beam = (yaw * 3.2) % TAU;   // faisceau qui balaie le relevé
+    const beam = (clockT * 0.4) % TAU;
+    const R = 110, R2 = R * R;
 
-    ctx.fillStyle = '#07090c';
+    ctx.fillStyle = '#06080b';
     ctx.fillRect(0, 0, W, H);
-    const R = 120, R2 = R * R;
-    for (const p of pts) {
-      // Rotation autour de l'axe vertical, inclinaison de la caméra, perspective.
+
+    let minX = 1e9, maxX = -1e9, minY = 1e9, maxY = -1e9, flying = 0;
+    const draw = (p, isModel) => {
       const x = p.x * cyaw - p.z * syaw, z = p.x * syaw + p.z * cyaw;
       const y = p.y - 1.2;
       const y2 = y * cp - z * sp, z2 = y * sp + z * cp;
       const d = camD - z2;
-      if (d < 0.5) continue;
+      if (d < 0.5) return;
       const f = scale * 7 / d;
       let sx = cx + x * f, sy = cy - y2 * f;
-      // Le curseur repousse les points ; un ressort les ramène.
       if (!reduce) {
         const dx = sx + p.ox - mouse.x, dy = sy + p.oy - mouse.y, dd = dx * dx + dy * dy;
         if (dd < R2 && dd > 0.01) {
@@ -243,18 +464,81 @@
         p.ox += p.vx * dt; p.oy += p.vy * dt;
       }
       sx += p.ox; sy += p.oy;
-      if (sx < -4 || sx > W + 4 || sy < -4 || sy > H + 4) continue;
+      if (sx < -4 || sx > W + 4 || sy < -4 || sy > H + 4) return;
       const depth = (d - camD + 4) / 8;
       const az = Math.atan2(p.z, p.x);
       let hit = (az - beam) % TAU; if (hit < 0) hit += TAU;
       const sweep = Math.exp(-hit * 3.5);
       const disp = Math.min(1, Math.hypot(p.ox, p.oy) / 30);
-      const [r, g, b] = ramp(depth - disp * 0.6);
-      const a = Math.min(1, (0.25 + 0.6 * p.k) * (1 - depth * 0.45) + sweep * 0.5 + disp * 0.5);
+      let [r, g, b] = ramp(depth - disp * 0.6);
+      const heat = isModel ? p.heat : 0;
+      if (heat > 0) { r += (255 - r) * heat; g += (138 - g) * heat; b += (92 - b) * heat; }
+      const a = Math.min(1, (0.25 + 0.6 * p.k) * (1 - depth * 0.45) + sweep * 0.5 + disp * 0.5 + heat * 0.3);
       ctx.fillStyle = `rgba(${r | 0},${g | 0},${b | 0},${a.toFixed(3)})`;
       const s = (p.k > 0.5 ? 1.6 : 1.3) * (1 + sweep * 0.6 + disp * 0.8);
       ctx.fillRect(sx - s / 2, sy - s / 2, s, s);
+      if (isModel) { if (sx < minX) minX = sx; if (sx > maxX) maxX = sx; if (sy < minY) minY = sy; if (sy > maxY) maxY = sy; }
+    };
+
+    for (const p of ground) draw(p, false);
+    for (const p of P) {
+      // Morphing : chaque point quitte sa place, s'envole en arc, puis se pose sur le nouveau modèle.
+      const t = reduce ? 1 : Math.min(1, Math.max(0, (now - p.t0) / MORPH));
+      if (t < 1) {
+        const e = ease(t), lift = Math.sin(Math.PI * t);
+        p.x = p.fx + (p.tx - p.fx) * e;
+        p.y = p.fy + (p.ty - p.fy) * e + lift * 0.9;
+        p.z = p.fz + (p.tz - p.fz) * e + lift * 0.4 * Math.sin(p.t0);
+        p.k = p.k + (p.tk - p.k) * 0.1;
+        p.heat = lift;
+        flying++;
+      } else {
+        p.x = p.tx; p.y = p.ty; p.z = p.tz; p.k = p.tk; p.heat = 0;
+      }
+      draw(p, true);
     }
+
+    // Cadre de visée autour du modèle, comme une boîte de détection.
+    if (maxX > minX) {
+      const pad = 18, x0 = minX - pad, y0 = minY - pad, x1 = maxX + pad, y1 = maxY + pad, c = 16;
+      ctx.strokeStyle = 'rgba(95,240,200,0.55)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (const [x, y, dx, dy] of [[x0, y0, 1, 1], [x1, y0, -1, 1], [x0, y1, 1, -1], [x1, y1, -1, -1]]) {
+        ctx.moveTo(x, y + dy * c); ctx.lineTo(x, y); ctx.lineTo(x + dx * c, y);
+      }
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(95,240,200,0.8)';
+      ctx.font = '11px "IBM Plex Mono", ui-monospace, monospace';
+      ctx.fillText(`${MODELS[current].id} · ${flying ? 'RECONSTRUCTION' : 'VERROUILLÉ'}`, x0, y0 - 8);
+    }
+
+    // Réticule au curseur, avec ses coordonnées.
+    if (mouse.x > -1e3) {
+      ctx.strokeStyle = 'rgba(233,238,242,0.35)';
+      ctx.beginPath();
+      ctx.moveTo(mouse.x - 14, mouse.y); ctx.lineTo(mouse.x - 5, mouse.y);
+      ctx.moveTo(mouse.x + 5, mouse.y); ctx.lineTo(mouse.x + 14, mouse.y);
+      ctx.moveTo(mouse.x, mouse.y - 14); ctx.lineTo(mouse.x, mouse.y - 5);
+      ctx.moveTo(mouse.x, mouse.y + 5); ctx.lineTo(mouse.x, mouse.y + 14);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(233,238,242,0.5)';
+      ctx.fillText(`${((mouse.x - cx) / scale).toFixed(2)}  ${((cy - mouse.y) / scale).toFixed(2)}`, mouse.x + 12, mouse.y + 22);
+    }
+
+    // Fiche : décodage du nom, compteur, rotation, jauge de reconstruction.
+    if (decode) {
+      const k = (now - decode.t0) / 40;
+      const txt = decode.text;
+      let out = '';
+      for (let i = 0; i < txt.length; i++) out += i < k - 6 || txt[i] === ' ' || reduce ? txt[i] : GLYPHS[(Math.random() * GLYPHS.length) | 0];
+      ro.name.textContent = out;
+      if (reduce || k - 6 > txt.length) decode = null;
+    }
+    ro.pts.textContent = `${(N - flying).toLocaleString('fr-FR')} / ${N.toLocaleString('fr-FR')}`;
+    ro.yaw.textContent = `${Math.round(((yaw * 180 / Math.PI) % 360 + 360) % 360)}°`;
+    ro.meter.style.width = `${((N - flying) / N * 100).toFixed(1)}%`;
+
     requestAnimationFrame(frame);
   }
   requestAnimationFrame(frame);
